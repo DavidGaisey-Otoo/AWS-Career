@@ -1,0 +1,17 @@
+{
+  "name": "AWS Career Launchpad Pro",
+  "short_name": "AWS Launchpad",
+  "description": "The most ambitious AWS learning and freelance career platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0E1A",
+  "theme_color": "#FF9900",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

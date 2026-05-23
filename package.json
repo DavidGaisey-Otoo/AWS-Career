@@ -1,0 +1,40 @@
+{
+  "name": "aws-career-launchpad-pro",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@aws-sdk/client-budgets": "^3.1053.0",
+    "@aws-sdk/client-cloudformation": "^3.1051.0",
+    "@aws-sdk/client-cloudfront": "^3.1053.0",
+    "@aws-sdk/client-dynamodb": "^3.1053.0",
+    "@aws-sdk/client-ec2": "^3.1051.0",
+    "@aws-sdk/client-iam": "^3.1051.0",
+    "@aws-sdk/client-lambda": "^3.1053.0",
+    "@aws-sdk/client-s3": "^3.1051.0",
+    "@aws-sdk/client-sts": "^3.1051.0",
+    "@aws-sdk/credential-providers": "^3.1051.0",
+    "canvas-confetti": "^1.9.3",
+    "date-fns": "^4.2.1",
+    "framer-motion": "^11.18.2",
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^6.28.1",
+    "recharts": "^2.15.0",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "vite": "^5.4.11"
+  }
+}
