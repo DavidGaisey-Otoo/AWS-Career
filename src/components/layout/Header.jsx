@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { formatDate, cn } from '../../lib/utils.js';
+import { AccountStatusBadge } from '../system/AccountStatusBadge.jsx';
 
 export function Header({ onMobileMenu }) {
   const { openPalette, notifications, unreadCount, markAllRead } = useApp();
@@ -34,7 +35,10 @@ export function Header({ onMobileMenu }) {
           </kbd>
         </button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {/* AWS account tier badge — always visible */}
+          <AccountStatusBadge compact />
+
           {/* Theme toggle */}
           <button
             onClick={toggle}

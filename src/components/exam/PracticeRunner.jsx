@@ -1,5 +1,5 @@
 import {
-  CheckCircle2, ChevronRight, ExternalLink, Send, XCircle,
+  CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Send, XCircle,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -73,12 +73,70 @@ export function PracticeRunner({ cert, onComplete, onExit, initial = {} }) {
     setPhase('playing');
   };
 
+  // ════════════════════════════════════════════════════════════════════
+  // BF-04: ALL hooks MUST be called before any early return.
+  // React's rule of hooks requires identical hook order every render.
+  // Previously the `if (phase === 'starting') return null;` sat BETWEEN
+  // hooks, which caused "Rendered more hooks than previous render".
+  // ════════════════════════════════════════════════════════════════════
+
   // Auto-start when initial.autoStart is set
   useEffect(() => {
-    if (phase === 'starting') start();
+    if (phase === 'starting') {
+      // Inline start logic — defined further down — but we re-derive minimal
+      // setup here to avoid a forward-reference; start() also runs unchanged.
+      // The function reference itself is stable across renders so we can call it.
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
-  if (phase === 'starting') return null;
+
+  // EX-04: auto-scroll back to top whenever the question index changes so
+  // the user never has to scroll back up to see the new question.
+  useEffect(() => {
+    if (phase === 'playing') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
+  }, [index, phase]);
+
+  // EX-04: keyboard shortcuts — ← Prev, → / Enter Next/Check
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    function onKey(e) {
+      // Ignore when user is typing in an input/textarea
+      const tag = (e.target?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (e.key === 'ArrowLeft' && index > 0) {
+        e.preventDefault();
+        setIndex(index - 1);
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const q = questions[index];
+        if (q && revealed[q.id]) {
+          if (index < questions.length - 1) setIndex(index + 1);
+        }
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const q = questions[index];
+        if (!q) return;
+        if (!revealed[q.id]) {
+          if (isAnswered(answers[q.id])) setRevealed((r) => ({ ...r, [q.id]: true }));
+        } else if (index < questions.length - 1) {
+          setIndex(index + 1);
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, index, revealed, answers, questions]);
+
+  // Now that all hooks have been declared, the early return is safe.
+  if (phase === 'starting') {
+    // Defer start() to the next tick so we don't call setState during render.
+    setTimeout(() => start(), 0);
+    return null;
+  }
 
   const submitOne = () => {
     const q = questions[index];
@@ -92,6 +150,11 @@ export function PracticeRunner({ cert, onComplete, onExit, initial = {} }) {
     } else {
       finalize();
     }
+  };
+
+  // EX-04: Prev button — go back to review/edit prior answer
+  const prev = () => {
+    if (index > 0) setIndex(index - 1);
   };
 
   const finalize = () => {
@@ -231,6 +294,60 @@ export function PracticeRunner({ cert, onComplete, onExit, initial = {} }) {
               total={questions.length}
               hideFlag
             />
+
+            {/* BF-05: INLINE action buttons — visible right under the options.
+                No scrolling needed. Check + Next live side-by-side so the
+                moment you click Check, Next is RIGHT THERE in the same spot. */}
+            <div className="mt-5 pt-4 border-t border-token flex flex-wrap items-center justify-between gap-3">
+              <button
+                onClick={prev}
+                disabled={index === 0}
+                className={cn(
+                  'btn btn-ghost !text-sm flex items-center gap-1.5',
+                  index === 0 && 'opacity-40 cursor-not-allowed'
+                )}
+                title="Previous question (← key)"
+              >
+                <ChevronLeft size={16} /> Previous
+              </button>
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {!isRevealed ? (
+                  <>
+                    {/* Check answer — primary, only enabled when an option is selected */}
+                    <button
+                      onClick={submitOne}
+                      disabled={!isAnswered(answers[q.id])}
+                      className={cn(
+                        'btn btn-primary !text-sm flex items-center gap-1.5',
+                        !isAnswered(answers[q.id]) && 'opacity-40 cursor-not-allowed'
+                      )}
+                      title="Check answer (Enter key)"
+                    >
+                      ✓ Check answer
+                    </button>
+                    {/* Skip without checking — for the user who just wants to move on */}
+                    <button
+                      onClick={next}
+                      className="btn btn-ghost !text-sm flex items-center gap-1.5"
+                      title="Skip to next without checking (→ key)"
+                    >
+                      Skip <ChevronRight size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={next}
+                    className="btn btn-primary !text-sm flex items-center gap-1.5 shadow-lg"
+                    title={`${index < questions.length - 1 ? 'Next question' : 'Finish'} (→ or Enter)`}
+                    autoFocus
+                  >
+                    {index < questions.length - 1 ? 'Next question' : 'Finish exam'}
+                    <ChevronRight size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+
             {isRevealed && (
               <div className="mt-4 flex flex-wrap gap-2 text-xs">
                 {q.docs && (
@@ -251,20 +368,40 @@ export function PracticeRunner({ cert, onComplete, onExit, initial = {} }) {
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] text-muted">
-              Q {index + 1} of {questions.length}
+          {/* EX-04 + BF-05: Sticky bottom nav bar — Prev / status / Check / Next.
+              Stays visible at all times so you never have to scroll back
+              up to navigate. Includes keyboard shortcuts (← → Enter).
+              Higher z-index (z-40) sits above the MobileNav (z-30) so it never
+              gets hidden on small screens. Margin-bottom accounts for the
+              mobile bottom-nav strip. */}
+          <div className="sticky bottom-0 z-40 -mx-3 sm:-mx-4 mb-16 lg:mb-0 px-3 sm:px-4 py-3 backdrop-blur-md bg-[var(--bg)]/95 border-t-2 border-aws-orange/30 shadow-2xl flex items-center justify-between gap-2">
+            <button
+              onClick={prev}
+              disabled={index === 0}
+              className={cn('btn btn-ghost !text-xs flex items-center gap-1', index === 0 && 'opacity-40 cursor-not-allowed')}
+              title="Previous question (← key)"
+            >
+              <ChevronLeft size={14} /> Prev
+            </button>
+            <div className="text-[11px] text-muted font-bold tabular-nums">
+              <span className="text-aws-orange">Q {index + 1}</span> / {questions.length}
+              {isRevealed && <span className="ml-1.5 text-success">✓ revealed</span>}
             </div>
             {!isRevealed ? (
               <button
                 onClick={submitOne}
                 disabled={!isAnswered(answers[q.id])}
-                className={cn('btn btn-primary', !isAnswered(answers[q.id]) && 'opacity-40 cursor-not-allowed')}
+                className={cn('btn btn-primary !text-xs flex items-center gap-1', !isAnswered(answers[q.id]) && 'opacity-40 cursor-not-allowed')}
+                title="Check answer (Enter key)"
               >
-                Check answer
+                Check answer <ChevronRight size={14} />
               </button>
             ) : (
-              <button onClick={next} className="btn btn-primary">
+              <button
+                onClick={next}
+                className="btn btn-primary !text-xs flex items-center gap-1"
+                title={`${index < questions.length - 1 ? 'Next question' : 'Finish'} (→ or Enter)`}
+              >
                 {index < questions.length - 1 ? 'Next' : 'Finish'} <ChevronRight size={14} />
               </button>
             )}

@@ -16,6 +16,18 @@ import { useToast } from '../context/ToastContext.jsx';
 import { WHITEPAPERS } from '../data/whitepapers.js';
 import { CERTS, LEVEL_META, getCert, passPercent } from '../data/certs.js';
 import { questionsForCert } from '../data/questionBank.js';
+import { weaknessSummary } from '../lib/examWeakness.js';
+import { topicNote } from '../data/topicNotes.js';
+import { TOPIC_STUDY_GUIDES } from '../data/topicStudyGuides.js';
+import {
+  certMastery, ratingDistribution, topicMastery, resetSmartReview,
+} from '../lib/spacedRepetition.js';
+
+// EX-17: topics with full study guide + Worked Examples + Decision Tree.
+// Heatmap shows a small ⭐ on these tiles so the user knows which are "fully done".
+const FULLY_ENRICHED_TOPICS = new Set([
+  'mixed', 's3', 'ec2', 'vpc', 'iam', 'lambda', 'dynamodb', 'rds',
+]);
 import { BOOKING, MODE_CONFIGS, NEW_MODES, TOPIC_SERVICES, readinessSignal, servicePerformance } from '../data/examModes.js';
 import { TASK_STATEMENTS } from '../data/examTaskStatements.js';
 import { ProgressRing } from '../components/roadmap/ProgressRing.jsx';
@@ -56,6 +68,9 @@ export default function ExamCertDetail() {
 
       {/* Hero */}
       <CertHero cert={cert} stats={stats} levelMeta={levelMeta} markEarned={markCertEarned} />
+
+      {/* EX-02: Weak topics summary card */}
+      <WeakTopicsCard cert={cert} certId={certId} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <DomainPieCard cert={cert} stats={stats} />
@@ -99,8 +114,14 @@ export default function ExamCertDetail() {
             sub="One AWS service · spotlight weaknesses" accent />
           <ModeCard certId={cert.id} mode="final" icon={Flag} title="Randomised final"
             sub={`${cert.questions} Q · readiness assessment`} accent />
+          {/* EX-18: Smart Review (spaced repetition) */}
+          <ModeCard certId={cert.id} mode="smartReview" icon={Award} title="🧠 Smart Review"
+            sub="Spaced repetition · weak Qs come back more" accent />
         </div>
       </section>
+
+      {/* EX-18: Smart Review mastery card */}
+      <SmartReviewMasteryCard cert={cert} />
 
       {/* Adaptive readiness + service heatmap */}
       <ReadinessCard cert={cert} />
@@ -119,7 +140,8 @@ export default function ExamCertDetail() {
 // ---------- Stage 13 add-ons ----------
 
 function BankNotice({ cert }) {
-  const available = questionsForCert(cert.id).length;
+  // EX-03 perf: memoize so we don\'t re-filter the full bank on every parent render.
+  const available = useMemo(() => questionsForCert(cert.id).length, [cert.id]);
   if (available >= cert.questions) return null;
   return (
     <section className="surface rounded-2xl p-4 border-warning/40 bg-warning/5">
@@ -145,6 +167,9 @@ function ModeCard({ certId, mode, icon: Icon, title, sub, accent }) {
   return (
     <Link
       to={`/exam/${certId}/run/${mode}`}
+      // EX-03 perf: prefetch the ExamRun bundle on hover so the click feels instant.
+      onMouseEnter={() => { import('./ExamRun.jsx'); }}
+      onFocus={() => { import('./ExamRun.jsx'); }}
       className={cn(
         'rounded-2xl border p-4 hover:border-aws-orange/40 transition focus-ring',
         accent ? 'border-aws-orange/30 bg-aws-orange/5' : 'border-token',
@@ -199,44 +224,378 @@ function ReadinessCard({ cert }) {
   );
 }
 
+// ════════════════════════════════════════════════════════════════════
+// EX-18: Smart Review mastery overview
+// ════════════════════════════════════════════════════════════════════
+function SmartReviewMasteryCard({ cert }) {
+  const [tick, setTick] = useState(0); // bump to re-read storage
+  const pool = useMemo(() => questionsForCert(cert.id), [cert.id]);
+  const overall = useMemo(() => certMastery(cert.id, pool), [cert.id, pool, tick]);
+  const dist = useMemo(() => ratingDistribution(cert.id, pool), [cert.id, pool, tick]);
+
+  // Per-topic mastery (only topics with questions)
+  const perTopic = useMemo(() => {
+    return TOPIC_SERVICES.map((t) => {
+      const aliases = (t.aliases || [t.id]).map((a) => a.toLowerCase());
+      const tQs = pool.filter((q) => (q.service || []).some((s) => aliases.includes(String(s).toLowerCase())));
+      if (tQs.length === 0) return null;
+      const m = topicMastery(cert.id, tQs);
+      return { id: t.id, label: t.label, icon: t.icon, ...m };
+    }).filter(Boolean);
+  }, [cert.id, pool, tick]);
+
+  // Sort by lowest mastery first (highlights weak topics)
+  const sorted = [...perTopic].sort((a, b) => {
+    if (a.masteryPct == null && b.masteryPct == null) return 0;
+    if (a.masteryPct == null) return 1; // not rated → end
+    if (b.masteryPct == null) return -1;
+    return a.masteryPct - b.masteryPct;
+  });
+
+  const [resetConfirm, setResetConfirm] = useState(false);
+  function handleReset() {
+    if (!resetConfirm) {
+      setResetConfirm(true);
+      setTimeout(() => setResetConfirm(false), 4000);
+      return;
+    }
+    resetSmartReview(cert.id);
+    setResetConfirm(false);
+    setTick((t) => t + 1);
+  }
+
+  return (
+    <section className="surface rounded-2xl p-5 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange inline-flex items-center gap-1.5">
+            <Award size={11} /> Smart Review mastery
+          </h3>
+          <p className="text-[11px] opacity-70 mt-0.5">
+            Mastery % per topic, driven by your confidence ratings in Smart Review sessions.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/exam/${cert.id}/run/smartReview`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-aws text-ink-950 text-xs font-extrabold shadow-glow-orange"
+          >
+            🧠 Start Smart Review
+          </Link>
+          <button
+            onClick={handleReset}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition',
+              resetConfirm
+                ? 'border-danger bg-danger/15 text-danger'
+                : 'border-token text-muted hover:text-danger hover:border-danger/40'
+            )}
+            title="Wipe all confidence ratings for this cert"
+          >
+            🗑 {resetConfirm ? 'Confirm reset' : 'Reset'}
+          </button>
+        </div>
+      </div>
+
+      {/* Overall summary */}
+      <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-0.5">Overall mastery</div>
+            <div className="text-2xl font-extrabold tabular-nums">
+              {overall.masteryPct == null ? '—' : `${overall.masteryPct}%`}
+            </div>
+            <div className="text-[11px] opacity-70">{overall.rated} of {overall.total} rated</div>
+          </div>
+          <div className="flex-1 min-w-[180px] max-w-md">
+            <div className="w-full h-2.5 rounded-full bg-[var(--card)] overflow-hidden">
+              <div
+                className="h-full transition-all"
+                style={{
+                  width: `${overall.masteryPct || 0}%`,
+                  backgroundColor:
+                    overall.masteryPct == null ? 'transparent'
+                    : overall.masteryPct >= 80 ? 'var(--success, #16a34a)'
+                    : overall.masteryPct >= 50 ? 'var(--warning, #FF9900)'
+                    : 'var(--danger, #ef4444)',
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 text-[11px]">
+            <span className="px-2 py-0.5 rounded-full bg-danger/15 text-danger font-bold">1 · {dist.r1}</span>
+            <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning font-bold">2 · {dist.r2}</span>
+            <span className="px-2 py-0.5 rounded-full bg-success/15 text-success font-bold">3 · {dist.r3}</span>
+            <span className="px-2 py-0.5 rounded-full bg-[var(--card)] opacity-70 font-bold">— · {dist.unrated}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Per-topic mastery — top 12 weakest shown first */}
+      {sorted.some((t) => t.masteryPct != null) ? (
+        <div className="space-y-1.5">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest opacity-60 mb-1">
+            Per-topic mastery — weakest first
+          </div>
+          {sorted.slice(0, 12).map((t) => (
+            <MasteryRow key={t.id} topic={t} />
+          ))}
+          {sorted.length > 12 && (
+            <div className="text-[10.5px] opacity-60 text-center pt-1 italic">
+              + {sorted.length - 12} more topics — start a Smart Review session to fill them in
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-4 text-sm opacity-70">
+          You haven't rated any questions yet. <Link to={`/exam/${cert.id}/run/smartReview`} className="text-aws-orange font-bold hover:underline">Start your first Smart Review</Link> to build the mastery map.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MasteryRow({ topic }) {
+  const pct = topic.masteryPct;
+  const tone =
+    pct == null      ? 'opacity-50'
+    : pct >= 80      ? 'text-success'
+    : pct >= 50      ? 'text-warning'
+                     : 'text-danger';
+  const barColor =
+    pct == null      ? 'transparent'
+    : pct >= 80      ? 'var(--success, #16a34a)'
+    : pct >= 50      ? 'var(--warning, #FF9900)'
+                     : 'var(--danger, #ef4444)';
+  return (
+    <div className="flex items-center gap-2.5 text-xs">
+      <span className="w-5 text-center">{topic.icon}</span>
+      <span className="font-bold w-28 truncate">{topic.label}</span>
+      <div className="flex-1 h-2 rounded-full bg-[var(--card-2)] overflow-hidden">
+        <div className="h-full transition-all"
+          style={{ width: `${pct || 0}%`, backgroundColor: barColor }} />
+      </div>
+      <span className={cn('w-10 text-right tabular-nums font-bold', tone)}>
+        {pct == null ? '—' : `${pct}%`}
+      </span>
+      <span className="w-16 text-right text-[10.5px] opacity-60">
+        {topic.rated}/{topic.total}
+      </span>
+    </div>
+  );
+}
+
 function TopicHeatmapCard({ cert }) {
   const { state } = useExam();
   const certState = state.certs?.[cert.id];
   const perf = useMemo(() => servicePerformance(certState, cert), [certState, cert]);
+  const [hideEmpty, setHideEmpty] = useState(true);
+  const [openTopic, setOpenTopic] = useState(null); // EX-05: inline notes drawer
+
+  const filtered = perf.filter((s) => !hideEmpty || s.available > 0);
+  const totalWithQuestions = perf.filter((s) => s.available > 0).length;
+
   return (
     <section className="surface rounded-2xl p-5">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
         <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange inline-flex items-center gap-1.5">
           <Target size={11} /> Topic-level performance
         </h3>
-        <span className="text-[10px] text-muted">Click a service to drill in Topic mode.</span>
+        <div className="flex items-center gap-2 text-[10px]">
+          <button
+            onClick={() => setHideEmpty((h) => !h)}
+            className="font-bold opacity-70 hover:opacity-100 underline"
+            title="Show/hide topics that have no questions for this cert yet"
+          >
+            {hideEmpty ? `Show all (${perf.length})` : `Hide empty (${totalWithQuestions} with Qs)`}
+          </button>
+          <span className="text-muted">· Click a tile for notes + practice</span>
+        </div>
       </div>
+
+      {/* EX-05: legend so user knows what colours mean */}
+      <div className="flex items-center gap-2 flex-wrap mb-3 text-[10px]">
+        <Legend tone="success" label="≥80% mastered" />
+        <Legend tone="warning" label="60-79% needs work" />
+        <Legend tone="danger"  label="<60% weak" />
+        <Legend tone="muted"   label="No attempts yet" />
+        <Legend tone="ghost"   label="No questions yet" />
+        <span className="inline-flex items-center gap-1 text-yellow-400 font-bold">
+          <span>★</span>
+          <span className="opacity-80">Full guide with worked examples</span>
+        </span>
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-        {perf.map((s) => {
+        {filtered.map((s) => {
+          const noQuestions = s.available === 0;
+          const noAttempts = !noQuestions && s.pct == null;
           const tone =
-            s.pct == null ? 'border-token bg-[var(--card-2)]/30 text-muted'
-            : s.pct >= 80 ? 'border-success/40 bg-success/10 text-success'
-            : s.pct >= 60 ? 'border-warning/40 bg-warning/10 text-warning'
-            : 'border-danger/40 bg-danger/10 text-danger';
+            noQuestions          ? 'border-dashed border-token bg-[var(--card-2)]/10 text-muted opacity-50'
+            : noAttempts         ? 'border-token bg-[var(--card-2)]/30 text-muted'
+            : s.pct >= 80        ? 'border-success/40 bg-success/10 text-success'
+            : s.pct >= 60        ? 'border-warning/40 bg-warning/10 text-warning'
+                                 : 'border-danger/40 bg-danger/10 text-danger';
           return (
-            <Link
+            <button
               key={s.id}
-              to={`/exam/${cert.id}/run/topic?service=${s.id}`}
+              onClick={() => setOpenTopic(openTopic === s.id ? null : s.id)}
+              disabled={noQuestions}
               className={cn(
-                'rounded-lg border p-2 text-center transition hover:border-aws-orange/60',
+                'rounded-lg border p-2 text-center transition relative',
                 tone,
+                !noQuestions && 'hover:border-aws-orange/60 cursor-pointer',
+                noQuestions && 'cursor-not-allowed',
+                openTopic === s.id && 'ring-2 ring-aws-orange',
               )}
+              title={
+                noQuestions ? `No ${s.label} questions in the bank yet — coming soon`
+                : noAttempts ? `${s.available} ${s.label} questions available — click to study + practice`
+                : `Last accuracy: ${s.pct}% across ${s.attempts} attempts · ${s.available} questions available`
+              }
             >
+              {/* EX-17: ⭐ badge on fully-enriched topic guides */}
+              {FULLY_ENRICHED_TOPICS.has(s.id) && (
+                <span
+                  className="absolute top-1 right-1 text-[11px] leading-none text-yellow-400 drop-shadow-glow"
+                  title="Full study guide with Worked Examples + Decision Tree"
+                >★</span>
+              )}
               <div className="text-lg leading-none">{s.icon}</div>
               <div className="text-[10px] font-extrabold mt-1 truncate">{s.label}</div>
               <div className="text-[10px] tabular-nums font-bold">
-                {s.pct == null ? '—' : `${s.pct}%`}
+                {noQuestions ? 'No Qs' : s.pct == null ? `${s.available} Q` : `${s.pct}%`}
               </div>
-            </Link>
+              {!noQuestions && s.attempts > 0 && (
+                <div className="text-[9px] opacity-70 mt-0.5">{s.attempts}/{s.available} done</div>
+              )}
+            </button>
           );
         })}
       </div>
+
+      {/* EX-05: Inline study notes drawer — appears below the grid */}
+      {openTopic && (
+        <TopicNotesDrawer
+          cert={cert}
+          topic={filtered.find((t) => t.id === openTopic)}
+          onClose={() => setOpenTopic(null)}
+        />
+      )}
     </section>
+  );
+}
+
+function Legend({ tone, label }) {
+  const cls =
+    tone === 'success' ? 'border-success/40 bg-success/10 text-success' :
+    tone === 'warning' ? 'border-warning/40 bg-warning/10 text-warning' :
+    tone === 'danger'  ? 'border-danger/40 bg-danger/10 text-danger'   :
+    tone === 'muted'   ? 'border-token bg-[var(--card-2)]/30 text-muted' :
+                         'border-dashed border-token bg-[var(--card-2)]/10 text-muted opacity-50';
+  return (
+    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded border font-bold', cls)}>
+      <span className="w-2 h-2 rounded-full bg-current" />
+      {label}
+    </span>
+  );
+}
+
+// EX-05: Inline notes drawer — opens under the heatmap when a tile is clicked
+function TopicNotesDrawer({ cert, topic, onClose }) {
+  const notes = topicNote(topic.id);
+  return (
+    <div className="mt-4 rounded-xl border-2 border-aws-orange/40 bg-[var(--card-2)]/40 p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{topic.icon}</span>
+          <div>
+            <h4 className="text-base font-extrabold">{topic.label} — quick notes</h4>
+            <p className="text-[11px] opacity-70">
+              {topic.available} question{topic.available === 1 ? '' : 's'} in the bank · {topic.attempts > 0 ? `${topic.pct}% latest accuracy across ${topic.attempts} attempts` : 'No attempts yet'}
+            </p>
+          </div>
+        </div>
+        <button onClick={onClose} className="text-xs opacity-60 hover:opacity-100 px-2 py-1 rounded hover:bg-[var(--card)]">
+          Close
+        </button>
+      </div>
+
+      {notes ? (
+        <div className="space-y-3 text-sm">
+          <p className="text-aws-orange font-semibold">{notes.oneLine}</p>
+
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-success mb-1.5">Key facts</div>
+            <ul className="space-y-1">
+              {notes.keyFacts.map((f, i) => (
+                <li key={i} className="flex items-start gap-2 text-[12px]">
+                  <span className="text-success mt-1">▸</span>
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {notes.examTraps?.length > 0 && (
+            <div>
+              <div className="text-[10px] font-extrabold uppercase tracking-widest text-warning mb-1.5">Common exam traps</div>
+              <ul className="space-y-1">
+                {notes.examTraps.map((t, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[12px]">
+                    <span className="text-warning mt-1">⚠</span>
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-token mt-3">
+            <Link
+              to={`/exam/${cert.id}/study/${topic.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-aws-orange/15 text-aws-orange border border-aws-orange/40 hover:bg-aws-orange/25 text-xs font-extrabold"
+            >
+              📖 Open full Study Guide
+            </Link>
+            {topic.available > 0 && (
+              <Link
+                to={`/exam/${cert.id}/run/topic?service=${topic.id}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-aws text-ink-950 text-xs font-extrabold shadow-glow-orange hover:brightness-110"
+              >
+                ▶ Practice {topic.available} {topic.label} question{topic.available === 1 ? '' : 's'}
+              </Link>
+            )}
+            {notes.docs && (
+              <a href={notes.docs} target="_blank" rel="noreferrer"
+                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] hover:bg-[var(--card-2)] text-xs font-bold border border-token">
+                <ExternalLink size={11} /> AWS Docs
+              </a>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="text-sm opacity-70">
+          Notes for <strong>{topic.label}</strong> are coming. For now, hit the practice button to drill into questions.
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              to={`/exam/${cert.id}/study/${topic.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-aws-orange/15 text-aws-orange border border-aws-orange/40 text-xs font-extrabold"
+            >
+              📖 Open Study Guide
+            </Link>
+            {topic.available > 0 && (
+              <Link
+                to={`/exam/${cert.id}/run/topic?service=${topic.id}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-aws text-ink-950 text-xs font-extrabold"
+              >
+                ▶ Practice {topic.available} {topic.label} questions
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -383,6 +742,104 @@ function Accordion({ title, id, openId, setOpenId, children }) {
 }
 
 // ---------- pieces ----------
+
+// EX-02: Weak topics summary card on the Exam Overview page
+function WeakTopicsCard({ cert, certId }) {
+  // EX-03 perf: depend on cert.id (stable) rather than the cert object reference.
+  const summary = useMemo(() => weaknessSummary(cert), [cert.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!summary.topics.length && !summary.isCritical) {
+    // Nothing flagged — only show a subtle "no weak topics yet" hint if we have ≥ 1 attempt
+    if (!summary.lastAttempt) return null;
+    return (
+      <div className="surface rounded-2xl p-4 gradient-border">
+        <div className="flex items-center gap-2 text-sm">
+          <Trophy size={16} className="text-success" />
+          <strong>No weak topics flagged</strong>
+          <span className="opacity-70">— your last attempt was {summary.lastAttempt.scorePct}%. Keep it up.</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={cn(
+      'surface rounded-2xl p-5 gradient-border',
+      summary.isCritical ? 'border-danger/40' : 'border-warning/40'
+    )}>
+      <div className="flex items-start gap-3 mb-3">
+        <div className={cn(
+          'shrink-0 w-10 h-10 rounded-xl grid place-items-center',
+          summary.isCritical ? 'bg-danger/20 text-danger' : 'bg-warning/20 text-warning'
+        )}>
+          <Target size={18} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-extrabold">
+            {summary.isCritical ? '🔴 ' : '🟡 '}
+            Weak topics ({summary.topics.length || 1})
+          </h3>
+          <p className="text-xs opacity-80 mt-0.5">
+            Topics where you scored under 60% in the last 2 sessions. Click any to see the recovery plan.
+          </p>
+        </div>
+        {summary.topics.length > 0 && (
+          <Link
+            to={`/exam/${cert.id}/run/practice?domains=${summary.topics.map((t) => t.domainId).join(',')}`}
+            className={cn(
+              'shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold',
+              summary.isCritical
+                ? 'bg-danger text-white hover:brightness-110'
+                : 'bg-warning text-ink-950 hover:brightness-110'
+            )}
+          >
+            <Zap size={11} /> Retry these only
+          </Link>
+        )}
+      </div>
+      {summary.topics.length > 0 ? (
+        <div className="space-y-2">
+          {summary.topics.map((t) => (
+            <details key={t.domainId} className="rounded-lg border border-token bg-[var(--card-2)]/40 p-3">
+              <summary className="cursor-pointer text-sm font-bold flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Target size={12} className={summary.isCritical ? 'text-danger' : 'text-warning'} />
+                  {t.label}
+                </span>
+                <span className="text-[11px] opacity-70 font-mono">
+                  latest {t.latestPct}% · prev {t.previousPct}%
+                </span>
+              </summary>
+              {t.plan && (
+                <>
+                  <ol className="mt-2.5 space-y-1.5 text-[12px]">
+                    {t.plan.subtopics.map((s, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className={cn(
+                          'shrink-0 mt-0.5 w-5 h-5 rounded text-[10px] font-extrabold grid place-items-center',
+                          summary.isCritical ? 'bg-danger/15 text-danger' : 'bg-warning/15 text-warning'
+                        )}>{i + 1}</span>
+                        <span>{s}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="text-[10px] opacity-70 mt-2">
+                    Estimated recovery time: <strong>{t.plan.estimatedHours} hours</strong> · Real-exam weight: <strong>{t.plan.weight}%</strong>
+                  </div>
+                </>
+              )}
+            </details>
+          ))}
+        </div>
+      ) : (
+        summary.isCritical && summary.lastAttempt && (
+          <div className="text-sm opacity-90">
+            Last attempt: <strong className="text-danger">{summary.lastAttempt.scorePct}%</strong> — below the critical threshold of 40%.
+            Focus on your weakest domain shown in the breakdown below.
+          </div>
+        )
+      )}
+    </div>
+  );
+}
 
 function CertHero({ cert, stats, levelMeta, markEarned }) {
   return (

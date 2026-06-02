@@ -36,6 +36,10 @@ const LearningTopic        = lazy(() => import('./pages/LearningTopic.jsx'));
 const Exam                 = lazy(() => import('./pages/Exam.jsx'));
 const ExamCertDetail       = lazy(() => import('./pages/ExamCertDetail.jsx'));
 const ExamRun              = lazy(() => import('./pages/ExamRun.jsx'));
+const TopicStudyGuide      = lazy(() => import('./pages/TopicStudyGuide.jsx'));
+const Flashcards           = lazy(() => import('./pages/Flashcards.jsx'));
+const DeepWalkthrough      = lazy(() => import('./pages/DeepWalkthrough.jsx'));
+const NewWalkthrough       = lazy(() => import('./pages/NewWalkthrough.jsx'));
 const Certifications       = lazy(() => import('./pages/Certifications.jsx'));
 const AIHub                = lazy(() => import('./pages/AIHub.jsx'));
 const AIAssistant          = lazy(() => import('./pages/AIAssistant.jsx'));
@@ -67,6 +71,9 @@ const Walkthroughs         = lazy(() => import('./pages/Walkthroughs.jsx'));
 const SessionLog           = lazy(() => import('./pages/SessionLog.jsx'));
 const ProjectBuilder       = lazy(() => import('./pages/ProjectBuilder.jsx'));
 const Updates              = lazy(() => import('./pages/Updates.jsx'));
+const Readiness            = lazy(() => import('./pages/Readiness.jsx'));
+const RenewGithubToken     = lazy(() => import('./pages/RenewGithubToken.jsx'));
+const IdeaStudio           = lazy(() => import('./pages/IdeaStudio.jsx'));
 
 /**
  * Lightweight fallback while a lazy chunk loads. Two SkeletonCards keep
@@ -120,6 +127,12 @@ export default function App() {
                        <Route path="/exam" element={<Suspended><Exam /></Suspended>} />
                        <Route path="/exam/:certId" element={<Suspended><ExamCertDetail /></Suspended>} />
                        <Route path="/exam/:certId/run/:mode" element={<Suspended><ExamRun /></Suspended>} />
+                       <Route path="/exam/:certId/study/:topicId" element={<Suspended><TopicStudyGuide /></Suspended>} />
+                       <Route path="/flashcards" element={<Suspended><Flashcards /></Suspended>} />
+                       <Route path="/flashcards/:categoryId" element={<Suspended><Flashcards /></Suspended>} />
+                       <Route path="/walkthroughs/deep" element={<Suspended><DeepWalkthrough /></Suspended>} />
+                       <Route path="/walkthroughs/deep/new" element={<Suspended><NewWalkthrough /></Suspended>} />
+                       <Route path="/walkthroughs/deep/:id" element={<Suspended><DeepWalkthrough /></Suspended>} />
                        <Route path="/certifications" element={<Suspended><Certifications /></Suspended>} />
                        <Route path="/ai" element={<Suspended><AIHub /></Suspended>} />
                        <Route path="/ai/assistant" element={<Suspended><AIAssistant /></Suspended>} />
@@ -156,6 +169,9 @@ export default function App() {
                        <Route path="/session-log"   element={<Suspended><SessionLog /></Suspended>} />
                        <Route path="/project-builder" element={<Suspended><ProjectBuilder /></Suspended>} />
                        <Route path="/updates"         element={<Suspended><Updates /></Suspended>} />
+                       <Route path="/readiness"       element={<Suspended><Readiness /></Suspended>} />
+                       <Route path="/renew-github"    element={<Suspended><RenewGithubToken /></Suspended>} />
+                       <Route path="/idea-studio"     element={<Suspended><IdeaStudio /></Suspended>} />
                        <Route path="/settings" element={<Suspended><Settings /></Suspended>} />
                        <Route path="*" element={<Dashboard />} />
                      </Route>

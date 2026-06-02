@@ -14,7 +14,7 @@ import {
 import { Button } from '../components/ui/Button.jsx';
 import { SESSIONS, sessionToMarkdown } from '../data/sessionLog.js';
 import { useDeploy } from '../context/DeployContext.jsx';
-import { openPrintable } from '../lib/printableHtml.js';
+import { openPrintable, downloadPdfFile } from '../lib/printableHtml.js';
 
 export default function SessionLog() {
   const [activeId, setActiveId] = useState(SESSIONS[0]?.id);
@@ -116,6 +116,21 @@ function SessionView({ session }) {
     });
   }
 
+  async function downloadAsPdf() {
+    const md = sessionToMarkdown(session);
+    try {
+      await downloadPdfFile({
+        markdown: md,
+        title: session.title,
+        meta: `${session.date} · Account ${session.account?.id || '—'}`,
+        documentType: 'AWS Session Report',
+        authorName: 'David Gaisey-Otoo',
+      });
+    } catch (err) {
+      alert('PDF generation failed — ' + (err.message || err));
+    }
+  }
+
   return (
     <main className="space-y-5 min-w-0">
       {/* Top metadata */}
@@ -130,9 +145,10 @@ function SessionView({ session }) {
               {session.account?.region && <span>{session.account.region}</span>}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="primary" size="sm" icon={Download} onClick={downloadAsPdf}>⭐ PDF</Button>
             <Button variant="ghost" size="sm" icon={Download} onClick={downloadMarkdown}>Markdown</Button>
-            <Button variant="ghost" size="sm" icon={Printer} onClick={printable}>Print / PDF</Button>
+            <Button variant="ghost" size="sm" icon={Printer} onClick={printable}>Print preview</Button>
           </div>
         </div>
         <p className="text-sm opacity-90 leading-relaxed">{session.summary}</p>

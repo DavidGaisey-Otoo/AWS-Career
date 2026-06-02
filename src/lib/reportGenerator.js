@@ -21,7 +21,7 @@
  *   await pushSessionReportToGitHub({ token, input, repoName });
  */
 
-import { openPrintable } from './printableHtml.js';
+import { openPrintable, downloadPdfFile } from './printableHtml.js';
 import { pushPortfolioRepo, suggestRepoName } from './githubPush.js';
 
 /**
@@ -189,6 +189,15 @@ export function downloadMarkdown(markdown, filename) {
  */
 export function openReportPrintable({ markdown, title, meta }) {
   return openPrintable({ markdown, title, meta });
+}
+
+/**
+ * BF-07: Download a TRUE .pdf file directly to the user's Downloads folder.
+ * No popup. No print dialog. Just click → file lands.
+ * Uses html2pdf.js under the hood (lazy-loaded).
+ */
+export async function downloadReportAsPdf({ markdown, title, meta }) {
+  return downloadPdfFile({ markdown, title, meta });
 }
 
 /**

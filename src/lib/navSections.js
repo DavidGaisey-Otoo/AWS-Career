@@ -29,6 +29,7 @@ export const SECTIONS = [
       { id: 'community', label: 'Community',         icon: Users,      path: '/community' },
       { id: 'wellness',  label: 'Wellness',          icon: Heart,      path: '/wellness' },
       { id: 'analytics', label: 'Analytics',         icon: BarChart3,  path: '/analytics' },
+      { id: 'readiness', label: 'Readiness check',   icon: ShieldCheck,path: '/readiness' },
       { id: 'updates',   label: 'Updates',           icon: Sparkles,   path: '/updates' },
       { id: 'settings',  label: 'Settings',          icon: Settings,   path: '/settings' },
     ],
@@ -69,6 +70,7 @@ export const SECTIONS = [
     path: '/build',
     blurb: 'Portfolio projects + architecture studio + AWS account deploys.',
     children: [
+      { id: 'idea-studio',  label: 'Idea Studio',          icon: Sparkles,    path: '/idea-studio' },
       { id: 'project-builder', label: 'Project Builder',  icon: Wand2,       path: '/project-builder' },
       { id: 'portfolio',    label: 'Portfolio',           icon: Briefcase,   path: '/portfolio' },
       { id: 'architecture', label: 'Architecture Studio', icon: Layers,      path: '/architecture' },

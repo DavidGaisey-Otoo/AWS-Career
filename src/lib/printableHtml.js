@@ -30,27 +30,198 @@ const PALETTE = {
 };
 
 /**
- * Open a styled HTML preview window in print-ready form.
+ * Open a styled HTML preview in a new browser tab.
  *
- * @param {object} opts
- *   - markdown         the body content as markdown (required)
- *   - title            window + document title
- *   - subtitle         small subhead on the cover (e.g. project type)
- *   - meta             [{ label, value }] cover metadata grid
- *   - authorName       footer signature
- *   - authorCompany    optional
- *   - documentType     'Project Plan' | 'Proposal' | 'Contract' | 'Invoice' | 'Delivery'
- *   - autoPrint        boolean — opens print dialog after load
+ * BF-07 — uses a Blob URL approach so the new tab loads REAL HTML content
+ * (not blank + document.write, which fails silently in some browsers).
+ * No auto-print, no iframe side effects on the parent page — the user
+ * sees the preview, then prints with Ctrl/Cmd+P from there.
+ *
+ * If popups are blocked, falls back to downloading the HTML file with
+ * clear instructions.
+ *
+ * Always returns a result object so callers can show feedback.
+ *
+ * @param {object} opts  see buildPrintableHtml options
+ * @returns {{ method: 'popup' | 'download' | 'error', ok: boolean, url?: string }}
  */
 export function openPrintable(opts) {
-  const html = buildPrintableHtml(opts);
-  const w = window.open('', '_blank');
-  if (!w) {
-    alert('Pop-up blocked — please allow pop-ups to export the document.');
-    return;
+  let html;
+  try {
+    // autoPrint=false — let the user choose when to print from the preview
+    html = buildPrintableHtml({ autoPrint: false, ...opts });
+  } catch (err) {
+    console.error('[printable] buildPrintableHtml threw:', err);
+    alert('Could not build the print view — see browser console for details.');
+    return { method: 'error', ok: false };
   }
-  w.document.write(html);
-  w.document.close();
+
+  // Create a Blob URL the new tab can navigate to.
+  // This loads as a real document with content (not a blank tab + document.write).
+  let blobUrl;
+  try {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    blobUrl = URL.createObjectURL(blob);
+  } catch (err) {
+    console.error('[printable] could not create blob URL:', err);
+    alert('Could not prepare the print view — see browser console.');
+    return { method: 'error', ok: false };
+  }
+
+  // Tier 1 — open in new tab via Blob URL
+  try {
+    const w = window.open(blobUrl, '_blank');
+    if (w && !w.closed) {
+      w.focus();
+      // Revoke the URL after the tab has had time to load (Blob URLs are
+      // browser-scoped — once revoked the new tab keeps its loaded copy).
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      return { method: 'popup', ok: true, url: blobUrl };
+    }
+  } catch (err) {
+    console.warn('[printable] popup failed:', err);
+  }
+
+  // Tier 2 — popup blocked: download as HTML file
+  try {
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `${slugify(opts.title || 'document')}.html`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try { document.body.removeChild(a); } catch {/* */}
+      URL.revokeObjectURL(blobUrl);
+    }, 30000);
+    alert('Pop-up was blocked — we downloaded an HTML file instead.\n\nOpen it in your browser, then press Ctrl+P (Cmd+P on Mac) → "Save as PDF".\n\nOr use the "Download as PDF" button to skip the print dialog entirely.');
+    return { method: 'download', ok: true };
+  } catch (err) {
+    console.error('[printable] download fallback failed:', err);
+    try { URL.revokeObjectURL(blobUrl); } catch {/* */}
+    alert('Could not open print view. Check your browser\'s popup + download settings.');
+    return { method: 'error', ok: false };
+  }
+}
+
+/**
+ * The bulletproof download trigger.
+ *
+ * Browser quirks this handles:
+ *   • Firefox / older Chrome won't fire .click() on a detached <a>.
+ *     Fix: append to <body>, click, then remove.
+ *   • Some browsers revoke the blob URL before the download starts if
+ *     we call URL.revokeObjectURL() synchronously. Fix: defer 30s.
+ *   • Safari sometimes ignores the `download` attribute on certain MIME
+ *     types. Fix: fall back to opening the blob in a new tab so the
+ *     user can save manually.
+ */
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  try {
+    a.click();
+  } catch (err) {
+    // Last-resort: open in a new tab if click() throws
+    window.open(url, '_blank');
+  }
+  // Clean up after the browser has had time to start the download
+  setTimeout(() => {
+    try { document.body.removeChild(a); } catch {}
+    try { URL.revokeObjectURL(url); } catch {}
+  }, 30_000);
+  return url;
+}
+
+/**
+ * Download a Markdown file directly (no print preview).
+ */
+export function downloadMarkdownFile(markdown, filename) {
+  const blob = new Blob([markdown || ''], { type: 'text/markdown;charset=utf-8' });
+  triggerDownload(blob, filename || 'document.md');
+}
+
+/**
+ * Download a self-contained HTML file (the same one openPrintable shows
+ * in a new tab, but as a file). Easier "give this to a teammate" path.
+ */
+export function downloadHtmlFile(opts) {
+  const html = buildPrintableHtml({ autoPrint: false, ...opts });
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  triggerDownload(blob, `${slugify(opts.title || 'document')}.html`);
+}
+
+function slugify(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+}
+
+/**
+ * TRUE one-click PDF download — generates a real .pdf file in the browser
+ * and pushes it straight to the user's Downloads folder.
+ *
+ * No popup window. No print dialog. Just click → file lands in Downloads.
+ *
+ * Uses html2pdf.js (which wraps jsPDF + html2canvas) — the library is
+ * imported dynamically so the ~600KB hit is only paid when the user
+ * actually clicks "Download PDF".
+ */
+export async function downloadPdfFile(opts) {
+  const html = buildPrintableHtml({ autoPrint: false, ...opts });
+  const filename = `${slugify(opts.title || 'document')}.pdf`;
+
+  // Render the printable HTML into a hidden iframe so html2pdf can read it
+  // with the right document context (styles, fonts loaded, etc.)
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-99999px';
+  iframe.style.top = '0';
+  iframe.style.width = '794px';   // ~A4 width at 96dpi
+  iframe.style.height = '1123px'; // ~A4 height at 96dpi
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  try {
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    // Wait for fonts to load
+    if (doc.fonts && doc.fonts.ready) {
+      try { await doc.fonts.ready; } catch {}
+    }
+    // Belt-and-braces: a small delay so layout settles
+    await new Promise((r) => setTimeout(r, 400));
+
+    const root = doc.body;
+    // Hide the screen-only "how to save" banner before rendering
+    const howto = doc.querySelector('.howto');
+    if (howto) howto.style.display = 'none';
+    // Hide the screen-only doc footer
+    const docFooter = doc.querySelector('.doc-footer');
+    if (docFooter) docFooter.style.display = 'none';
+
+    const html2pdf = (await import('html2pdf.js')).default;
+    await html2pdf()
+      .set({
+        margin:       [12, 12, 16, 12],
+        filename,
+        image:        { type: 'jpeg', quality: 0.95 },
+        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
+      })
+      .from(root)
+      .save();
+  } finally {
+    // Clean up the iframe
+    iframe.remove();
+  }
 }
 
 export function buildPrintableHtml({
@@ -63,7 +234,18 @@ export function buildPrintableHtml({
   documentType = 'Document',
   autoPrint = true,
 }) {
-  const body = renderMarkdown(markdown);
+  // BF-06 hardening: callers sometimes pass `meta` as a STRING instead of
+  // an array of {label, value}. Normalise so .map() never throws.
+  if (typeof meta === 'string') {
+    meta = meta.trim() ? [{ label: 'Details', value: meta }] : [];
+  } else if (!Array.isArray(meta)) {
+    meta = [];
+  } else {
+    // Filter out malformed entries (must have a label)
+    meta = meta.filter((m) => m && typeof m === 'object' && m.label != null);
+  }
+
+  const body = renderMarkdown(markdown || '');
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return `<!doctype html>
@@ -80,6 +262,19 @@ ${baseCss()}
 </style>
 </head>
 <body>
+
+  <!-- HOW-TO-SAVE banner (screen only — hidden in print) -->
+  <div class="howto no-print">
+    <div class="howto-inner">
+      <div class="howto-title">📄 Save this as a PDF in 3 clicks</div>
+      <ol class="howto-steps">
+        <li><strong>1.</strong> Click the orange <strong>"Save as PDF"</strong> button →</li>
+        <li><strong>2.</strong> In the dialog that opens, set <strong>Destination</strong> to <strong>"Save as PDF"</strong></li>
+        <li><strong>3.</strong> Click <strong>Save</strong> — pick where to put it</li>
+      </ol>
+      <button class="howto-cta" onclick="window.print()">🖨 Save as PDF</button>
+    </div>
+  </div>
 
   <!-- COVER -->
   <section class="cover">
@@ -140,6 +335,35 @@ function baseCss() {
     line-height: 1.6;
     font-size: 14px;
   }
+
+  /* ============ HOW-TO-SAVE BANNER (screen only) ============ */
+  .howto {
+    position: sticky; top: 0; z-index: 100;
+    background: linear-gradient(135deg, ${primary}, #F97316);
+    color: #1A1207;
+    padding: 14px 24px;
+    box-shadow: 0 4px 16px rgba(255,153,0,0.25);
+    border-bottom: 3px solid #1A1207;
+  }
+  .howto-inner {
+    max-width: 1000px; margin: 0 auto;
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .howto-title { font-size: 16px; font-weight: 900; letter-spacing: -0.01em; }
+  .howto-steps {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; gap: 18px; font-size: 12px; flex: 1; flex-wrap: wrap;
+  }
+  .howto-steps li { margin: 0; }
+  .howto-cta {
+    background: ${ink}; color: ${primary};
+    border: none; padding: 10px 20px; border-radius: 10px;
+    font-size: 13px; font-weight: 900; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20);
+    transition: transform 0.1s;
+  }
+  .howto-cta:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .howto-cta:active { transform: translateY(0); }
 
   /* ============ COVER ============ */
   .cover {
@@ -326,7 +550,7 @@ function baseCss() {
   }
   .doc blockquote p { margin: 0; }
 
-  /* Bold / italic / links */
+  /* Bold / italic / links / highlights */
   .doc strong { color: ${ink}; font-weight: 700; }
   .doc em { font-style: italic; color: ${muted}; }
   .doc a {
@@ -334,6 +558,23 @@ function baseCss() {
     text-decoration: none;
     border-bottom: 1px dotted ${primary};
   }
+  .doc mark {
+    background: linear-gradient(180deg, transparent 55%, rgba(255,153,0,0.40) 55%);
+    color: ${ink};
+    padding: 0 2px;
+    font-weight: 600;
+  }
+  .doc .chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    font-size: 10px; font-weight: 900;
+    margin-right: 4px;
+    vertical-align: -3px;
+  }
+  .doc .chip-ok    { background: ${success}; color: #fff; }
+  .doc .chip-warn  { background: ${warning}; color: #fff; }
+  .doc .chip-fail  { background: ${danger};  color: #fff; }
+  .doc .chip-block { background: #475569;    color: #fff; }
 
   /* Code */
   .doc code {
@@ -522,18 +763,27 @@ function buildTable(header, rows) {
   </table>`;
 }
 
-/** Inline transforms: bold, italic, code, links. Run on already-text content. */
+/** Inline transforms: bold, italic, code, links, highlights, status chips. */
 function inline(s) {
   if (!s) return '';
   let out = escapeHtml(s);
   // Links [text](url)
   out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  // Bare URLs — auto-link
+  out = out.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noreferrer">$2</a>');
   // Bold **text**
   out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   // Italic _text_   (don't catch __ used in code)
   out = out.replace(/(^|[^_])_([^_\n]+)_(?!_)/g, '$1<em>$2</em>');
+  // ==highlight==
+  out = out.replace(/==([^=]+)==/g, '<mark>$1</mark>');
   // Inline code `text`
   out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Status chips at line start ✅ / ⚠️ / ❌ / ⛔ become coloured chips
+  out = out.replace(/^(✅|✓)\s+/, '<span class="chip chip-ok">✓</span> ');
+  out = out.replace(/^(⚠️|⚠)\s+/, '<span class="chip chip-warn">!</span> ');
+  out = out.replace(/^(❌|✗)\s+/, '<span class="chip chip-fail">✗</span> ');
+  out = out.replace(/^(⛔)\s+/, '<span class="chip chip-block">⛔</span> ');
   return out;
 }
 

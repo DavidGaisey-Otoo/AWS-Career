@@ -55,13 +55,25 @@ export default function Walkthroughs() {
 function Header() {
   return (
     <div className="rounded-3xl border border-token bg-gradient-to-br from-[var(--brand)]/10 via-transparent to-transparent p-6">
-      <div className="flex items-center gap-2 mb-1">
-        <BookOpen size={18} className="text-[var(--brand)]" />
-        <h1 className="text-2xl font-bold tracking-tight">Walkthroughs</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
+        <div className="flex items-center gap-2">
+          <BookOpen size={18} className="text-[var(--brand)]" />
+          <h1 className="text-2xl font-bold tracking-tight">Walkthroughs</h1>
+        </div>
+        {/* PJ-01: Deep Walkthrough Mode entry — Standard mode untouched */}
+        <Link
+          to="/walkthroughs/deep"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-aws text-ink-950 text-xs font-extrabold shadow-glow-orange hover:brightness-110"
+        >
+          🛠 Deep Walkthroughs →
+        </Link>
       </div>
       <p className="text-sm opacity-70 max-w-2xl">
         Atomic, step-by-step procedures for everything AWS. Each step is one click or one form,
         with a direct console link, a checkpoint to verify, and progress that persists across sessions.
+      </p>
+      <p className="text-[12px] opacity-60 mt-1.5 italic">
+        Want more depth? Try <strong>Deep Walkthroughs</strong> — every step explained with WHY, real-world analogy, common mistakes, and HOW in all 4 formats (Console / CLI / CloudFormation / Terraform).
       </p>
     </div>
   );

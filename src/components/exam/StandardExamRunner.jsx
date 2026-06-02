@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { passPercent } from '../../data/certs.js';
 import { pickExamQuestions, questionsForCert } from '../../data/questionBank.js';
 import { cn } from '../../lib/utils.js';
+import { useSessionState } from '../../hooks/useSessionState.js';
 import { ExamTimer } from './ExamTimer.jsx';
 import { QuestionPalette } from './QuestionPalette.jsx';
 import { QuestionRenderer } from './QuestionRenderer.jsx';
@@ -21,28 +22,43 @@ import { QuestionRenderer } from './QuestionRenderer.jsx';
 export function StandardExamRunner({ cert, onComplete, onExit }) {
   const { recordAttempt } = useExam();
   const toast = useToast();
-  const [phase, setPhase] = useState('intro'); // intro | playing | reviewing | confirm-submit
-  const [seed] = useState(() => Date.now());
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});       // qId → selection
-  const [flags, setFlags] = useState({});           // qId → bool
-  const [perQTime, setPerQTime] = useState({});     // qId → seconds spent
-  const [index, setIndex] = useState(0);
-  const startedAtRef = useRef(null);
+  // BF-02: persist exam progress per cert so a refresh mid-exam recovers everything.
+  const scope = `exam/${cert.id}/standard`;
+  const [phase, setPhase]         = useSessionState('phase', 'intro', { scope });
+  const [seed, setSeed]           = useSessionState('seed', () => Date.now(), { scope });
+  const [questions, setQuestions] = useSessionState('questions', [], { scope });
+  const [answers, setAnswers]     = useSessionState('answers', {}, { scope });
+  const [flags, setFlags]         = useSessionState('flags', {}, { scope });
+  const [perQTime, setPerQTime]   = useSessionState('perQTime', {}, { scope });
+  const [index, setIndex]         = useSessionState('index', 0, { scope });
+  const [startedAt, setStartedAt] = useSessionState('startedAt', null, { scope });
+  const startedAtRef = useRef(startedAt);
   const lastTickRef = useRef(null);
 
   // ---------- start ----------
   const start = () => {
-    const qs = pickExamQuestions({ cert, count: cert.questions, seed });
+    const freshSeed = Date.now();
+    setSeed(freshSeed);
+    const qs = pickExamQuestions({ cert, count: cert.questions, seed: freshSeed });
     setQuestions(qs);
     setAnswers({});
     setFlags({});
     setPerQTime({});
     setIndex(0);
-    startedAtRef.current = Date.now();
-    lastTickRef.current = Date.now();
+    const now = Date.now();
+    setStartedAt(now);
+    startedAtRef.current = now;
+    lastTickRef.current = now;
     setPhase('playing');
   };
+
+  // BF-02: rehydrate startedAtRef when we recover from a refresh
+  useEffect(() => {
+    if (startedAt && !startedAtRef.current) {
+      startedAtRef.current = startedAt;
+      lastTickRef.current = Date.now();
+    }
+  }, [startedAt]);
 
   // ---------- per-question time tracking ----------
   useEffect(() => {

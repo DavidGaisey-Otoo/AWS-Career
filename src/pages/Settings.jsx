@@ -343,6 +343,16 @@ function GitHubTokenPanel({ currentToken, onSave }) {
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(null); // { ok, user, message }
 
+  // Expiry tracking — read existing record (if any) directly from localStorage
+  const [tokenMeta, setTokenMeta] = useState(() => {
+    try {
+      const raw = localStorage.getItem('awscl-pro::v1::github');
+      if (!raw) return { expiresAt: '', userLogin: null };
+      const parsed = JSON.parse(raw);
+      return { expiresAt: parsed.expiresAt || '', userLogin: parsed.userLogin || null };
+    } catch { return { expiresAt: '', userLogin: null }; }
+  });
+
   const verify = async () => {
     setVerifying(true);
     const { whoAmI } = await import('../lib/githubPush.js');
@@ -353,8 +363,23 @@ function GitHubTokenPanel({ currentToken, onSave }) {
     else        toast.error('Token check failed — see below');
   };
 
-  const save = () => {
+  const save = async () => {
     onSave(value.trim());
+    // Also write to the new storage so TokenExpiryBanner + Readiness can see it
+    try {
+      const { writeToken, clearToken } = await import('../lib/githubToken.js');
+      if (value.trim()) {
+        writeToken({
+          token: value.trim(),
+          expiresAt: tokenMeta.expiresAt || null,
+          userLogin: verified?.ok ? verified.user?.login : tokenMeta.userLogin || null,
+        });
+      } else {
+        clearToken();
+      }
+    } catch (err) {
+      console.warn('Could not sync to githubToken storage:', err);
+    }
     toast.success(value.trim() ? 'GitHub token saved' : 'GitHub token cleared');
   };
 
@@ -413,6 +438,22 @@ function GitHubTokenPanel({ currentToken, onSave }) {
             <button onClick={save} className="btn btn-primary !text-xs">Save</button>
           </div>
         </div>
+
+        {/* Expiry date tracking — feeds the app-wide warning banner + Readiness page */}
+        <label className="block mt-2">
+          <span className="text-[10px] font-bold text-muted flex items-center gap-1">
+            🗓 Token expiry date <span className="opacity-60 font-normal">(so we can warn you before it dies)</span>
+          </span>
+          <div className="mt-1 flex gap-1 items-center">
+            <input
+              type="date"
+              value={tokenMeta.expiresAt || ''}
+              onChange={(e) => setTokenMeta((s) => ({ ...s, expiresAt: e.target.value }))}
+              className="bg-[var(--card)] border border-token rounded-md px-2 py-1.5 text-xs focus-ring focus:border-aws-orange"
+            />
+            <span className="text-[10px] opacity-60">Pick the date GitHub showed in the "Expires" column. Click Save above to persist.</span>
+          </div>
+        </label>
 
         {verified && (
           <div className={cn(

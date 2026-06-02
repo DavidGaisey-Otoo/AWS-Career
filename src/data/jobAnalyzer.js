@@ -499,5 +499,7 @@ export function analyzeJob(text, profile) {
     // Cross-page autofill helpers (Stage 13.5)
     suggestedName:    suggestProjectName(cleaned, type, services),
     suggestedClient:  suggestClientCompany(cleaned),
+    // Raw input — Master Intelligence layer re-analyses this
+    rawText: cleaned,
   };
 }

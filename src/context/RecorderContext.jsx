@@ -69,11 +69,22 @@ export function RecorderProvider({ children }) {
     // Find the most recently started session and append to it.
     const id = [...activeRef.current.values()].pop();
     if (!id) return;
-    setSessions((s) => s.map((sess) => (
-      sess.id === id
-        ? { ...sess, events: [...sess.events, { at: new Date().toISOString(), ...event }] }
-        : sess
-    )));
+    setSessions((s) => s.map((sess) => {
+      if (sess.id !== id) return sess;
+      // BF-03: dedupe — skip if the LAST event is identical (same type+key+value)
+      // within the last 500ms. StrictMode + rapid handlers can fire twice.
+      const last = sess.events[sess.events.length - 1];
+      if (last
+          && last.type === event.type
+          && last.key === event.key
+          && last.valueSnippet === event.valueSnippet
+          && last.step === event.step
+          && Date.now() - new Date(last.at).getTime() < 500) {
+        console.warn('[Recorder] Skipping duplicate event:', event.type, event.key || event.step || '');
+        return sess;
+      }
+      return { ...sess, events: [...sess.events, { at: new Date().toISOString(), ...event }] };
+    }));
   }, [setSessions]);
 
   const endSession = useCallback((flowId, finalValues = null, status = 'complete') => {

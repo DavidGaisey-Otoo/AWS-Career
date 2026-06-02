@@ -1,16 +1,17 @@
 import { motion } from 'framer-motion';
 import {
-  Award, CheckCircle2, ChevronRight, Clock, ExternalLink, ListChecks, RotateCw,
-  Target, Trophy, X, XCircle,
+  AlertTriangle, Award, CheckCircle2, ChevronRight, Clock, ExternalLink, Lightbulb,
+  ListChecks, RotateCw, Target, Trophy, X, XCircle, Zap,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { fireConfetti, sideCannons } from '../ui/Confetti.js';
 import { passPercent } from '../../data/certs.js';
 import { cn } from '../../lib/utils.js';
 import { ProgressRing } from '../roadmap/ProgressRing.jsx';
 import { QuestionRenderer } from './QuestionRenderer.jsx';
+import { recordAttempt, findSustainedWeakness, isCriticalSession, recoveryPlanFor } from '../../lib/examWeakness.js';
 
 /**
  * Results page rendered after a standard exam finishes.
@@ -33,11 +34,27 @@ export function ExamResults({ cert, attempt, questions, answers, flags, onRetake
     }
   }, [passed]);
 
+  // EX-02: record this attempt + compute weakness state
+  useEffect(() => {
+    recordAttempt(cert.id, { scoreOverall: Math.round((scaledScore / 1000) * 100), byDomain });
+  }, [cert.id, scaledScore, byDomain]);
+
+  const sustainedWeakness = useMemo(() => findSustainedWeakness(cert.id), [cert.id, scaledScore]);
+  const critical          = useMemo(() => isCriticalSession(cert.id),    [cert.id, scaledScore]);
+  const navigate = useNavigate();
+
+  // Build a "retry weak topics only" deep link
+  const weakDomainIds = sustainedWeakness.map((w) => w.domainId);
+  function retryWeakTopics() {
+    const param = weakDomainIds.length ? `?domains=${weakDomainIds.join(',')}` : '';
+    navigate(`/exam/${cert.id}/run/practice${param}`);
+  }
+
   const domainChart = useMemo(() => {
     return cert.domains.map((d) => {
       const v = byDomain[d.id] || { correct: 0, total: 0 };
       const pct = v.total ? Math.round((v.correct / v.total) * 100) : 0;
-      return { name: d.label, pct, correct: v.correct, total: v.total };
+      return { domainId: d.id, name: d.label, pct, correct: v.correct, total: v.total };
     });
   }, [cert, byDomain]);
 
@@ -112,6 +129,20 @@ export function ExamResults({ cert, attempt, questions, answers, flags, onRetake
                 <span className="font-extrabold text-warning">Focus next:</span> {weakest.name} —
                 {' '}<strong>{weakest.pct}%</strong> ({weakest.correct}/{weakest.total}).
               </div>
+            )}
+
+            {/* EX-02: Critical-session red alert + mini recovery plan */}
+            {critical && weakest && (
+              <CriticalAlert cert={cert} domainId={weakest.domainId || cert.domains[0]?.id} scorePct={scorePct} />
+            )}
+
+            {/* EX-02: Sustained-weakness yellow banner — only if 2 in a row sub-60% on same topic */}
+            {sustainedWeakness.length > 0 && (
+              <SustainedWeaknessBanner
+                cert={cert}
+                items={sustainedWeakness}
+                onRetryWeak={retryWeakTopics}
+              />
             )}
             <div className="mt-5 flex flex-wrap gap-2">
               <button onClick={onRetake} className="btn btn-primary">
@@ -246,6 +277,102 @@ export function ExamResults({ cert, attempt, questions, answers, flags, onRetake
       )}
     </div>
   );
+}
+
+// EX-02: Critical-session red alert + mini recovery plan
+function CriticalAlert({ cert, domainId, scorePct }) {
+  const plan = recoveryPlanFor(cert, domainId);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+      className="mt-4 rounded-2xl border-2 border-danger/50 bg-danger/10 p-4"
+    >
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 w-10 h-10 rounded-xl bg-danger/20 text-danger grid place-items-center">
+          <Zap size={18} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-extrabold text-danger">🔴 This session needs attention</h3>
+          <p className="text-sm opacity-90 mt-1">
+            You scored {scorePct}% — below the 40% critical threshold. Don\'t panic — every cert
+            student hits this at least once. Here\'s a focused recovery plan for {plan?.label || 'your weakest area'}.
+          </p>
+          {plan && (
+            <ol className="mt-3 space-y-1.5 text-sm">
+              {plan.subtopics.map((s, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5 w-5 h-5 rounded bg-danger/15 text-danger text-[10px] font-extrabold grid place-items-center">{i + 1}</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {plan && (
+            <div className="mt-3 text-[11px] opacity-70">
+              Estimated time: <strong>{plan.estimatedHours} hours</strong> · Weight in real exam: <strong>{plan.weight}%</strong>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// EX-02: Sustained weakness yellow banner + retry button
+function SustainedWeaknessBanner({ cert, items, onRetryWeak }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+      className="mt-3 rounded-2xl border-2 border-warning/50 bg-warning/10 p-4"
+    >
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 w-10 h-10 rounded-xl bg-warning/20 text-warning grid place-items-center">
+          <AlertTriangle size={18} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-extrabold text-warning">
+            🟡 You\'re struggling with {items.length === 1 ? `${getDomainLabel(cert, items[0].domainId)}` : `${items.length} topics`} — let\'s fix that
+          </h3>
+          <p className="text-sm opacity-90 mt-1">
+            You\'ve scored under 60% on these topics in 2 sessions in a row. Run a focused practice with only these topics — small, regular wins are how you reverse a slump.
+          </p>
+          <div className="mt-3 space-y-2">
+            {items.slice(0, 3).map((w) => {
+              const plan = recoveryPlanFor(cert, w.domainId);
+              return (
+                <details key={w.domainId} className="rounded-lg border border-warning/30 bg-[var(--card-2)]/40 p-2.5 text-sm">
+                  <summary className="cursor-pointer font-bold flex items-center justify-between">
+                    <span>{getDomainLabel(cert, w.domainId)}</span>
+                    <span className="text-[11px] opacity-70 font-mono">latest {w.latestPct}% · prev {w.previousPct}%</span>
+                  </summary>
+                  {plan && (
+                    <ol className="mt-2 space-y-1 text-[12px]">
+                      {plan.subtopics.map((s, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Lightbulb size={10} className="shrink-0 mt-1 text-warning" />
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </details>
+              );
+            })}
+          </div>
+          <button
+            onClick={onRetryWeak}
+            className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning text-ink-950 font-extrabold text-xs hover:brightness-110 shadow-sm"
+          >
+            <RotateCw size={12} /> Retry weak topics only
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function getDomainLabel(cert, domainId) {
+  return cert.domains.find((d) => d.id === domainId)?.label || domainId;
 }
 
 function Stat({ icon: Icon, label, value, tone = 'text-current' }) {

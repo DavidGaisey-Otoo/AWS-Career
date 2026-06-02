@@ -12,6 +12,7 @@ import {
 import { Link } from 'react-router-dom';
 import { AWSUpdatesWidget } from '../components/dashboard/AWSUpdatesWidget.jsx';
 import { GettingStartedWidget } from '../components/dashboard/GettingStartedWidget.jsx';
+import { DailyStudyPlanCard } from '../components/study/DailyStudyPlanCard.jsx';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { DailyDigest } from '../components/learning/DailyDigest.jsx';
 import { Button } from '../components/ui/Button.jsx';
@@ -67,6 +68,9 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Getting Started — only shows until all 9 steps are done (or dismissed) */}
       <GettingStartedWidget />
+
+      {/* EX-20: Daily Study Plan — auto-generates from exam date + weak topics */}
+      <DailyStudyPlanCard />
 
       {/* HERO */}
       <section className="relative overflow-hidden rounded-3xl surface gradient-border">

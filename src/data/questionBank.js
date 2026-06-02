@@ -1666,20 +1666,59 @@ const AIF = [
 // ====================================================================
 // Master pool
 // ====================================================================
+// EX-01: pull in the premium V2 question pool (scenario-based, 4-paragraph
+// explanations, level + topic tagging). Legacy questions remain — V2 just
+// extends the pool so selectors return a richer mix.
+import { QUESTION_BANK_V2 } from './questionBankV2.js';
+// EX-04: extra 30 SAA-C03 scenario questions covering VPC/EC2/X-Ray/RDS/etc.
+import { SAA_V2_EXTRAS } from './questionBankV2_saaExtras.js';
+// EX-06: another 50 SAA-C03 scenarios — bulk expansion across every topic.
+import { SAA_V2_BULK } from './questionBankV2_saaBulk.js';
+// EX-07: +100 SAA-C03 scenarios — targets underserved topics (SNS/IAM/KMS/ECS/EKS/Aurora/ElastiCache/Kinesis/Glue/Athena/Redshift/DX/TGW/WAF/Secrets/Step/CloudWatch/EventBridge/Config/CloudTrail/Bedrock).
+import { SAA_V2_MEGA } from './questionBankV2_saaMega.js';
+// EX-08: +80 multi-service combo scenarios (real-exam style — every Q spans multiple services).
+import { SAA_V2_COMBO } from './questionBankV2_saaCombo.js';
+// EX-09 batch 1: +80 more SAA topic-pure scenarios (EC2/S3/VPC/RDS/Lambda/DDB/ALB/ASG/CF/R53).
+import { SAA_V2_XL } from './questionBankV2_saaXL.js';
+// EX-17 fill batches: bring every thin topic to ≥20 questions.
+import { SAA_V2_FILL } from './questionBankV2_saaFill.js';
+import { SAA_V2_FILL2 } from './questionBankV2_saaFill2.js';
+
 export const QUESTION_BANK = [
+  ...QUESTION_BANK_V2,
+  ...SAA_V2_EXTRAS,
+  ...SAA_V2_BULK,
+  ...SAA_V2_MEGA,
+  ...SAA_V2_COMBO,
+  ...SAA_V2_XL,
+  ...SAA_V2_FILL,
+  ...SAA_V2_FILL2,
   ...CLF, ...SAA, ...DVA, ...SOA, ...DEA, ...MLA,
   ...SAP, ...DOP, ...SCS, ...ANS, ...DBS, ...MLS, ...AIF,
 ];
 
 // ---------- helpers ----------
 
+// EX-03 perf: cache results per cert/domain because the bank has 1700+ items
+// and these are called dozens of times per render in the Exam pages. Cache
+// keys are immutable strings so no invalidation is needed at runtime.
+const _certCache = new Map();
+const _domainCache = new Map();
+
 export function questionsForCert(certId) {
-  return QUESTION_BANK.filter((q) => q.certIds.includes(certId));
+  if (_certCache.has(certId)) return _certCache.get(certId);
+  const out = QUESTION_BANK.filter((q) => q.certIds.includes(certId));
+  _certCache.set(certId, out);
+  return out;
 }
 
 export function questionsForDomain(certId, domainId) {
-  return QUESTION_BANK.filter((q) =>
+  const key = `${certId}::${domainId}`;
+  if (_domainCache.has(key)) return _domainCache.get(key);
+  const out = QUESTION_BANK.filter((q) =>
     q.certIds.includes(certId) && q.domainIds.includes(domainId));
+  _domainCache.set(key, out);
+  return out;
 }
 
 // Deterministic mulberry32 PRNG so test+rotation feel "random" but are

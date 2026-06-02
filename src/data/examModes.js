@@ -66,7 +66,9 @@ export const MODE_CONFIGS = {
     label: 'Topic',
     icon: '🧩',
     blurb: 'Pick one AWS service. Find your weak areas fast.',
-    paramsFn: () => ({ count: 15, timed: false }), // needs service pick on setup
+    // EX-09: was hard-coded 15 — now 'all' so when a tile has 80 questions
+    // the user sees all 80. The setup screen still lets them pick smaller.
+    paramsFn: () => ({ count: 'all', timed: false }), // needs service pick on setup
   },
   final: {
     id: 'final',
@@ -75,44 +77,67 @@ export const MODE_CONFIGS = {
     blurb: 'Randomised final test — readiness assessment.',
     paramsFn: (cert) => ({ count: cert.questions, minutes: cert.minutes, timed: true, autoStart: true }),
   },
+  // EX-18: Smart Review (spaced repetition). Confidence ratings drive selection.
+  smartReview: {
+    id: 'smartReview',
+    label: 'Smart Review',
+    icon: '🧠',
+    blurb: 'Spaced repetition — weak questions appear more, mastered ones less.',
+    paramsFn: () => ({ count: 20, timed: false }),
+  },
 };
 
-export const NEW_MODES = ['timed', 'review', 'section', 'topic', 'final'];
+export const NEW_MODES = ['timed', 'review', 'section', 'topic', 'final', 'smartReview'];
 export const ALL_MODES = ['standard', 'practice', 'learning', ...NEW_MODES];
 
 // ===================================================================
 // Topic services grid (matches IDs used in questionBank `service` tags)
 // ===================================================================
 
+// Topic catalogue with aliases — any of `id` or `aliases` matching a question's
+// `service[]` tag counts that question towards this topic. This catches the
+// many tag variants used across legacy + V2 question banks.
 export const TOPIC_SERVICES = [
-  { id: 'ec2',         label: 'EC2',          icon: '🖥' },
-  { id: 's3',          label: 'S3',           icon: '🪣' },
-  { id: 'vpc',         label: 'VPC',          icon: '🔗' },
-  { id: 'rds',         label: 'RDS',          icon: '🗄' },
-  { id: 'lambda',      label: 'Lambda',       icon: 'λ'  },
-  { id: 'dynamodb',    label: 'DynamoDB',     icon: '⚡' },
-  { id: 'alb',         label: 'ELB / ALB',    icon: '⚖' },
-  { id: 'asg',         label: 'Auto Scaling', icon: '↕'  },
-  { id: 'cloudfront',  label: 'CloudFront',   icon: '🌎' },
-  { id: 'route53',     label: 'Route 53',     icon: '🧭' },
-  { id: 'sqs',         label: 'SQS',          icon: '📨' },
-  { id: 'sns',         label: 'SNS',          icon: '📢' },
-  { id: 'iam',         label: 'IAM',          icon: '🛡' },
-  { id: 'kms',         label: 'KMS',          icon: '🔑' },
-  { id: 'ecs',         label: 'ECS',          icon: '🚢' },
-  { id: 'eks',         label: 'EKS',          icon: '☸'  },
-  { id: 'aurora',      label: 'Aurora',       icon: '🌌' },
-  { id: 'elasticache', label: 'ElastiCache',  icon: '🚀' },
-  { id: 'kinesis',     label: 'Kinesis',      icon: '📡' },
-  { id: 'glue',        label: 'Glue',         icon: '🧪' },
-  { id: 'athena',      label: 'Athena',       icon: '🔍' },
-  { id: 'redshift',    label: 'Redshift',     icon: '📊' },
-  { id: 'dx',          label: 'Direct Connect', icon: '🔌' },
-  { id: 'tgw',         label: 'Transit GW',   icon: '🛤' },
-  { id: 'waf',         label: 'WAF',          icon: '🧱' },
-  { id: 'shield',      label: 'Shield',       icon: '🛡' },
-  { id: 'secretsmgr',  label: 'Secrets Mgr',  icon: '🤐' },
-  { id: 'step',        label: 'Step Functions', icon: '🪜' },
+  // Mixed sits at the top — this is the "real exam" category where questions
+  // combine multiple services. EX-08: dumps showed most real questions are
+  // combos (S3+Lambda+DDB, ALB+ECS+WAF, VPC+S3+Endpoints, etc.) — they live
+  // here AND in each component-service tile via the service[] tags.
+  { id: 'mixed',       label: 'Multi-Service Scenarios', icon: '🧩', aliases: ['mixed', 'multi-service', 'combo', 'architecture'] },
+  { id: 'ec2',         label: 'EC2',          icon: '🖥', aliases: ['ec2', 'ec2-t3-large', 'ec2-autoscale'] },
+  { id: 's3',          label: 'S3',           icon: '🪣', aliases: ['s3', 'glacier', 'transfer-acceleration', 'lifecycle', 'intelligent-tiering'] },
+  { id: 'vpc',         label: 'VPC',          icon: '🔗', aliases: ['vpc', 'subnet', 'igw', 'nat-instance', 'nat-gateway', 'security-group', 'nacl', 'vpc-endpoint'] },
+  { id: 'rds',         label: 'RDS',          icon: '🗄', aliases: ['rds', 'rds-multiaz', 'rds-r5-large', 'multi-az', 'snapshot'] },
+  { id: 'lambda',      label: 'Lambda',       icon: 'λ',  aliases: ['lambda'] },
+  { id: 'dynamodb',    label: 'DynamoDB',     icon: '⚡', aliases: ['dynamodb', 'gsi', 'streams'] },
+  { id: 'alb',         label: 'ELB / ALB',    icon: '⚖', aliases: ['alb', 'nlb', 'elb', 'load-balancer'] },
+  { id: 'asg',         label: 'Auto Scaling', icon: '↕', aliases: ['asg', 'auto-scaling', 'ec2-autoscale', 'spot'] },
+  { id: 'cloudfront',  label: 'CloudFront',   icon: '🌎', aliases: ['cloudfront'] },
+  { id: 'route53',     label: 'Route 53',     icon: '🧭', aliases: ['route53', 'route-53', 'failover'] },
+  { id: 'sqs',         label: 'SQS',          icon: '📨', aliases: ['sqs', 'dlq'] },
+  { id: 'sns',         label: 'SNS',          icon: '📢', aliases: ['sns', 'fanout', 'pub-sub'] },
+  { id: 'iam',         label: 'IAM',          icon: '🛡', aliases: ['iam', 'shared-responsibility', 'sts', 'cross-account', 'organizations'] },
+  { id: 'kms',         label: 'KMS',          icon: '🔑', aliases: ['kms', 'multi-region-key', 'encryption'] },
+  { id: 'ecs',         label: 'ECS',          icon: '🚢', aliases: ['ecs', 'fargate', 'ecr'] },
+  { id: 'eks',         label: 'EKS',          icon: '☸',  aliases: ['eks', 'kubernetes'] },
+  { id: 'aurora',      label: 'Aurora',       icon: '🌌', aliases: ['aurora', 'global-database'] },
+  { id: 'elasticache', label: 'ElastiCache',  icon: '🚀', aliases: ['elasticache', 'redis', 'memcached'] },
+  { id: 'kinesis',     label: 'Kinesis',      icon: '📡', aliases: ['kinesis', 'firehose', 'data-streams'] },
+  { id: 'glue',        label: 'Glue',         icon: '🧪', aliases: ['glue', 'crawler'] },
+  { id: 'athena',      label: 'Athena',       icon: '🔍', aliases: ['athena'] },
+  { id: 'redshift',    label: 'Redshift',     icon: '📊', aliases: ['redshift'] },
+  { id: 'dx',          label: 'Direct Connect', icon: '🔌', aliases: ['dx', 'direct-connect', 'directconnect'] },
+  { id: 'tgw',         label: 'Transit GW',   icon: '🛤', aliases: ['tgw', 'transit-gateway'] },
+  { id: 'waf',         label: 'WAF',          icon: '🧱', aliases: ['waf'] },
+  { id: 'shield',      label: 'Shield',       icon: '🛡', aliases: ['shield'] },
+  { id: 'secretsmgr',  label: 'Secrets Mgr',  icon: '🤐', aliases: ['secretsmgr', 'secrets-manager', 'ssm-parameter', 'parameter-store'] },
+  { id: 'step',        label: 'Step Functions', icon: '🪜', aliases: ['step', 'step-functions', 'state-machine'] },
+  { id: 'cloudwatch',  label: 'CloudWatch',   icon: '📈', aliases: ['cloudwatch', 'cloudwatch-logs', 'xray', 'log-insights'] },
+  { id: 'eventbridge', label: 'EventBridge',  icon: '🔔', aliases: ['eventbridge', 'event-bus', 'event-rule'] },
+  { id: 'config',      label: 'AWS Config',   icon: '🩺', aliases: ['config', 'remediation'] },
+  { id: 'cloudtrail',  label: 'CloudTrail',   icon: '🛤', aliases: ['cloudtrail', 'audit-log'] },
+  { id: 'bedrock',     label: 'Bedrock / GenAI', icon: '🧠', aliases: ['bedrock', 'rag', 'llm', 'genai'] },
+  { id: 'cloudformation', label: 'CloudFormation', icon: '📋', aliases: ['cloudformation', 'cfn', 'stackset'] },
+  { id: 'migration',   label: 'Migration',    icon: '📦', aliases: ['datasync', 'dms', 'sct', 'snowball', 'snowball-edge', 'snowcone', 'snowmobile', 'storage-gateway', 'mgn', 'app2container', 'migration-hub', 'vmware', 'lift-shift', 'heterogeneous', 'homogeneous', 'cross-region', 'validation', 'cutover', 'file', 'volume', 'tape'] },
 ];
 
 // ===================================================================
@@ -187,21 +212,42 @@ export function servicePerformance(certState, cert) {
   const attempts = certState?.attempts || [];
   const banks = questionsForCert(cert.id);
   const idMap = new Map(banks.map((q) => [q.id, q]));
+
+  // EX-05: per-topic question-AVAILABILITY count (for greying out empty topics)
+  const availableByTopic = {};
+  for (const t of TOPIC_SERVICES) {
+    const aliasSet = new Set([t.id, ...(t.aliases || [])]);
+    availableByTopic[t.id] = banks.filter((q) =>
+      (q.service || []).some((tag) => aliasSet.has(tag))
+    ).length;
+  }
+
+  // Accuracy tally per topic — uses ALIAS matching so questions tagged
+  // with synonyms (e.g. "transit-gateway" vs "tgw") count correctly.
   const tally = {};
   for (const at of attempts) {
     for (const r of (at.questionResults || [])) {
       const q = idMap.get(r.qId); if (!q) continue;
-      for (const s of (q.service || [])) {
-        if (!tally[s]) tally[s] = { c: 0, t: 0 };
-        tally[s].t += 1;
-        if (r.isCorrect) tally[s].c += 1;
+      const qTags = q.service || [];
+      for (const t of TOPIC_SERVICES) {
+        const aliasSet = new Set([t.id, ...(t.aliases || [])]);
+        if (qTags.some((tag) => aliasSet.has(tag))) {
+          if (!tally[t.id]) tally[t.id] = { c: 0, t: 0 };
+          tally[t.id].t += 1;
+          if (r.isCorrect) tally[t.id].c += 1;
+        }
       }
     }
   }
   return TOPIC_SERVICES.map((s) => {
     const v = tally[s.id];
     const pct = v?.t ? Math.round((v.c / v.t) * 100) : null;
-    return { ...s, pct, attempts: v?.t || 0 };
+    return {
+      ...s,
+      pct,
+      attempts: v?.t || 0,
+      available: availableByTopic[s.id] || 0,
+    };
   });
 }
 

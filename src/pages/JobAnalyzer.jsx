@@ -13,6 +13,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { CATEGORY_COLOR, getServiceDef } from '../data/archStudio.js';
 import { SAMPLE_JOBS, analyzeJob } from '../data/jobAnalyzer.js';
 import { cn } from '../lib/utils.js';
+import { MasterIntelligencePanel } from '../components/intelligence/MasterIntelligencePanel.jsx';
 
 export default function JobAnalyzer() {
   const toast = useToast();
@@ -209,14 +210,53 @@ function Chip({ icon: Icon, label }) {
 // =================================================================
 
 function Analysis({ result }) {
+  // PJ-04 Phase B: derive params for the walkthrough generator
+  const briefText = result.rawText || result.jdText || '';
+  const serviceIds = (result.services || []).map((s) =>
+    typeof s === 'string' ? s : (s.id || s.label || '')
+  ).filter(Boolean);
+  const inferredTitle = (briefText.split(/\n/)[0] || 'Freelance job walkthrough').slice(0, 80);
+  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(inferredTitle)}&brief=${encodeURIComponent(briefText.slice(0, 600))}&services=${serviceIds.join(',')}&source=freelance`;
+
   return (
     <div className="space-y-3">
-      <Summary result={result} />
-      <ServicesPanel services={result.services} />
-      <FlagsPanel flags={result.flags} />
-      <DeploymentPanel deployment={result.deployment} />
-      <MissingInfoPanel missing={result.missing} />
-      <WorkflowsPanel workflows={result.workflows} />
+      {/* PJ-04 Phase B: jump straight to walkthrough generation pre-filled with this job */}
+      <section className="surface rounded-2xl p-4 border-l-4 border-l-aws-orange flex flex-wrap items-center gap-3">
+        <div className="text-3xl">🛠</div>
+        <div className="flex-1 min-w-[200px]">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange">
+            Ready to build?
+          </div>
+          <h3 className="text-base font-extrabold">Generate a Deep Walkthrough for this job</h3>
+          <p className="text-[11.5px] opacity-80 leading-snug mt-0.5">
+            Auto-orders the services from this brief into a numbered Deep Walkthrough — saved under 💼 Freelance Jobs.
+          </p>
+        </div>
+        <a
+          href={generateHref}
+          className="btn btn-primary inline-flex items-center gap-2 text-xs"
+        >
+          ✨ Generate walkthrough
+        </a>
+      </section>
+
+      {/* NEW: Master Intelligence — runs the universal analyser on the raw input */}
+      <MasterIntelligencePanel inputText={result.rawText || result.jdText} />
+
+      {/* Existing v1 analysis panels — kept for backwards compatibility */}
+      <details className="rounded-2xl border border-token bg-[var(--card-2)]/30 overflow-hidden">
+        <summary className="cursor-pointer px-4 py-2.5 text-xs font-bold opacity-70 hover:opacity-100">
+          Show legacy v1 analysis (Summary / Services / Flags / Deployment / Workflows)
+        </summary>
+        <div className="p-3 space-y-3">
+          <Summary result={result} />
+          <ServicesPanel services={result.services} />
+          <FlagsPanel flags={result.flags} />
+          <DeploymentPanel deployment={result.deployment} />
+          <MissingInfoPanel missing={result.missing} />
+          <WorkflowsPanel workflows={result.workflows} />
+        </div>
+      </details>
     </div>
   );
 }

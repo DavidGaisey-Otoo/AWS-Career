@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { CategoryTree } from '../components/learning/CategoryTree.jsx';
 import { DailyDigest } from '../components/learning/DailyDigest.jsx';
+import { DailyStudyPlanCard } from '../components/study/DailyStudyPlanCard.jsx';
 import { WhitepaperLibrary } from '../components/learning/WhitepaperLibrary.jsx';
 import { ProgressRing } from '../components/roadmap/ProgressRing.jsx';
 import { useLearning } from '../context/LearningContext.jsx';
@@ -23,6 +24,9 @@ export default function Learning() {
       />
 
       <DailyDigest />
+
+      {/* EX-20: Daily Study Plan — auto-generates from exam date + weak topics */}
+      <DailyStudyPlanCard />
 
       {/* hero progress */}
       <motion.section

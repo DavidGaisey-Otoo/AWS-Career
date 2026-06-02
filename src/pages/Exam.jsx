@@ -48,6 +48,27 @@ export default function Exam() {
       {/* Master dashboard */}
       <MasterDashboard ms={masterStats} />
 
+      {/* EX-19: Flashcards quick-access card */}
+      <motion.section
+        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+        className="surface rounded-2xl p-5 flex flex-wrap items-center gap-4 border-l-4 border-l-aws-orange"
+      >
+        <div className="text-4xl">🃏</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange">
+            New · Quick recall
+          </div>
+          <h3 className="text-lg font-extrabold tracking-tight">AWS Flashcards</h3>
+          <p className="text-xs text-muted mt-0.5">
+            70+ service cards across 7 categories — Compute, Storage, Database, Networking, Security, Serverless, ML.
+            Tap to flip · rate to track mastery.
+          </p>
+        </div>
+        <Link to="/flashcards" className="btn btn-primary !text-xs">
+          Open Flashcards
+        </Link>
+      </motion.section>
+
       {/* Recommended next */}
       {masterStats.recommended && (
         <motion.section
@@ -110,6 +131,10 @@ export default function Exam() {
             >
               <Link
                 to={`/exam/${cert.id}`}
+                // EX-03 perf: prefetch the ExamCertDetail lazy chunk on hover/focus
+                // so the click is instant. The dynamic import is cached after first.
+                onMouseEnter={() => { import('./ExamCertDetail.jsx'); }}
+                onFocus={() => { import('./ExamCertDetail.jsx'); }}
                 className={cn(
                   'group surface rounded-2xl p-4 h-full flex flex-col gap-3 hover:border-aws-orange/40 transition focus-ring relative overflow-hidden',
                   stats.earned && 'border-success/40'

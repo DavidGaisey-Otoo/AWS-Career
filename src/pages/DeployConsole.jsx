@@ -127,16 +127,29 @@ function VaultTab() {
   const [unlockTry, setUnlockTry] = useState('');
   const [unlockStatus, setUnlockStatus] = useState(null);
   const [panicOpen, setPanicOpen] = useState(false);
+  // Bugfix BF-01: track success state for ✓ ticks
+  const [createOk, setCreateOk] = useState(false);
+  const [unlockOk, setUnlockOk] = useState(false);
+  const [rotateOk, setRotateOk] = useState(false);
 
   const strength = passwordStrength(pw);
 
   async function handleCreate() {
     if (!activeProfile?.accessKeyId || !activeProfile?.secretAccessKey) {
+      console.error('✗ [Vault] Create blocked — no AWS creds in active profile');
       toast.error('No AWS credentials in active profile. Add them in AWS Account Manager first.');
       return;
     }
-    if (pw !== pw2) { toast.error('Passwords do not match.'); return; }
-    if (strength.score < 2) { toast.error(strength.warning); return; }
+    if (pw !== pw2) {
+      console.error('✗ [Vault] Create blocked — passwords don\'t match');
+      toast.error('Passwords do not match.');
+      return;
+    }
+    if (strength.score < 2) {
+      console.error('✗ [Vault] Create blocked — password too weak:', strength.warning);
+      toast.error(strength.warning);
+      return;
+    }
     setCreating(true);
     try {
       await initVault({
@@ -147,9 +160,13 @@ function VaultTab() {
         },
         password: pw,
       });
+      console.log('✓ [Vault] Created successfully — AES-GCM 256 vault encrypted');
+      setCreateOk(true);
+      setTimeout(() => setCreateOk(false), 5000);
       toast.success('🔒 Vault created. Your deploy password is the only way to unlock it — store it safely.');
       setPw(''); setPw2('');
     } catch (err) {
+      console.error('✗ [Vault] Create failed:', err);
       toast.error(err.message);
     } finally {
       setCreating(false);
@@ -158,18 +175,34 @@ function VaultTab() {
 
   async function handleUnlock() {
     setUnlockStatus(null);
-    const ok = await verifyPassword(unlockTry);
-    setUnlockStatus(ok ? 'ok' : 'bad');
-    if (ok) toast.success('Password verified.');
-    else    toast.error('Wrong password.');
+    try {
+      const ok = await verifyPassword(unlockTry);
+      setUnlockStatus(ok ? 'ok' : 'bad');
+      if (ok) {
+        console.log('✓ [Vault] Password verified — credentials are intact');
+        setUnlockOk(true);
+        setTimeout(() => setUnlockOk(false), 5000);
+        toast.success('Password verified.');
+      } else {
+        console.warn('✗ [Vault] Password verify failed — wrong password');
+        toast.error('Wrong password.');
+      }
+    } catch (err) {
+      console.error('✗ [Vault] Unlock threw:', err);
+      toast.error(err.message || 'Unlock failed');
+    }
   }
 
   async function handleRotate() {
     try {
       await rotatePassword({ oldPassword: rotateOld, newPassword: rotateNew });
+      console.log('✓ [Vault] Password rotated successfully — re-encrypted with new key');
+      setRotateOk(true);
+      setTimeout(() => setRotateOk(false), 5000);
       toast.success('Password rotated.');
       setRotateOld(''); setRotateNew('');
     } catch (err) {
+      console.error('✗ [Vault] Rotate failed:', err);
       toast.error(err.message);
     }
   }
@@ -179,12 +212,12 @@ function VaultTab() {
       {!hasVault ? (
         <SetupCard
           activeProfile={activeProfile} pw={pw} setPw={setPw} pw2={pw2} setPw2={setPw2}
-          strength={strength} creating={creating} onCreate={handleCreate}
+          strength={strength} creating={creating} onCreate={handleCreate} createOk={createOk}
         />
       ) : (
         <>
-          <UnlockTester unlockTry={unlockTry} setUnlockTry={setUnlockTry} unlockStatus={unlockStatus} onUnlock={handleUnlock} />
-          <RotateCard rotateOld={rotateOld} rotateNew={rotateNew} setRotateOld={setRotateOld} setRotateNew={setRotateNew} onRotate={handleRotate} />
+          <UnlockTester unlockTry={unlockTry} setUnlockTry={setUnlockTry} unlockStatus={unlockStatus} onUnlock={handleUnlock} unlockOk={unlockOk} />
+          <RotateCard rotateOld={rotateOld} rotateNew={rotateNew} setRotateOld={setRotateOld} setRotateNew={setRotateNew} onRotate={handleRotate} rotateOk={rotateOk} />
           <SettingsCard settings={settings} onUpdate={updateSettings} />
           <PanicCard onClick={() => setPanicOpen(true)} />
         </>
@@ -201,7 +234,7 @@ function VaultTab() {
   );
 }
 
-function SetupCard({ activeProfile, pw, setPw, pw2, setPw2, strength, creating, onCreate }) {
+function SetupCard({ activeProfile, pw, setPw, pw2, setPw2, strength, creating, onCreate, createOk }) {
   const hasCreds = !!(activeProfile?.accessKeyId && activeProfile?.secretAccessKey);
   const strengthColors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-emerald-400'];
   return (
@@ -253,15 +286,20 @@ function SetupCard({ activeProfile, pw, setPw, pw2, setPw2, strength, creating, 
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button variant="primary" onClick={onCreate} disabled={creating || !hasCreds || !pw || pw !== pw2 || strength.score < 2}>
-          {creating ? 'Creating…' : 'Create vault'}
+        <Button
+          variant={createOk ? 'ghost' : 'primary'}
+          onClick={onCreate}
+          disabled={creating || !hasCreds || !pw || pw !== pw2 || strength.score < 2}
+          iconRight={createOk ? CheckCircle2 : undefined}
+        >
+          {creating ? 'Creating…' : createOk ? 'Vault created' : 'Create vault'}
         </Button>
       </div>
     </div>
   );
 }
 
-function UnlockTester({ unlockTry, setUnlockTry, unlockStatus, onUnlock }) {
+function UnlockTester({ unlockTry, setUnlockTry, unlockStatus, onUnlock, unlockOk }) {
   return (
     <div className="rounded-2xl border border-token p-5 bg-[var(--card)]">
       <h3 className="text-lg font-bold mb-1">Test your password</h3>
@@ -272,7 +310,9 @@ function UnlockTester({ unlockTry, setUnlockTry, unlockStatus, onUnlock }) {
           placeholder="Deploy password"
           className="flex-1 px-3 py-2.5 rounded-xl bg-[var(--card-2)] border border-token text-sm"
         />
-        <Button variant="ghost" onClick={onUnlock}>Verify</Button>
+        <Button variant="ghost" onClick={onUnlock} iconRight={unlockOk ? CheckCircle2 : undefined}>
+          {unlockOk ? 'Verified' : 'Verify'}
+        </Button>
       </div>
       {unlockStatus === 'ok' && (
         <div className="mt-3 flex items-center gap-2 text-xs text-emerald-300"><CheckCircle2 size={12} /> Password valid.</div>
@@ -284,7 +324,7 @@ function UnlockTester({ unlockTry, setUnlockTry, unlockStatus, onUnlock }) {
   );
 }
 
-function RotateCard({ rotateOld, rotateNew, setRotateOld, setRotateNew, onRotate }) {
+function RotateCard({ rotateOld, rotateNew, setRotateOld, setRotateNew, onRotate, rotateOk }) {
   return (
     <div className="rounded-2xl border border-token p-5 bg-[var(--card)]">
       <h3 className="text-lg font-bold mb-1 flex items-center gap-2"><RotateCcw size={16} /> Rotate password</h3>
@@ -302,7 +342,9 @@ function RotateCard({ rotateOld, rotateNew, setRotateOld, setRotateNew, onRotate
         />
       </div>
       <div className="mt-3 flex justify-end">
-        <Button variant="ghost" onClick={onRotate} disabled={!rotateOld || !rotateNew}>Rotate</Button>
+        <Button variant="ghost" onClick={onRotate} disabled={!rotateOld || !rotateNew} iconRight={rotateOk ? CheckCircle2 : undefined}>
+          {rotateOk ? 'Rotated' : 'Rotate'}
+        </Button>
       </div>
     </div>
   );

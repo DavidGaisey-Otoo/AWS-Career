@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Check, Flag, X } from 'lucide-react';
+import { BookOpen, Check, ExternalLink, Flag, Lightbulb, Target, X, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils.js';
 
 /**
@@ -55,15 +55,34 @@ export function QuestionRenderer({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-muted">
           <span>Question <span className="text-aws-orange">{index + 1}</span> / {total}</span>
-          <span className={cn(
-            'chip border text-[10px]',
-            q.difficulty === 'easy'   ? 'border-success/40 text-success bg-success/10' :
-            q.difficulty === 'hard'   ? 'border-warning/40 text-warning bg-warning/10' :
-            q.difficulty === 'expert' ? 'border-danger/40 text-danger bg-danger/10' :
-                                        'border-token text-muted bg-[var(--card-2)]',
-          )}>
-            {q.difficulty}
-          </span>
+          {/* EX-01: prefer the new `level` tag (Foundational/Associate/Professional) when present */}
+          {q.level ? (
+            <span className={cn(
+              'chip border text-[10px]',
+              q.level === 'Foundational' ? 'border-success/40 text-success bg-success/10' :
+              q.level === 'Associate'    ? 'border-aws-orange/40 text-aws-orange bg-aws-orange/10' :
+              q.level === 'Professional' ? 'border-danger/40 text-danger bg-danger/10' :
+                                           'border-token text-muted bg-[var(--card-2)]',
+            )}>
+              {q.level}
+            </span>
+          ) : (
+            <span className={cn(
+              'chip border text-[10px]',
+              q.difficulty === 'easy'   ? 'border-success/40 text-success bg-success/10' :
+              q.difficulty === 'hard'   ? 'border-warning/40 text-warning bg-warning/10' :
+              q.difficulty === 'expert' ? 'border-danger/40 text-danger bg-danger/10' :
+                                          'border-token text-muted bg-[var(--card-2)]',
+            )}>
+              {q.difficulty}
+            </span>
+          )}
+          {/* EX-01: topic tag (Storage / Compute / Security / ...) */}
+          {q.topic && (
+            <span className="chip border border-electric/40 text-electric bg-electric/10 text-[10px]">
+              {q.topic}
+            </span>
+          )}
           {q.service?.length > 0 && (
             <span className="chip border border-token text-muted bg-[var(--card-2)] text-[10px]">
               {q.service.slice(0, 2).join(', ')}
@@ -140,16 +159,67 @@ export function QuestionRenderer({
         })}
       </ul>
 
-      {/* Reveal explanation */}
+      {/* Reveal explanation — V2 questions get a rich multi-section panel,
+          legacy questions keep the original simple "Why" block. */}
       {revealed && q.why && (
         <motion.div
           initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-electric/30 bg-electric/5 p-3.5"
+          className="rounded-xl border border-electric/30 bg-electric/5 overflow-hidden"
         >
-          <div className="text-[11px] font-extrabold uppercase tracking-widest text-electric mb-1">
-            Why
+          {/* Correct-answer block — always shown */}
+          <div className="p-3.5 border-b border-electric/20">
+            <div className="text-[11px] font-extrabold uppercase tracking-widest text-success mb-1 flex items-center gap-1.5">
+              <Check size={11} />
+              Why {String.fromCharCode(65 + (Array.isArray(q.answer) ? q.answer[0] : q.answer))} is correct
+            </div>
+            <p className="text-sm leading-relaxed">{q.why}</p>
           </div>
-          <p className="text-sm leading-relaxed">{q.why}</p>
+
+          {/* EX-01: per-wrong-answer reasoning block — only when wrongReasons map is populated */}
+          {q.wrongReasons && Object.keys(q.wrongReasons).length > 0 && (
+            <div className="p-3.5 border-b border-electric/20 space-y-2 bg-[var(--card-2)]/30">
+              <div className="text-[11px] font-extrabold uppercase tracking-widest text-danger mb-1 flex items-center gap-1.5">
+                <XCircle size={11} />
+                Why the other options are wrong
+              </div>
+              {q.options.map((opt, i) => {
+                const reason = q.wrongReasons?.[i];
+                if (!reason) return null;
+                if (isCorrect(i)) return null;
+                return (
+                  <div key={i} className="text-sm leading-relaxed flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5 w-5 h-5 rounded bg-danger/15 text-danger text-[10px] font-extrabold grid place-items-center">
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    <span><strong className="text-danger">Not {String.fromCharCode(65 + i)}:</strong> {reason}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* EX-01: concept + docs link */}
+          {(q.concept || q.docs) && (
+            <div className="p-3.5 bg-[var(--card-2)]/20 flex flex-wrap items-start gap-3">
+              {q.concept && (
+                <div className="flex-1 min-w-[200px]">
+                  <div className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange mb-1 flex items-center gap-1.5">
+                    <Lightbulb size={11} />
+                    Concept tested
+                  </div>
+                  <p className="text-sm leading-relaxed">{q.concept}</p>
+                </div>
+              )}
+              {q.docs && (
+                <a
+                  href={q.docs} target="_blank" rel="noreferrer"
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-aws-orange/15 text-aws-orange hover:bg-aws-orange/25 border border-aws-orange/30 text-[11px] font-bold"
+                >
+                  <BookOpen size={12} /> AWS Docs <ExternalLink size={10} />
+                </a>
+              )}
+            </div>
+          )}
         </motion.div>
       )}
     </div>

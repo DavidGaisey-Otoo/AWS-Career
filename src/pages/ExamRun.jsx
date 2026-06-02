@@ -4,6 +4,7 @@ import { ChevronLeft } from 'lucide-react';
 import { ExamResults } from '../components/exam/ExamResults.jsx';
 import { LearningModeRunner } from '../components/exam/LearningModeRunner.jsx';
 import { PracticeRunner } from '../components/exam/PracticeRunner.jsx';
+import { SmartReviewRunner } from '../components/exam/SmartReviewRunner.jsx';
 import { StandardExamRunner } from '../components/exam/StandardExamRunner.jsx';
 import { getCert } from '../data/certs.js';
 import { MODE_CONFIGS, adaptivePool } from '../data/examModes.js';
@@ -53,7 +54,13 @@ export default function ExamRun() {
     );
   }
   if (mode === 'practice') {
-    return <PracticeRunner cert={cert} onComplete={() => {}} onExit={back} />;
+    // EX-02: support `?domains=d1,d2` deep-link from the "Retry weak topics only" button.
+    // Picks the first domain (PracticeRunner filters by one today; the URL captures the full set).
+    const weakDomains = searchParams.get('domains');
+    const initial = weakDomains
+      ? { domainId: weakDomains.split(',')[0], autoStart: true, mode: 'weak-topic-retry' }
+      : {};
+    return <PracticeRunner cert={cert} onComplete={() => {}} onExit={back} initial={initial} />;
   }
   if (mode === 'learning') {
     return <LearningModeRunner cert={cert} onExit={back} />;
@@ -137,6 +144,11 @@ export default function ExamRun() {
         initial={{ ...configFor('final'), mode: 'final' }}
       />
     );
+  }
+
+  // EX-18: Smart Review (spaced repetition)
+  if (mode === 'smartReview' || mode === 'smart-review') {
+    return <SmartReviewRunner cert={cert} onExit={back} />;
   }
 
   return null;

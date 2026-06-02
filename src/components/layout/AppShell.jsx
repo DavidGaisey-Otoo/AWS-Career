@@ -19,6 +19,10 @@ import { FloatingActionButton } from './FloatingActionButton.jsx';
 import { Header } from './Header.jsx';
 import { MobileNav } from './MobileNav.jsx';
 import { Sidebar } from './Sidebar.jsx';
+import { TokenExpiryBanner } from '../system/TokenExpiryBanner.jsx';
+import { EmergencyStopFAB } from '../system/EmergencyStopFAB.jsx';
+import { RouteMemory } from '../system/RouteMemory.jsx';
+import { InitialSplash } from '../system/InitialSplash.jsx';
 
 export function AppShell() {
   const { paletteOpen, openPalette, closePalette, profile } = useApp();
@@ -61,6 +65,7 @@ export function AppShell() {
 
       {/* Main column */}
       <div className="flex-1 min-w-0 flex flex-col">
+        <TokenExpiryBanner />
         <Header onMobileMenu={() => setMobileOpen(true)} />
         <main className="flex-1 min-w-0 relative">
           <AnimatePresence mode="wait">
@@ -79,8 +84,13 @@ export function AppShell() {
         </main>
       </div>
 
+      {/* BF-02: state-persistence + initial loading splash */}
+      <RouteMemory />
+      <InitialSplash />
+
       <MobileNav />
       <FloatingActionButton />
+      <EmergencyStopFAB />
       <CommandPalette />
       <TaskDetailPanel />
       <XPFloaterLayer />
