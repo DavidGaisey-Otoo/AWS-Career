@@ -18,6 +18,7 @@ import { saveWalkthrough } from '../lib/savedWalkthroughs.js';
 import { suggestRegion } from '../lib/regionSuggester.js';
 import { setProjectRegion } from '../lib/projectRegion.js';
 import { REGION_LABELS } from '../data/awsPricing.js';
+import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
 import { cn } from '../lib/utils.js';
 
 export default function NewWalkthrough() {
@@ -132,33 +133,13 @@ export default function NewWalkthrough() {
           )}
         </div>
 
-        <div>
-          <label className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange mb-1.5 block">
-            Or pick services directly ({finalServices.length} selected)
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {SUPPORTED_SERVICES.map((svc) => {
-              const isDetected = detected.includes(svc);
-              const isPicked = picked.includes(svc);
-              const isOn = isPicked || isDetected;
-              return (
-                <button
-                  key={svc}
-                  type="button"
-                  onClick={() => togglePick(svc)}
-                  className={cn(
-                    'rounded-lg px-2.5 py-1 text-[11.5px] font-bold border transition',
-                    isOn
-                      ? 'border-aws-orange bg-aws-orange/15 text-aws-orange'
-                      : 'border-token text-muted hover:text-current'
-                  )}
-                  title={isDetected ? 'Detected in your brief' : 'Click to add'}
-                >
-                  {isOn && <span className="mr-0.5">✓</span>}{svc}
-                </button>
-              );
-            })}
-          </div>
+        {/* AD-02: Service Suggestion Chips with popovers */}
+        <div className="rounded-xl bg-[var(--card-2)]/30 border border-token p-3.5">
+          <ServiceSuggestionChips
+            brief={brief}
+            selected={picked}
+            onChange={setPicked}
+          />
         </div>
 
         <div>

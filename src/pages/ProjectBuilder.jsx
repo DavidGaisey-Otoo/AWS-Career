@@ -17,7 +17,7 @@
  * suggestName(). The session is auto-recorded; the final step bundles
  * the recording + values into a polished report.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Sparkles, User, Layers, Globe, Cloud, BookOpen, Github,
   FileText, Download, Printer, ExternalLink, ArrowRight, CheckCircle2,
@@ -30,6 +30,7 @@ import { useAWS } from '../context/AWSContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { CostEstimatorCard } from '../components/build/CostEstimatorCard.jsx';
 import { RegionSuggestionChip } from '../components/build/RegionSuggestionChip.jsx';
+import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
 import { useProjectRegion } from '../lib/projectRegion.js';
 import { Link } from 'react-router-dom';
 import { suggestName, suggestVariations, describeKind } from '../lib/nameSuggester.js';
@@ -466,17 +467,10 @@ function GenerateStage({ values }) {
         />
       </div>
 
-      {/* AD-01: Region suggestion card — stable id per project type */}
-      <ProjectBuilderRegionCard
-        projectId={`pb-${values.projectType || 'default'}`}
-        brief={`${values.projectName || ''} ${values.summary || ''} ${values.architecture || ''}`.trim()}
-      />
-
-      {/* PJ-03: AWS Cost Estimator — services inferred from project type */}
-      <ProjectBuilderCostCard
-        services={PROJECT_TYPE_SERVICES[values.projectType] || ['s3', 'cloudfront']}
-        projectName={values.projectName || 'this project'}
-        projectId={`pb-${values.projectType || 'default'}`}
+      {/* AD-02 + AD-01 + PJ-03: smart services + region + cost trio */}
+      <ProjectBuilderSmartPanel
+        values={values}
+        defaultServices={PROJECT_TYPE_SERVICES[values.projectType] || ['s3', 'cloudfront']}
       />
 
       {/* PJ-04 Phase B: Generate a Deep Walkthrough from this project */}
@@ -667,31 +661,49 @@ function synthSession(values) {
   };
 }
 
-// AD-01: Region card with explanation chip
-function ProjectBuilderRegionCard({ projectId, brief }) {
-  return (
-    <section className="surface rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-aws-orange">
-      <div className="flex-1 min-w-[200px]">
-        <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-0.5">
-          AD-01 · AWS region for this project
-        </div>
-        <div className="text-[12.5px] opacity-85">
-          Auto-suggested based on your project description. Click the chip to see why or override.
-        </div>
-      </div>
-      <RegionSuggestionChip projectId={projectId} brief={brief} />
-    </section>
-  );
-}
-
-// AD-01: Cost card that reads the per-project region
-function ProjectBuilderCostCard({ projectId, services, projectName }) {
+// AD-02 + AD-01 + PJ-03: combined smart panel — services + region + cost
+function ProjectBuilderSmartPanel({ values, defaultServices }) {
+  const projectId = `pb-${values.projectType || 'default'}`;
+  const brief = `${values.projectName || ''} ${values.summary || ''} ${values.architecture || ''}`.trim();
   const saved = useProjectRegion(projectId);
+  const [services, setServices] = useState(defaultServices);
+
+  // Update services when project type changes (resets to type defaults)
+  useEffect(() => {
+    setServices(defaultServices);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.projectType]);
+
   return (
-    <CostEstimatorCard
-      services={services}
-      projectName={projectName}
-      region={saved?.region}
-    />
+    <div className="space-y-3">
+      {/* AD-02: Services */}
+      <section className="surface rounded-2xl p-4">
+        <ServiceSuggestionChips
+          brief={brief}
+          selected={services}
+          onChange={setServices}
+        />
+      </section>
+
+      {/* AD-01: Region */}
+      <section className="surface rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-aws-orange">
+        <div className="flex-1 min-w-[200px]">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-0.5">
+            AD-01 · AWS region for this project
+          </div>
+          <div className="text-[12.5px] opacity-85">
+            Auto-suggested based on your project description. Click the chip to see why or override.
+          </div>
+        </div>
+        <RegionSuggestionChip projectId={projectId} brief={brief} />
+      </section>
+
+      {/* PJ-03: Cost estimate using the selected services + region */}
+      <CostEstimatorCard
+        services={services}
+        projectName={values.projectName || 'this project'}
+        region={saved?.region}
+      />
+    </div>
   );
 }

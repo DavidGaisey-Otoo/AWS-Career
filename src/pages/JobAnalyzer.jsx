@@ -14,6 +14,7 @@ import { CATEGORY_COLOR, getServiceDef } from '../data/archStudio.js';
 import { SAMPLE_JOBS, analyzeJob } from '../data/jobAnalyzer.js';
 import { cn } from '../lib/utils.js';
 import { MasterIntelligencePanel } from '../components/intelligence/MasterIntelligencePanel.jsx';
+import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
 
 export default function JobAnalyzer() {
   const toast = useToast();
@@ -212,14 +213,25 @@ function Chip({ icon: Icon, label }) {
 function Analysis({ result }) {
   // PJ-04 Phase B: derive params for the walkthrough generator
   const briefText = result.rawText || result.jdText || '';
-  const serviceIds = (result.services || []).map((s) =>
-    typeof s === 'string' ? s : (s.id || s.label || '')
-  ).filter(Boolean);
+  const [pickedServices, setPickedServices] = useState(
+    (result.services || []).map((s) =>
+      typeof s === 'string' ? s : (s.id || s.label || '')
+    ).filter(Boolean)
+  );
   const inferredTitle = (briefText.split(/\n/)[0] || 'Freelance job walkthrough').slice(0, 80);
-  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(inferredTitle)}&brief=${encodeURIComponent(briefText.slice(0, 600))}&services=${serviceIds.join(',')}&source=freelance`;
+  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(inferredTitle)}&brief=${encodeURIComponent(briefText.slice(0, 600))}&services=${pickedServices.join(',')}&source=freelance`;
 
   return (
     <div className="space-y-3">
+      {/* AD-02: Smart AWS Service Suggestion chips with hover popovers */}
+      <section className="surface rounded-2xl p-4">
+        <ServiceSuggestionChips
+          brief={briefText}
+          selected={pickedServices}
+          onChange={setPickedServices}
+        />
+      </section>
+
       {/* PJ-04 Phase B: jump straight to walkthrough generation pre-filled with this job */}
       <section className="surface rounded-2xl p-4 border-l-4 border-l-aws-orange flex flex-wrap items-center gap-3">
         <div className="text-3xl">🛠</div>
@@ -230,6 +242,7 @@ function Analysis({ result }) {
           <h3 className="text-base font-extrabold">Generate a Deep Walkthrough for this job</h3>
           <p className="text-[11.5px] opacity-80 leading-snug mt-0.5">
             Auto-orders the services from this brief into a numbered Deep Walkthrough — saved under 💼 Freelance Jobs.
+            <strong className="text-aws-orange"> {pickedServices.length} service{pickedServices.length === 1 ? '' : 's'}</strong> will carry through.
           </p>
         </div>
         <a
