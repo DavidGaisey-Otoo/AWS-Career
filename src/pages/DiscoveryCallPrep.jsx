@@ -18,6 +18,7 @@ import {
 import { PROJECTS } from '../data/projects.js';
 import { analyzeJob } from '../data/jobAnalyzer.js';
 import { gmailComposeUrl, outlookComposeUrl } from '../data/emailTemplates.js';
+import { BookDiscoveryCallButton } from '../components/calendar/BookDiscoveryCallButton.jsx';
 import { cn } from '../lib/utils.js';
 
 export default function DiscoveryCallPrep() {
@@ -183,6 +184,15 @@ ${profile.name || 'Your Name'}`;
         subtitle="Auto-generated from the job analysis: project-type-aware questions, your talking points, common objections + responses, and a one-click follow-up email after the call."
         icon={PhoneCall}
       />
+
+      {/* IN-01: Book the call in one click */}
+      <div className="flex justify-end">
+        <BookDiscoveryCallButton
+          variant="primary"
+          defaultTitle={lastAnalysis?.suggestedName ? `Discovery call — ${lastAnalysis.suggestedName}` : 'Discovery call'}
+          defaultDescription={jdText ? `Project brief:\n\n${jdText.slice(0, 600)}` : ''}
+        />
+      </div>
 
       {lastAnalysis && (
         <div className="surface rounded-2xl px-3 py-2 flex items-center gap-2 border-aws-orange/30 bg-aws-orange/5">

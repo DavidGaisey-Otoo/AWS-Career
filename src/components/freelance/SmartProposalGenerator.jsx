@@ -27,6 +27,7 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { generateSmartProposal, wordCount } from '../../lib/smartProposalGenerator.js';
 import { ApproachRecommendationPanel } from '../build/ApproachRecommendationPanel.jsx';
 import { getApproachById } from '../../lib/approachRecommender.js';
+import { BookDiscoveryCallButton } from '../calendar/BookDiscoveryCallButton.jsx';
 import { cn } from '../../lib/utils.js';
 
 const TARGET_LOW = 200;
@@ -337,6 +338,11 @@ export function SmartProposalGenerator() {
               >
                 <Mail size={11} /> Also send as Email
               </button>
+              <BookDiscoveryCallButton
+                variant="outline"
+                defaultTitle={`Discovery call — ${proposal.analysis?.projectTitle || 'AWS project'}`}
+                defaultDescription={`Project: ${proposal.analysis?.projectTitle || 'AWS project'}\n\nServices: ${(proposal.analysis?.services || []).join(', ') || 'TBD'}\n\nNotes from proposal:\n${stripMarkdown(displayText).slice(0, 500)}`}
+              />
               <button
                 onClick={handleSaveToTracker}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11.5px] font-bold bg-gradient-aws text-ink-950 hover:brightness-110 transition"

@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { AWS_LEVELS, GOALS, STORAGE_KEY } from '../lib/constants.js';
 import { cn, formatCurrency } from '../lib/utils.js';
+import { GoogleCalendarConnectCard } from '../components/integrations/GoogleCalendarConnectCard.jsx';
 
 const SECTIONS = [
   { id: 'profile',       label: 'Profile',          icon: User },
@@ -312,7 +313,10 @@ function IntegrationSection() {
   const toast = useToast();
   return (
     <Section title="Integrations" subtitle="Link your external profiles so the app can reference them in proposals + portfolio.">
-      <div className="grid sm:grid-cols-2 gap-3">
+      {/* IN-01: Google Calendar OAuth connect */}
+      <GoogleCalendarConnectCard />
+
+      <div className="grid sm:grid-cols-2 gap-3 mt-3">
         <Field label="GitHub URL"   icon={Github}   value={i.github}    onChange={(v) => updateIntegrations({ github: v })}
                placeholder="https://github.com/your-handle" wide />
         <Field label="LinkedIn URL" icon={Linkedin} value={i.linkedin}  onChange={(v) => updateIntegrations({ linkedin: v })}
