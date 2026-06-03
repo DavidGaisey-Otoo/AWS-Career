@@ -25,6 +25,7 @@ import { useApp } from '../../context/AppContext.jsx';
 import { useFreelance } from '../../context/FreelanceContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { generateSmartProposal, wordCount } from '../../lib/smartProposalGenerator.js';
+import { logProposal } from '../../lib/proposalLog.js';
 import { ApproachRecommendationPanel } from '../build/ApproachRecommendationPanel.jsx';
 import { getApproachById } from '../../lib/approachRecommender.js';
 import { BookDiscoveryCallButton } from '../calendar/BookDiscoveryCallButton.jsx';
@@ -95,6 +96,22 @@ export function SmartProposalGenerator() {
       setProposal(result);
       setEdited(result.fullText);
       setIsEditing(false);
+
+      // FR-05: auto-log the proposal (dedupes by JD + same day, so
+      // regenerates update the existing entry instead of inflating count)
+      try {
+        logProposal({
+          jd: useJd,
+          gigTitle: result.analysis?.projectTitle || '',
+          platform: 'manual',
+          text: result.fullText,
+          approach: approach || 'auto',
+          services: result.analysis?.services || [],
+        });
+      } catch (logErr) {
+        // Non-fatal — proposal generation succeeded, logging failed
+        console.warn('[SmartProposalGenerator] auto-log failed:', logErr);
+      }
     } catch (err) {
       console.error('[SmartProposalGenerator]', err);
       setError('Could not generate proposal — try a longer job description.');
