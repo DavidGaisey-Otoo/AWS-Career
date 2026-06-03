@@ -20,6 +20,7 @@ import { setProjectRegion } from '../lib/projectRegion.js';
 import { REGION_LABELS } from '../data/awsPricing.js';
 import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
 import { AutoFillFromBrief } from '../components/build/AutoFillFromBrief.jsx';
+import { ApproachRecommendationPanel } from '../components/build/ApproachRecommendationPanel.jsx';
 import { cn } from '../lib/utils.js';
 
 export default function NewWalkthrough() {
@@ -156,6 +157,15 @@ export default function NewWalkthrough() {
           <div className="text-[11px] opacity-70 italic">
             Will generate {finalServices.length} step{finalServices.length === 1 ? '' : 's'} · estimated {Math.max(15, finalServices.length * 12)} min read · auto difficulty {finalServices.length <= 3 ? 'Beginner' : finalServices.length <= 6 ? 'Intermediate' : 'Advanced'}.
           </div>
+        )}
+
+        {/* FR-04: Recommended approach */}
+        {(brief.trim() || finalServices.length > 0) && (
+          <ApproachRecommendationPanel
+            brief={brief}
+            services={finalServices}
+            className="!p-3"
+          />
         )}
 
         {/* AD-01: Live region suggestion preview */}

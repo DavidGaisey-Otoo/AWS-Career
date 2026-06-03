@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchAllGigs, clearCache, getCacheAge, GIG_SOURCES } from '../../lib/gigFeed.js';
+import { recommendApproach, getApproachById } from '../../lib/approachRecommender.js';
 import { cn } from '../../lib/utils.js';
 
 const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
@@ -312,6 +313,9 @@ function GigCard({ gig }) {
         </div>
       )}
 
+      {/* FR-04: recommended approach */}
+      <GigApproachBadge gig={gig} />
+
       {/* Action buttons */}
       <div className="flex flex-wrap gap-1.5 mt-1 pt-2 border-t border-token">
         <a
@@ -344,6 +348,25 @@ function GigCard({ gig }) {
           ✨ Walkthrough
         </Link>
       </div>
+    </div>
+  );
+}
+
+// FR-04: tiny inline approach recommendation chip on every gig card
+function GigApproachBadge({ gig }) {
+  const brief = `${gig.title}\n${gig.description}\n${(gig.skills || []).join(' ')}`;
+  const rec = recommendApproach({ brief, services: gig.skills || [] });
+  const opt = getApproachById(rec.recommended);
+  const toneClass = {
+    sky: 'text-sky-400 bg-sky-400/10 border-sky-400/30',
+    amber: 'text-amber-400 bg-amber-400/10 border-amber-400/30',
+    orange: 'text-aws-orange bg-aws-orange/10 border-aws-orange/30',
+    violet: 'text-violet-400 bg-violet-400/10 border-violet-400/30',
+  }[opt.tone] || 'text-aws-orange bg-aws-orange/10 border-aws-orange/30';
+  return (
+    <div className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold', toneClass)}
+         title={rec.rationale}>
+      ✦ Recommended: {opt.label}
     </div>
   );
 }

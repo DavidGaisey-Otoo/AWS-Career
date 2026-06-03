@@ -25,6 +25,8 @@ import { useApp } from '../../context/AppContext.jsx';
 import { useFreelance } from '../../context/FreelanceContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { generateSmartProposal, wordCount } from '../../lib/smartProposalGenerator.js';
+import { ApproachRecommendationPanel } from '../build/ApproachRecommendationPanel.jsx';
+import { getApproachById } from '../../lib/approachRecommender.js';
 import { cn } from '../../lib/utils.js';
 
 const TARGET_LOW = 200;
@@ -45,6 +47,7 @@ export function SmartProposalGenerator() {
   const [lengthMode, setLengthMode] = useState('normal'); // normal | short | long
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [approach, setApproach] = useState(null); // FR-04 — null = use recommended
 
   // FR-02: react to deep-link prefill from Gig Feed
   useEffect(() => {
@@ -57,7 +60,16 @@ export function SmartProposalGenerator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
 
-  const wc = useMemo(() => wordCount(edited || proposal?.fullText || ''), [edited, proposal]);
+  // FR-04: apply the chosen approach annotation to the proposal text
+  // This is a non-destructive transform — `edited` and `proposal.fullText`
+  // stay untouched, we just decorate the My-approach section on the fly.
+  const displayText = useMemo(() => {
+    const base = edited || proposal?.fullText || '';
+    if (!proposal || !approach) return base;
+    return injectApproachLine(base, approach);
+  }, [edited, proposal, approach]);
+
+  const wc = useMemo(() => wordCount(displayText), [displayText]);
   const wcStatus = useMemo(() => {
     if (wc === 0) return { tone: 'opacity-50', label: '' };
     if (wc < TARGET_LOW) return { tone: 'text-warning', label: `too short (target ${TARGET_LOW}-${TARGET_HIGH})` };
@@ -111,7 +123,7 @@ export function SmartProposalGenerator() {
   }
 
   async function handleCopy() {
-    const text = edited || proposal?.fullText || '';
+    const text = displayText;
     if (!text) return;
     try {
       await navigator.clipboard.writeText(stripMarkdown(text));
@@ -136,7 +148,7 @@ export function SmartProposalGenerator() {
   // FR-03: format proposal as email + deep-link to Email Outreach tab
   function handleAlsoSendAsEmail() {
     if (!proposal) return;
-    const proposalText = edited || proposal.fullText;
+    const proposalText = displayText;
     const title = proposal.analysis?.projectTitle || 'your AWS project';
     const clientFirst = proposal.analysis?.clientName?.split(' ')[0] || 'there';
 
@@ -160,7 +172,8 @@ export function SmartProposalGenerator() {
     const entry = {
       title: proposal.analysis?.projectTitle || 'Smart-generated proposal',
       client: proposal.analysis?.clientName || 'Prospect',
-      content: edited || proposal.fullText,
+      content: displayText,
+      approach: approach || 'auto',
       jd: jd,
       services: proposal.analysis?.services || [],
       status: 'draft',
@@ -276,6 +289,16 @@ export function SmartProposalGenerator() {
         </div>
       </div>
 
+      {/* ─────── FR-04 Recommended Approach panel ─────── */}
+      {proposal && (
+        <ApproachRecommendationPanel
+          brief={jd}
+          services={proposal.analysis?.services || []}
+          value={approach}
+          onChange={(id) => setApproach(id)}
+        />
+      )}
+
       {/* ─────── Output ─────── */}
       {proposal && (
         <div className="surface rounded-2xl p-5 space-y-3">
@@ -332,7 +355,7 @@ export function SmartProposalGenerator() {
               className="w-full rounded-xl bg-[var(--card-2)] border border-token px-3 py-3 text-[13px] outline-none focus:border-aws-orange leading-relaxed font-mono"
             />
           ) : (
-            <ProposalPreview text={edited || proposal.fullText} sections={proposal.sections} />
+            <ProposalPreview text={displayText} sections={proposal.sections} />
           )}
 
           {/* Section legend (always visible) */}
@@ -399,6 +422,25 @@ function SectionLegend({ sections }) {
 // Strip markdown bold (**) when copying so the recipient sees clean plain text
 function stripMarkdown(s) {
   return String(s || '').replace(/\*\*([^*]+)\*\*/g, '$1');
+}
+
+// FR-04 — Add a "Delivered as <approach>" sentence under the My approach
+// header. Non-destructive — operates on a copy of the text.
+const APPROACH_DELIVERY_LINE = {
+  console:   '_Delivered as click-by-click AWS Console instructions with annotated screenshots._',
+  cli:       '_Delivered as bash scripts using the AWS CLI v2 — drop them in your CI pipeline._',
+  terraform: '_Delivered as Terraform modules with remote state, plan/apply review, reusable across dev/staging/prod._',
+  cfn:       '_Delivered as CloudFormation templates (or AWS CDK if you prefer TypeScript) — fully AWS-native._',
+};
+
+function injectApproachLine(text, approachId) {
+  const line = APPROACH_DELIVERY_LINE[approachId];
+  if (!line) return text;
+  // First, strip any previous approach line we may have inserted earlier
+  let out = String(text || '').replace(/^_Delivered as [^\n]+_\n/gm, '');
+  // Then inject the new line right after the **My approach** header
+  out = out.replace(/(\*\*My approach\*\*)\n/, `$1\n${line}\n`);
+  return out;
 }
 
 // FR-03: convert markdown-flavoured proposal → clean email body.
