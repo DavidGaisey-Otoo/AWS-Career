@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
 import {
-  Award, Briefcase, Calculator, DollarSign, FileText, Megaphone, Users, Wand2,
+  Award, Briefcase, Calculator, DollarSign, FileText, Megaphone, Radio, Users, Wand2,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { BrandingEngine } from '../components/freelance/BrandingEngine.jsx';
 import { ClientCRM } from '../components/freelance/ClientCRM.jsx';
@@ -11,6 +12,7 @@ import { CurrencyCenter } from '../components/freelance/CurrencyCenter.jsx';
 import { EarningsTracker } from '../components/freelance/EarningsTracker.jsx';
 import { ExpenseTracker } from '../components/freelance/ExpenseTracker.jsx';
 import { FinancialGoals } from '../components/freelance/FinancialGoals.jsx';
+import { GigFeed } from '../components/freelance/GigFeed.jsx';
 import { InvoiceGenerator } from '../components/freelance/InvoiceGenerator.jsx';
 import { ProposalBuilder } from '../components/freelance/ProposalBuilder.jsx';
 import { ProposalTemplates } from '../components/freelance/ProposalTemplates.jsx';
@@ -20,6 +22,7 @@ import { cn, formatCurrency } from '../lib/utils.js';
 
 const TABS = [
   { id: 'overview',  label: 'Overview',   icon: Briefcase },
+  { id: 'gigfeed',   label: 'Live Gigs',  icon: Radio },        // FR-01
   { id: 'proposals', label: 'Proposals',  icon: Wand2 },
   { id: 'clients',   label: 'Clients',    icon: Users },
   { id: 'finance',   label: 'Finance',    icon: DollarSign },
@@ -42,9 +45,22 @@ const FINANCE_SUB = [
 ];
 
 export default function Freelance() {
-  const [tab, setTab] = useState('overview');
-  const [propTab, setPropTab] = useState('builder');
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(() => {
+    const t = params.get('tab');
+    return TABS.some((x) => x.id === t) ? t : 'overview';
+  });
+  const [propTab, setPropTab] = useState(() => {
+    const sub = params.get('sub');
+    return PROPOSAL_SUB.some((x) => x.id === sub) ? sub : 'builder';
+  });
   const [finTab, setFinTab] = useState('goals');
+
+  // FR-01: react to deep-links from Gig Feed (?tab=proposals&prefill=…)
+  useEffect(() => {
+    const t = params.get('tab');
+    if (t && TABS.some((x) => x.id === t)) setTab(t);
+  }, [params]);
 
   return (
     <div className="space-y-4">
@@ -81,6 +97,7 @@ export default function Freelance() {
         transition={{ duration: 0.18 }}
       >
         {tab === 'overview'  && <OverviewTab onJump={(t, sub) => { setTab(t); if (sub) (t === 'proposals' ? setPropTab(sub) : setFinTab(sub)); }} />}
+        {tab === 'gigfeed'   && <GigFeed />}
         {tab === 'proposals' && (
           <div className="space-y-3">
             <SubTabs items={PROPOSAL_SUB} active={propTab} setActive={setPropTab} />

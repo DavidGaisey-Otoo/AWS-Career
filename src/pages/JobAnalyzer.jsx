@@ -5,8 +5,8 @@ import {
   Gauge, HelpCircle, Layers, ListChecks, Loader2, Send, Sparkles, Target, Wand2,
   XCircle, Zap,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useEarn } from '../context/EarnContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -20,10 +20,22 @@ import { AutoFillFromBrief } from '../components/build/AutoFillFromBrief.jsx';
 export default function JobAnalyzer() {
   const toast = useToast();
   const { setLastAnalysis } = useEarn();
-  const [text, setText] = useState('');
+  const [params] = useSearchParams();
+  const [text, setText] = useState(() => params.get('prefill') || '');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [activeSample, setActiveSample] = useState(null);
+
+  // FR-01: react to deep-links from Gig Feed (?prefill=…)
+  useEffect(() => {
+    const p = params.get('prefill');
+    if (p && p !== text) {
+      setText(p);
+      setResult(null);
+      setActiveSample(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
   const run = () => {
     if (!text.trim()) {
