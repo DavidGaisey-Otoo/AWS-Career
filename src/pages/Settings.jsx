@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Bell, Brain, Briefcase, Camera, ClipboardCopy, Database, Download, Eye, EyeOff,
   Github, Globe2, KeyRound, Linkedin, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon,
@@ -25,7 +26,19 @@ const SECTIONS = [
 ];
 
 export default function Settings() {
-  const [section, setSection] = useState('profile');
+  const [params] = useSearchParams();
+  const [section, setSection] = useState(() => {
+    const q = params.get('section');
+    return SECTIONS.some((s) => s.id === q) ? q : 'profile';
+  });
+
+  // IN-01: react to ?section= deep-links from the Google OAuth callback,
+  // GitHub PAT renewal page, etc.
+  useEffect(() => {
+    const q = params.get('section');
+    if (q && SECTIONS.some((s) => s.id === q)) setSection(q);
+  }, [params]);
+
   return (
     <div className="space-y-6">
       <PageHeader
