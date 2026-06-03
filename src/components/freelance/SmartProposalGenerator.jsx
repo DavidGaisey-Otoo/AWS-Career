@@ -29,6 +29,7 @@ import { logProposal } from '../../lib/proposalLog.js';
 import { ApproachRecommendationPanel } from '../build/ApproachRecommendationPanel.jsx';
 import { getApproachById } from '../../lib/approachRecommender.js';
 import { BookDiscoveryCallButton } from '../calendar/BookDiscoveryCallButton.jsx';
+import { RateBenchmarkCard } from './RateBenchmarkCard.jsx';
 import { cn } from '../../lib/utils.js';
 
 const TARGET_LOW = 200;
@@ -316,6 +317,9 @@ export function SmartProposalGenerator() {
           onChange={(id) => setApproach(id)}
         />
       )}
+
+      {/* ─────── FR-06 Rate Benchmark ─────── */}
+      {proposal && <RateBenchmarkCard brief={jd} />}
 
       {/* ─────── Output ─────── */}
       {proposal && (

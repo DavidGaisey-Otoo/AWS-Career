@@ -15,6 +15,7 @@ import { SAMPLE_JOBS, analyzeJob } from '../data/jobAnalyzer.js';
 import { cn } from '../lib/utils.js';
 import { MasterIntelligencePanel } from '../components/intelligence/MasterIntelligencePanel.jsx';
 import { ApproachRecommendationPanel } from '../components/build/ApproachRecommendationPanel.jsx';
+import { RateBenchmarkCard } from '../components/freelance/RateBenchmarkCard.jsx';
 import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
 import { AutoFillFromBrief } from '../components/build/AutoFillFromBrief.jsx';
 
@@ -286,6 +287,9 @@ function Analysis({ result }) {
         brief={result.rawText || result.jdText || text}
         services={(result.services || []).map((s) => (typeof s === 'string' ? s : s?.id))}
       />
+
+      {/* FR-06: Rate benchmark */}
+      <RateBenchmarkCard brief={result.rawText || result.jdText || text} />
 
       {/* Existing v1 analysis panels — kept for backwards compatibility */}
       <details className="rounded-2xl border border-token bg-[var(--card-2)]/30 overflow-hidden">

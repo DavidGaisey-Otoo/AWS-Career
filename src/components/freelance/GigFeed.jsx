@@ -17,6 +17,7 @@ import {
 import { Link } from 'react-router-dom';
 import { fetchAllGigs, clearCache, getCacheAge, GIG_SOURCES } from '../../lib/gigFeed.js';
 import { recommendApproach, getApproachById } from '../../lib/approachRecommender.js';
+import { RateBenchmarkCard } from './RateBenchmarkCard.jsx';
 import { cn } from '../../lib/utils.js';
 
 const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
@@ -313,8 +314,11 @@ function GigCard({ gig }) {
         </div>
       )}
 
-      {/* FR-04: recommended approach */}
-      <GigApproachBadge gig={gig} />
+      {/* FR-04 + FR-06: recommended approach + rate range */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <GigApproachBadge gig={gig} />
+        <RateBenchmarkCard brief={`${gig.title}\n${gig.description}\n${(gig.skills || []).join(' ')} ${gig.location || ''}`} variant="compact" />
+      </div>
 
       {/* Action buttons */}
       <div className="flex flex-wrap gap-1.5 mt-1 pt-2 border-t border-token">
