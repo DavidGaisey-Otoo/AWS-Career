@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import {
-  Award, Briefcase, Calculator, DollarSign, FileText, Megaphone, Radio, Users, Wand2,
+  Award, Briefcase, Calculator, DollarSign, FileText, Mail, Megaphone, Radio, Users, Wand2,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -10,6 +10,7 @@ import { ClientCRM } from '../components/freelance/ClientCRM.jsx';
 import { ContractLibrary } from '../components/freelance/ContractLibrary.jsx';
 import { CurrencyCenter } from '../components/freelance/CurrencyCenter.jsx';
 import { EarningsTracker } from '../components/freelance/EarningsTracker.jsx';
+import { EmailOutreach } from '../components/freelance/EmailOutreach.jsx';
 import { ExpenseTracker } from '../components/freelance/ExpenseTracker.jsx';
 import { FinancialGoals } from '../components/freelance/FinancialGoals.jsx';
 import { GigFeed } from '../components/freelance/GigFeed.jsx';
@@ -22,13 +23,14 @@ import { useFreelance } from '../context/FreelanceContext.jsx';
 import { cn, formatCurrency } from '../lib/utils.js';
 
 const TABS = [
-  { id: 'overview',  label: 'Overview',   icon: Briefcase },
-  { id: 'gigfeed',   label: 'Live Gigs',  icon: Radio },        // FR-01
-  { id: 'proposals', label: 'Proposals',  icon: Wand2 },
-  { id: 'clients',   label: 'Clients',    icon: Users },
-  { id: 'finance',   label: 'Finance',    icon: DollarSign },
-  { id: 'contracts', label: 'Contracts',  icon: FileText },
-  { id: 'branding',  label: 'Branding',   icon: Megaphone },
+  { id: 'overview',  label: 'Overview',       icon: Briefcase },
+  { id: 'gigfeed',   label: 'Live Gigs',      icon: Radio },     // FR-01
+  { id: 'proposals', label: 'Proposals',      icon: Wand2 },
+  { id: 'outreach',  label: 'Email Outreach', icon: Mail },      // FR-03
+  { id: 'clients',   label: 'Clients',        icon: Users },
+  { id: 'finance',   label: 'Finance',        icon: DollarSign },
+  { id: 'contracts', label: 'Contracts',      icon: FileText },
+  { id: 'branding',  label: 'Branding',       icon: Megaphone },
 ];
 
 const PROPOSAL_SUB = [
@@ -102,6 +104,7 @@ export default function Freelance() {
       >
         {tab === 'overview'  && <OverviewTab onJump={(t, sub) => { setTab(t); if (sub) (t === 'proposals' ? setPropTab(sub) : setFinTab(sub)); }} />}
         {tab === 'gigfeed'   && <GigFeed />}
+        {tab === 'outreach'  && <EmailOutreach />}
         {tab === 'proposals' && (
           <div className="space-y-3">
             <SubTabs items={PROPOSAL_SUB} active={propTab} setActive={setPropTab} />

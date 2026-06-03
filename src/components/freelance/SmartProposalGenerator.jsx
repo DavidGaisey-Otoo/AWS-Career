@@ -15,10 +15,11 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Sparkles, Wand2, Copy, Check, RefreshCw, Minimize2, Maximize2,
   Pencil, Save, FileText, ClipboardPaste, AlertCircle, Eye, Target,
+  Mail,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext.jsx';
 import { useFreelance } from '../../context/FreelanceContext.jsx';
@@ -34,6 +35,7 @@ export function SmartProposalGenerator() {
   const { addProposal } = useFreelance();
   const toast = useToast();
   const [params] = useSearchParams();
+  const navigate = useNavigate();
 
   const [jd, setJd] = useState(() => params.get('prefill') || '');
   const [proposal, setProposal] = useState(null);
@@ -129,6 +131,28 @@ export function SmartProposalGenerator() {
         toast?.success?.('Pasted from clipboard');
       })
       .catch(() => toast?.error?.('Clipboard read blocked — paste manually with Ctrl+V.'));
+  }
+
+  // FR-03: format proposal as email + deep-link to Email Outreach tab
+  function handleAlsoSendAsEmail() {
+    if (!proposal) return;
+    const proposalText = edited || proposal.fullText;
+    const title = proposal.analysis?.projectTitle || 'your AWS project';
+    const clientFirst = proposal.analysis?.clientName?.split(' ')[0] || 'there';
+
+    // Re-format the markdown-flavoured proposal into a clean email
+    const emailBody = formatProposalAsEmail(proposalText, clientFirst, proposal.meta?.firstName || 'David');
+    const subject = `Proposal — ${title}`;
+
+    const search = new URLSearchParams({
+      tab: 'outreach',
+      mode: 'followup',     // proposal-style emails fit best as a follow-up tone
+      title,
+      subject,
+      prefill: emailBody,
+    });
+    navigate(`/freelance?${search.toString()}`);
+    toast?.success?.('Proposal copied into Email Outreach');
   }
 
   function handleSaveToTracker() {
@@ -284,6 +308,13 @@ export function SmartProposalGenerator() {
                 {copied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
               </button>
               <button
+                onClick={handleAlsoSendAsEmail}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11.5px] font-bold border border-aws-orange/40 text-aws-orange hover:bg-aws-orange/10 transition"
+                title="Open this proposal in Email Outreach pre-filled"
+              >
+                <Mail size={11} /> Also send as Email
+              </button>
+              <button
                 onClick={handleSaveToTracker}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11.5px] font-bold bg-gradient-aws text-ink-950 hover:brightness-110 transition"
               >
@@ -368,4 +399,30 @@ function SectionLegend({ sections }) {
 // Strip markdown bold (**) when copying so the recipient sees clean plain text
 function stripMarkdown(s) {
   return String(s || '').replace(/\*\*([^*]+)\*\*/g, '$1');
+}
+
+// FR-03: convert markdown-flavoured proposal → clean email body.
+// Markdown headers (**X**) become plain header lines, bullets stay,
+// numbered approach steps stay.
+function formatProposalAsEmail(proposalText, clientFirst, firstName) {
+  let body = String(proposalText || '');
+  // Replace **X** with plain headers
+  body = body.replace(/^\*\*([^*]+)\*\*$/gm, '$1');
+  // Tidy double blanks
+  body = body.replace(/\n{3,}/g, '\n\n').trim();
+  // Email needs a fresh top-line greeting (the proposal had one but we
+  // want to be sure it addresses the client by their real name)
+  const lines = body.split('\n');
+  if (/^hi\s/i.test(lines[0])) {
+    lines[0] = `Hi ${clientFirst},`;
+    body = lines.join('\n');
+  } else {
+    body = `Hi ${clientFirst},\n\n${body}`;
+  }
+  // The proposal already ends with a CTA — leave it. Add a sign-off if
+  // none is detected.
+  if (!/—\s*\w+\s*$/.test(body) && !/best regards/i.test(body)) {
+    body += `\n\nBest regards,\n${firstName}`;
+  }
+  return body;
 }
