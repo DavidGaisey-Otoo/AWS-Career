@@ -17,6 +17,7 @@ import { InvoiceGenerator } from '../components/freelance/InvoiceGenerator.jsx';
 import { ProposalBuilder } from '../components/freelance/ProposalBuilder.jsx';
 import { ProposalTemplates } from '../components/freelance/ProposalTemplates.jsx';
 import { ProposalTracker } from '../components/freelance/ProposalTracker.jsx';
+import { SmartProposalGenerator } from '../components/freelance/SmartProposalGenerator.jsx';
 import { useFreelance } from '../context/FreelanceContext.jsx';
 import { cn, formatCurrency } from '../lib/utils.js';
 
@@ -31,6 +32,7 @@ const TABS = [
 ];
 
 const PROPOSAL_SUB = [
+  { id: 'smart',     label: '✨ Smart Generator' },  // FR-02
   { id: 'builder',   label: 'Builder' },
   { id: 'tracker',   label: 'Tracker' },
   { id: 'templates', label: 'Templates' },
@@ -56,10 +58,12 @@ export default function Freelance() {
   });
   const [finTab, setFinTab] = useState('goals');
 
-  // FR-01: react to deep-links from Gig Feed (?tab=proposals&prefill=…)
+  // FR-01 + FR-02: react to deep-links from Gig Feed (?tab=…&sub=…&prefill=…)
   useEffect(() => {
     const t = params.get('tab');
     if (t && TABS.some((x) => x.id === t)) setTab(t);
+    const sub = params.get('sub');
+    if (sub && PROPOSAL_SUB.some((x) => x.id === sub)) setPropTab(sub);
   }, [params]);
 
   return (
@@ -101,6 +105,7 @@ export default function Freelance() {
         {tab === 'proposals' && (
           <div className="space-y-3">
             <SubTabs items={PROPOSAL_SUB} active={propTab} setActive={setPropTab} />
+            {propTab === 'smart'     && <SmartProposalGenerator />}
             {propTab === 'builder'   && <ProposalBuilder />}
             {propTab === 'tracker'   && <ProposalTracker />}
             {propTab === 'templates' && <ProposalTemplates />}

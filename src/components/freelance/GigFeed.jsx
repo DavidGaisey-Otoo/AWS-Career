@@ -253,7 +253,7 @@ export function GigFeed() {
 function GigCard({ gig }) {
   // Generate links for the action buttons
   const briefForActions = encodeURIComponent(`${gig.title}\n\n${gig.description}\n\nSkills: ${(gig.skills || []).join(', ')}`);
-  const proposalHref = `/freelance?tab=proposals&prefill=${briefForActions}`;
+  const proposalHref = `/freelance?tab=proposals&sub=smart&prefill=${briefForActions}`;
   const analyzeHref = `/job-analyzer?prefill=${briefForActions}`;
   const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(gig.title)}&brief=${briefForActions.slice(0, 600)}&source=freelance`;
 
