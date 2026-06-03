@@ -19,6 +19,7 @@ import { suggestRegion } from '../lib/regionSuggester.js';
 import { setProjectRegion } from '../lib/projectRegion.js';
 import { REGION_LABELS } from '../data/awsPricing.js';
 import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
+import { AutoFillFromBrief } from '../components/build/AutoFillFromBrief.jsx';
 import { cn } from '../lib/utils.js';
 
 export default function NewWalkthrough() {
@@ -99,48 +100,19 @@ export default function NewWalkthrough() {
 
       {/* Form */}
       <section className="surface rounded-3xl p-6 space-y-4">
-        <div>
-          <label className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange mb-1.5 block">
-            Walkthrough title <span className="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. SaaS billing API on Lambda + DynamoDB + Stripe webhooks"
-            className="w-full rounded-lg bg-[var(--card-2)] border border-token px-3 py-2 text-[14px] outline-none focus:border-aws-orange"
-          />
-        </div>
-
-        <div>
-          <label className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange mb-1.5 block">
-            Project description (or paste a freelance job brief)
-          </label>
-          <textarea
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            placeholder={`e.g.\n"Build a customer-facing chat app using API Gateway, Lambda, DynamoDB for chat history, Bedrock with Claude Haiku for responses, Cognito for user auth, and CloudFront for global edge delivery."\n\nThe more services you mention, the better the walkthrough.`}
-            rows={7}
-            className="w-full rounded-lg bg-[var(--card-2)] border border-token px-3 py-2 text-[13.5px] outline-none focus:border-aws-orange font-mono"
-          />
-          {brief.length > 30 && detected.length > 0 && (
-            <div className="mt-2 text-[11.5px] flex items-center gap-2 text-success">
-              <CheckCircle2 size={12} />
-              <span>
-                <strong>{detected.length} service{detected.length === 1 ? '' : 's'}</strong> detected: {detected.join(', ')}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* AD-02: Service Suggestion Chips with popovers */}
-        <div className="rounded-xl bg-[var(--card-2)]/30 border border-token p-3.5">
-          <ServiceSuggestionChips
-            brief={brief}
-            selected={picked}
-            onChange={setPicked}
-          />
-        </div>
+        {/* AD-03: Auto-Fill from pasted brief (replaces individual title + brief + chips fields) */}
+        <AutoFillFromBrief
+          value={{
+            brief,
+            name: title,
+            services: picked,
+          }}
+          onChange={(next) => {
+            if (next.brief !== brief) setBrief(next.brief || '');
+            if (next.name !== title) setTitle(next.name || '');
+            if (next.services !== picked) setPicked(next.services || []);
+          }}
+        />
 
         <div>
           <label className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange mb-1.5 block">

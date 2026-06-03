@@ -15,6 +15,7 @@ import { SAMPLE_JOBS, analyzeJob } from '../data/jobAnalyzer.js';
 import { cn } from '../lib/utils.js';
 import { MasterIntelligencePanel } from '../components/intelligence/MasterIntelligencePanel.jsx';
 import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
+import { AutoFillFromBrief } from '../components/build/AutoFillFromBrief.jsx';
 
 export default function JobAnalyzer() {
   const toast = useToast();
@@ -211,24 +212,35 @@ function Chip({ icon: Icon, label }) {
 // =================================================================
 
 function Analysis({ result }) {
-  // PJ-04 Phase B: derive params for the walkthrough generator
+  // PJ-04 Phase B + AD-03: derive params for the walkthrough generator
   const briefText = result.rawText || result.jdText || '';
-  const [pickedServices, setPickedServices] = useState(
-    (result.services || []).map((s) =>
+
+  // AD-03: Auto-Fill state — name, services, region, timeline, tech stack, location
+  const [autoFill, setAutoFill] = useState({
+    brief: briefText,
+    name: '',
+    services: (result.services || []).map((s) =>
       typeof s === 'string' ? s : (s.id || s.label || '')
-    ).filter(Boolean)
-  );
-  const inferredTitle = (briefText.split(/\n/)[0] || 'Freelance job walkthrough').slice(0, 80);
-  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(inferredTitle)}&brief=${encodeURIComponent(briefText.slice(0, 600))}&services=${pickedServices.join(',')}&source=freelance`;
+    ).filter(Boolean),
+    region: null,
+    timeline: null,
+    techStack: [],
+    clientLocation: null,
+  });
+
+  const pickedServices = autoFill.services || [];
+  const inferredTitle = autoFill.name || (briefText.split(/\n/)[0] || 'Freelance job walkthrough').slice(0, 80);
+  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(inferredTitle)}&brief=${encodeURIComponent((autoFill.brief || briefText).slice(0, 600))}&services=${pickedServices.join(',')}&source=freelance`;
 
   return (
     <div className="space-y-3">
-      {/* AD-02: Smart AWS Service Suggestion chips with hover popovers */}
+      {/* AD-03: Auto-Fill from pasted job description (top — drives the rest) */}
       <section className="surface rounded-2xl p-4">
-        <ServiceSuggestionChips
-          brief={briefText}
-          selected={pickedServices}
-          onChange={setPickedServices}
+        <AutoFillFromBrief
+          value={autoFill}
+          onChange={setAutoFill}
+          title="Auto-fill from this job description"
+          compact
         />
       </section>
 
