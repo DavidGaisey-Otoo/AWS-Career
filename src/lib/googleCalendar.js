@@ -111,18 +111,36 @@ async function makePkcePair() {
   return { verifier, challenge };
 }
 
+// PKCE state stored in localStorage (not sessionStorage) so it survives:
+//   - Google opening the consent screen in a new tab/window
+//   - Browser restarts mid-flow
+//   - Multi-window OAuth (common when user has multiple Google profiles)
+// The verifier is single-use (cleared immediately after token exchange) and
+// stale entries are pruned by the 10-minute TTL check.
+const PKCE_TTL_MS = 10 * 60 * 1000; // Google auth codes expire in ~10 min
+
 function savePkceState({ verifier, state }) {
-  try { sessionStorage.setItem(PKCE_KEY, JSON.stringify({ verifier, state })); } catch {}
+  try {
+    localStorage.setItem(PKCE_KEY, JSON.stringify({
+      verifier, state, ts: Date.now(),
+    }));
+  } catch {}
 }
 function loadPkceState() {
   try {
-    const raw = sessionStorage.getItem(PKCE_KEY);
+    const raw = localStorage.getItem(PKCE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.verifier || !parsed.state) return null;
+    if (parsed.ts && Date.now() - parsed.ts > PKCE_TTL_MS) {
+      clearPkceState();
+      return null;
+    }
+    return parsed;
   } catch { return null; }
 }
 function clearPkceState() {
-  try { sessionStorage.removeItem(PKCE_KEY); } catch {}
+  try { localStorage.removeItem(PKCE_KEY); } catch {}
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -157,8 +175,14 @@ export async function startOAuth({ clientId, redirectUri }) {
 // ════════════════════════════════════════════════════════════════════
 export async function exchangeCodeForTokens({ code, state, clientId, redirectUri }) {
   const pkce = loadPkceState();
-  if (!pkce) throw new Error('PKCE state lost — please retry the connection.');
-  if (state !== pkce.state) throw new Error('OAuth state mismatch — possible CSRF.');
+  if (!pkce) {
+    throw new Error(
+      'PKCE state missing or expired (10-min TTL). ' +
+      'This usually means the OAuth flow opened in a different tab/window, ' +
+      'or the browser was closed mid-flow. Go back to Settings → Integrations and click Connect again.'
+    );
+  }
+  if (state !== pkce.state) throw new Error('OAuth state mismatch — please retry the connection.');
   if (!clientId) clientId = getClientId();
   if (!redirectUri) redirectUri = `${window.location.origin}/integrations/google/callback`;
 
