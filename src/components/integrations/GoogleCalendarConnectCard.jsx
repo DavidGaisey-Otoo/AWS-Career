@@ -12,16 +12,19 @@
 import { useEffect, useState } from 'react';
 import {
   Calendar, CheckCircle2, AlertCircle, ExternalLink, Loader2, Link2,
-  Plug, PlugZap, Copy, ChevronDown, ChevronUp, Info, RefreshCw,
+  Plug, PlugZap, Copy, ChevronDown, ChevronUp, Info, RefreshCw, Eye, EyeOff,
 } from 'lucide-react';
 import {
   getClientId, setClientId, clearClientId,
+  getClientSecret, setClientSecret, clearClientSecret,
   readTokens, isConnected, disconnect, startOAuth, verifyConnection,
 } from '../../lib/googleCalendar.js';
 import { cn } from '../../lib/utils.js';
 
 export function GoogleCalendarConnectCard() {
   const [clientIdInput, setClientIdInput] = useState(() => getClientId());
+  const [clientSecretInput, setClientSecretInput] = useState(() => getClientSecret());
+  const [showSecret, setShowSecret] = useState(false);
   const [connected, setConnected] = useState(() => isConnected());
   const [tokens, setTokens] = useState(() => readTokens());
   const [showSetup, setShowSetup] = useState(false);
@@ -47,7 +50,12 @@ export function GoogleCalendarConnectCard() {
       setError('Paste your Google OAuth Client ID first.');
       return;
     }
+    if (!clientSecretInput.trim()) {
+      setError('Paste your Google OAuth Client Secret too — Google\'s "Web application" client type requires it even with PKCE.');
+      return;
+    }
     setClientId(clientIdInput.trim());
+    setClientSecret(clientSecretInput.trim());
     setWorking(true);
     try {
       await startOAuth({ clientId: clientIdInput.trim(), redirectUri });
@@ -66,6 +74,9 @@ export function GoogleCalendarConnectCard() {
       setConnected(false);
       setTokens(null);
       setVerifyOk(null);
+      // Clear stored secret too so a fresh connection re-prompts
+      clearClientSecret();
+      setClientSecretInput('');
     } catch (err) {
       setError(err.message || String(err));
     } finally {
@@ -182,6 +193,35 @@ export function GoogleCalendarConnectCard() {
             />
           </label>
 
+          <label className="block">
+            <span className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange mb-1.5 block">
+              OAuth Client Secret
+            </span>
+            <div className="relative">
+              <input
+                type={showSecret ? 'text' : 'password'}
+                value={clientSecretInput}
+                onChange={(e) => setClientSecretInput(e.target.value)}
+                placeholder="GOCSPX-..."
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-3 py-2 pr-9 text-[12.5px] font-mono outline-none focus:border-aws-orange"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSecret((s) => !s)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-[var(--card-2)] opacity-60 hover:opacity-100 transition"
+                title={showSecret ? 'Hide secret' : 'Show secret'}
+              >
+                {showSecret ? <EyeOff size={12} /> : <Eye size={12} />}
+              </button>
+            </div>
+            <span className="text-[10.5px] opacity-65 mt-1 block leading-relaxed">
+              Google's "Web application" OAuth clients require this even with PKCE.
+              Per <a href="https://developers.google.com/identity/protocols/oauth2/native-app" target="_blank" rel="noopener noreferrer" className="text-aws-orange hover:underline">Google's docs</a>,
+              when used from a browser, "the client secret is not treated as a secret" —
+              it's effectively a second client identifier. PKCE provides the real protection.
+            </span>
+          </label>
+
           {/* Authorised redirect URI helper — they need this in Google Console */}
           <div className="rounded-xl bg-aws-orange/5 border border-aws-orange/20 p-3">
             <div className="flex items-start gap-2">
@@ -214,7 +254,7 @@ export function GoogleCalendarConnectCard() {
 
           <button
             onClick={handleConnect}
-            disabled={working || !clientIdInput.trim()}
+            disabled={working || !clientIdInput.trim() || !clientSecretInput.trim()}
             className="btn btn-primary inline-flex items-center gap-2 disabled:opacity-50"
           >
             {working
@@ -274,7 +314,8 @@ function SetupReference({ redirectUri }) {
           <code className="block bg-ink-900/30 px-2 py-1 rounded mt-1 text-[11px] font-mono break-all">{redirectUri}</code>
         </li>
         <li>
-          Copy the Client ID and paste it into the input above.
+          Copy <strong>both</strong> the Client ID <strong>and</strong> Client Secret (Google shows both
+          when you create the OAuth client). Paste them into the two inputs above.
         </li>
       </ol>
     </div>

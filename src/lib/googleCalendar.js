@@ -28,6 +28,7 @@ import { STORAGE_KEY } from './constants.js';
 
 const TOKEN_KEY  = `${STORAGE_KEY}::google`;
 const CLIENT_ID_KEY = `${STORAGE_KEY}::google::clientId`;
+const CLIENT_SECRET_KEY = `${STORAGE_KEY}::google::clientSecret`;
 const PKCE_KEY   = `${STORAGE_KEY}::google::pkce`;
 
 export const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
@@ -48,6 +49,21 @@ export function setClientId(id) {
 }
 export function clearClientId() {
   try { localStorage.removeItem(CLIENT_ID_KEY); } catch {}
+}
+
+// Google quirk: their "Web application" OAuth clients require a
+// client_secret in the token exchange request even with PKCE. Per
+// Google's own docs, when used from a browser, this value "is not
+// treated as a secret" — it's a client identifier. PKCE still provides
+// the real protection against authorization code interception.
+export function getClientSecret() {
+  try { return localStorage.getItem(CLIENT_SECRET_KEY) || ''; } catch { return ''; }
+}
+export function setClientSecret(s) {
+  try { localStorage.setItem(CLIENT_SECRET_KEY, (s || '').trim()); } catch {}
+}
+export function clearClientSecret() {
+  try { localStorage.removeItem(CLIENT_SECRET_KEY); } catch {}
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -185,6 +201,7 @@ export async function exchangeCodeForTokens({ code, state, clientId, redirectUri
   if (state !== pkce.state) throw new Error('OAuth state mismatch — please retry the connection.');
   if (!clientId) clientId = getClientId();
   if (!redirectUri) redirectUri = `${window.location.origin}/integrations/google/callback`;
+  const clientSecret = getClientSecret();
 
   const body = new URLSearchParams({
     code,
@@ -193,6 +210,8 @@ export async function exchangeCodeForTokens({ code, state, clientId, redirectUri
     grant_type: 'authorization_code',
     redirect_uri: redirectUri,
   });
+  // Google "Web application" clients require this field even with PKCE
+  if (clientSecret) body.set('client_secret', clientSecret);
 
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
@@ -238,11 +257,13 @@ async function refreshAccessToken() {
   const clientId = getClientId();
   if (!clientId) throw new Error('Client ID missing — please reconnect.');
 
+  const clientSecret = getClientSecret();
   const body = new URLSearchParams({
     client_id: clientId,
     refresh_token: t.refreshToken,
     grant_type: 'refresh_token',
   });
+  if (clientSecret) body.set('client_secret', clientSecret);
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
