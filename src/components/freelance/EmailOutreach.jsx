@@ -33,6 +33,7 @@ import { useApp } from '../../context/AppContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { gmailComposeUrl, outlookComposeUrl, mailtoUrl } from '../../data/emailTemplates.js';
 import { BookDiscoveryCallButton } from '../calendar/BookDiscoveryCallButton.jsx';
+import { AddToCalendarButton } from '../calendar/AddToCalendarButton.jsx';
 import { cn } from '../../lib/utils.js';
 
 // ════════════════════════════════════════════════════════════════════
@@ -438,7 +439,7 @@ export function EmailOutreach() {
           >
             <Mail size={12} /> Default mail app
           </a>
-          <BookDiscoveryCallButton
+          <AddToCalendarButton
             variant="outline"
             defaultTitle={gigTitle ? `Discovery call — ${gigTitle}` : 'Discovery call'}
             defaultDescription={body || subject}

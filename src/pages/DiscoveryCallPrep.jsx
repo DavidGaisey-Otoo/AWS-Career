@@ -19,6 +19,7 @@ import { PROJECTS } from '../data/projects.js';
 import { analyzeJob } from '../data/jobAnalyzer.js';
 import { gmailComposeUrl, outlookComposeUrl } from '../data/emailTemplates.js';
 import { BookDiscoveryCallButton } from '../components/calendar/BookDiscoveryCallButton.jsx';
+import { AddToCalendarButton } from '../components/calendar/AddToCalendarButton.jsx';
 import { cn } from '../lib/utils.js';
 
 export default function DiscoveryCallPrep() {
@@ -185,9 +186,9 @@ ${profile.name || 'Your Name'}`;
         icon={PhoneCall}
       />
 
-      {/* IN-01: Book the call in one click */}
+      {/* Zero-OAuth Add to Calendar (works with Apple, Outlook, Google, anything) */}
       <div className="flex justify-end">
-        <BookDiscoveryCallButton
+        <AddToCalendarButton
           variant="primary"
           defaultTitle={lastAnalysis?.suggestedName ? `Discovery call — ${lastAnalysis.suggestedName}` : 'Discovery call'}
           defaultDescription={jdText ? `Project brief:\n\n${jdText.slice(0, 600)}` : ''}

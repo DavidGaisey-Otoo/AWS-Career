@@ -8,6 +8,7 @@ import { AppProvider } from './context/AppContext.jsx';
 import { AWSProvider } from './context/AWSContext.jsx';
 import { DeployProvider } from './context/DeployContext.jsx';
 import { DeployApprovalDialog } from './components/deploy/DeployApprovalDialog.jsx';
+import { PWAInstallPrompt } from './components/common/PWAInstallPrompt.jsx';
 import { RecorderProvider } from './context/RecorderContext.jsx';
 import { CommunityProvider } from './context/CommunityContext.jsx';
 import { EarnProvider } from './context/EarnContext.jsx';
@@ -120,6 +121,7 @@ export default function App() {
                  <EarnProvider>
                  <GamificationProvider>
                    <DeployApprovalDialog />
+                   <PWAInstallPrompt />
                    <Routes>
                      <Route element={<AppShell />}>
                        <Route path="/" element={<Dashboard />} />

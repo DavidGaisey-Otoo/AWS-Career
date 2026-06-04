@@ -1,17 +1,26 @@
 {
   "name": "AWS Career Launchpad Pro",
   "short_name": "AWS Launchpad",
-  "description": "The most ambitious AWS learning and freelance career platform.",
-  "start_url": "/",
+  "description": "Study AWS, build projects, land freelance gigs. The complete platform.",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0A0E1A",
   "theme_color": "#FF9900",
+  "categories": ["productivity", "education"],
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "./favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard",   "url": "./",            "icons": [{ "src": "./favicon.svg", "sizes": "any" }] },
+    { "name": "Smart Review","url": "./exam",        "icons": [{ "src": "./favicon.svg", "sizes": "any" }] },
+    { "name": "Live Gigs",   "url": "./freelance?tab=gigfeed", "icons": [{ "src": "./favicon.svg", "sizes": "any" }] },
+    { "name": "My Notes",    "url": "./my-notes",    "icons": [{ "src": "./favicon.svg", "sizes": "any" }] }
   ]
 }

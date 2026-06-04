@@ -21,6 +21,7 @@ import {
   deleteNote, getNote, noteToMarkdown, noteToPlainText,
 } from '../lib/studyNotesStore.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { ShareButton } from '../components/common/ShareButton.jsx';
 import { cn } from '../lib/utils.js';
 
 export default function MyNotes() {
@@ -282,6 +283,12 @@ export function NoteDetail() {
         <button onClick={downloadPdf} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold bg-gradient-aws text-ink-950 hover:brightness-110 transition">
           <FileText size={12} /> Download PDF
         </button>
+        <ShareButton
+          title={note.title}
+          text={noteToPlainText(note).slice(0, 1500)}
+          variant="ghost"
+          label="Share"
+        />
         <button onClick={handleDelete} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold border border-danger/30 text-danger hover:bg-danger/10 transition ml-auto">
           <Trash2 size={12} /> Delete
         </button>

@@ -29,6 +29,8 @@ import { logProposal } from '../../lib/proposalLog.js';
 import { ApproachRecommendationPanel } from '../build/ApproachRecommendationPanel.jsx';
 import { getApproachById } from '../../lib/approachRecommender.js';
 import { BookDiscoveryCallButton } from '../calendar/BookDiscoveryCallButton.jsx';
+import { AddToCalendarButton } from '../calendar/AddToCalendarButton.jsx';
+import { ShareButton } from '../common/ShareButton.jsx';
 import { RateBenchmarkCard } from './RateBenchmarkCard.jsx';
 import { ProactiveSuggestionsBanner } from '../common/ProactiveSuggestionsBanner.jsx';
 import { cn } from '../../lib/utils.js';
@@ -373,10 +375,16 @@ export function SmartProposalGenerator() {
               >
                 <Mail size={11} /> Also send as Email
               </button>
-              <BookDiscoveryCallButton
+              <AddToCalendarButton
                 variant="outline"
+                label="Add to Calendar"
                 defaultTitle={`Discovery call — ${proposal.analysis?.projectTitle || 'AWS project'}`}
                 defaultDescription={`Project: ${proposal.analysis?.projectTitle || 'AWS project'}\n\nServices: ${(proposal.analysis?.services || []).join(', ') || 'TBD'}\n\nNotes from proposal:\n${stripMarkdown(displayText).slice(0, 500)}`}
+              />
+              <ShareButton
+                variant="ghost"
+                title={proposal.analysis?.projectTitle || 'My AWS proposal'}
+                text={stripMarkdown(displayText)}
               />
               <button
                 onClick={handleSaveToTracker}
