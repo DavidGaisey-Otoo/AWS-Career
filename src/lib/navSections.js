@@ -10,7 +10,7 @@
  */
 import {
   Activity, Award, BarChart3, BookOpen, Brain, Briefcase, BriefcaseBusiness,
-  Calendar, Cloud, DollarSign, FileSearch, FileText, FlaskConical, GanttChart,
+  Calculator, Calendar, Cloud, DollarSign, FileSearch, FileText, FlaskConical, GanttChart,
   GraduationCap, Hammer, Heart, Home, Inbox, Layers, Library, Mail, Map as MapIcon,
   Newspaper, PhoneCall, Plane, Presentation, Settings, Sparkles, Target,
   TrendingUp, Trophy, Users, Wand2, Mic, ShieldCheck, Rocket, ListChecks,
@@ -87,6 +87,7 @@ export const SECTIONS = [
     path: '/earn',
     blurb: 'Land paid AWS work — proposals, CRM, finance, contracts, market intel.',
     children: [
+      { id: 'rate-calc',      label: 'Rate Calculator',       icon: Calculator,   path: '/rate-calculator' },
       { id: 'job-analyzer',   label: 'Job Analyzer',          icon: FileSearch,   path: '/job-analyzer' },
       { id: 'discovery-call', label: 'Discovery Call Prep',   icon: PhoneCall,    path: '/discovery-call' },
       { id: 'project-plan',   label: 'Project Plan',          icon: GanttChart,   path: '/project-plan' },

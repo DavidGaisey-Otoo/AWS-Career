@@ -338,6 +338,11 @@ export function SmartProposalGenerator() {
                   · cert: {proposal.meta.cert.replace(/AWS Certified /, '')}
                 </span>
               )}
+              {profile?.savedHourlyRate?.amount > 0 && (
+                <span className="text-[10.5px] font-bold text-success" title="Your saved floor rate — set on /rate-calculator">
+                  · your floor: ${Math.round(profile.savedHourlyRate.amount)}/hr
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
               <button

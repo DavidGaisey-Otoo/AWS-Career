@@ -75,6 +75,7 @@ const Readiness            = lazy(() => import('./pages/Readiness.jsx'));
 const RenewGithubToken     = lazy(() => import('./pages/RenewGithubToken.jsx'));
 const IdeaStudio           = lazy(() => import('./pages/IdeaStudio.jsx'));
 const GoogleCallback       = lazy(() => import('./pages/GoogleCallback.jsx'));
+const RateCalculator       = lazy(() => import('./pages/RateCalculator.jsx'));
 
 /**
  * Lightweight fallback while a lazy chunk loads. Two SkeletonCards keep
@@ -175,6 +176,7 @@ export default function App() {
                        <Route path="/idea-studio"     element={<Suspended><IdeaStudio /></Suspended>} />
                        <Route path="/settings" element={<Suspended><Settings /></Suspended>} />
                        <Route path="/integrations/google/callback" element={<Suspended><GoogleCallback /></Suspended>} />
+                       <Route path="/rate-calculator" element={<Suspended><RateCalculator /></Suspended>} />
                        <Route path="*" element={<Dashboard />} />
                      </Route>
                    </Routes>
