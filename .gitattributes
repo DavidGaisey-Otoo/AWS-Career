@@ -1,0 +1,45 @@
+# Normalise line endings across Windows + macOS + Linux contributors.
+# Without this, Windows users get "LF will be replaced by CRLF" on every
+# git add, and diffs sometimes show every line as changed when a file is
+# edited on a different OS.
+
+# Default: detect text vs binary, normalise to LF in the repo, restore
+# native on checkout. This is what "git init" would set on a fresh repo
+# but isn't applied retroactively.
+* text=auto eol=lf
+
+# Source code — always LF in repo, regardless of contributor OS.
+*.js     text eol=lf
+*.jsx    text eol=lf
+*.ts     text eol=lf
+*.tsx    text eol=lf
+*.css    text eol=lf
+*.scss   text eol=lf
+*.html   text eol=lf
+*.json   text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.md     text eol=lf
+*.svg    text eol=lf
+
+# Scripts MUST be LF — Windows CRLF in a .sh breaks bash.
+*.sh     text eol=lf
+
+# Lockfiles + config
+package-lock.json text eol=lf
+.gitignore        text eol=lf
+.editorconfig     text eol=lf
+
+# Binaries — never touch
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.pdf    binary
+*.zip    binary

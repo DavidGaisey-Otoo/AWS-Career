@@ -16,6 +16,7 @@ import { cn } from '../lib/utils.js';
 import { MasterIntelligencePanel } from '../components/intelligence/MasterIntelligencePanel.jsx';
 import { ApproachRecommendationPanel } from '../components/build/ApproachRecommendationPanel.jsx';
 import { RateBenchmarkCard } from '../components/freelance/RateBenchmarkCard.jsx';
+import { ProactiveSuggestionsBanner } from '../components/common/ProactiveSuggestionsBanner.jsx';
 import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
 import { AutoFillFromBrief } from '../components/build/AutoFillFromBrief.jsx';
 
@@ -281,6 +282,12 @@ function Analysis({ result }) {
 
       {/* NEW: Master Intelligence — runs the universal analyser on the raw input */}
       <MasterIntelligencePanel inputText={result.rawText || result.jdText} />
+
+      {/* Phase 5: Proactive suggestions (region mismatch, compliance gaps, Lambda timeout, etc.) */}
+      <ProactiveSuggestionsBanner
+        brief={result.rawText || result.jdText || text}
+        services={(result.services || []).map((s) => (typeof s === 'string' ? s : s?.id))}
+      />
 
       {/* FR-04: Recommended approach */}
       <ApproachRecommendationPanel

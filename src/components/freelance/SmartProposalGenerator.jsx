@@ -30,6 +30,7 @@ import { ApproachRecommendationPanel } from '../build/ApproachRecommendationPane
 import { getApproachById } from '../../lib/approachRecommender.js';
 import { BookDiscoveryCallButton } from '../calendar/BookDiscoveryCallButton.jsx';
 import { RateBenchmarkCard } from './RateBenchmarkCard.jsx';
+import { ProactiveSuggestionsBanner } from '../common/ProactiveSuggestionsBanner.jsx';
 import { cn } from '../../lib/utils.js';
 
 const TARGET_LOW = 200;
@@ -307,6 +308,14 @@ export function SmartProposalGenerator() {
           )}
         </div>
       </div>
+
+      {/* ─────── Phase 5 Proactive Suggestions ─────── */}
+      {proposal && (
+        <ProactiveSuggestionsBanner
+          brief={jd}
+          services={proposal.analysis?.services || []}
+        />
+      )}
 
       {/* ─────── FR-04 Recommended Approach panel ─────── */}
       {proposal && (
