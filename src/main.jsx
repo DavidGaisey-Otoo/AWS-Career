@@ -4,6 +4,13 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
 
+// Remove the pre-React fallback splash before mounting. If React fails
+// during render, ErrorBoundary will show its own error UI.
+try {
+  const fb = document.getElementById('bootstrap-fallback');
+  if (fb) fb.remove();
+} catch {}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     {/* basename uses Vite's import.meta.env.BASE_URL — '/' in dev, '/AWS-Career/' on Pages.
