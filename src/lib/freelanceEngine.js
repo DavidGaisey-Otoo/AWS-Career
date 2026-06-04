@@ -232,7 +232,7 @@ export function headlineOptions(firstName = 'David') {
 
 // ============================ Website copy ============================
 
-export function generateWebsiteCopy({ audience = 'B2B SaaS teams', yourName = 'David', yearsNetworking = 5, location = 'Accra, Ghana' }) {
+export function generateWebsiteCopy({ audience = 'B2B SaaS teams', yourName = 'You', yearsNetworking = 5, location = 'your city' }) {
   return {
     hero: WEBSITE_BLOCKS.hero[0].replaceAll('{audience}', audience),
     heroAlt: WEBSITE_BLOCKS.hero[1].replaceAll('{audience}', audience),

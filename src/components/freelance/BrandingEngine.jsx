@@ -326,7 +326,7 @@ function WebsiteCopy() {
       audience,
       yourName: profile?.name || 'You',
       yearsNetworking: 5,
-      location: 'Accra, Ghana',
+      location: 'your city',
     });
     setGenerated(out);
     setBranding({ websiteDrafts: out });
@@ -355,11 +355,15 @@ function WebsiteCopy() {
 
       {generated && (
         <div className="grid gap-3 sm:grid-cols-2">
-          <Block label="Hero (primary)" text={generated.hero} onCopy={copy} />
-          <Block label="Hero (alternate)" text={generated.heroAlt} onCopy={copy} />
-          <Block label="About" text={generated.about} onCopy={copy} wide />
-          <Block label="Services list" text={generated.services.map((s) => `• ${s}`).join('\n')} onCopy={copy} />
-          <Block label="SEO meta description" text={generated.seo} onCopy={copy} />
+          <Block label="Hero (primary)" text={generated.hero || ''} onCopy={copy} />
+          <Block label="Hero (alternate)" text={generated.heroAlt || ''} onCopy={copy} />
+          <Block label="About" text={generated.about || ''} onCopy={copy} wide />
+          <Block
+            label="Services list"
+            text={(generated.services || []).map((s) => `• ${s}`).join('\n') || '(click Generate to populate)'}
+            onCopy={copy}
+          />
+          <Block label="SEO meta description" text={generated.seo || ''} onCopy={copy} />
         </div>
       )}
     </div>
