@@ -1,7 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// GitHub Pages serves at /<repo>/ rather than /. Set the base path
+// only when the GH Actions workflow sets DEPLOY_TARGET=github-pages.
+// Local dev + Vercel + other hosts remain at '/'.
+const base = process.env.DEPLOY_TARGET === 'github-pages' ? '/AWS-Career/' : '/';
+
 export default defineConfig({
+  base,
   plugins: [react()],
   server: {
     port: 5273,

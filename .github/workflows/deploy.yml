@@ -1,0 +1,70 @@
+name: Deploy to GitHub Pages
+
+# When this runs:
+#   - On every push to main (the normal flow)
+#   - Manually via the Actions tab → "Run workflow" button
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissions the workflow needs to publish to Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deploy at a time — newer pushes cancel queued runs but never
+# cancel an in-progress deploy (so half-published states are impossible)
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # ─────────────────── BUILD ───────────────────
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20 + npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (clean)
+        run: npm ci
+
+      - name: Build for GitHub Pages
+        run: npm run build
+        env:
+          DEPLOY_TARGET: github-pages   # tells vite.config.js to set base: '/AWS-Career/'
+
+      - name: SPA fallback — copy index.html to 404.html
+        # GitHub Pages doesn't have rewrites like Vercel, so direct
+        # navigation to /freelance returns a 404. Trick: make 404.html
+        # be a copy of index.html so Pages serves the same SPA either
+        # way, then React Router takes over from window.location.
+        run: cp dist/index.html dist/404.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  # ─────────────────── DEPLOY ───────────────────
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

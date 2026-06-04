@@ -6,7 +6,12 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    {/* basename uses Vite's import.meta.env.BASE_URL — '/' in dev, '/AWS-Career/' on Pages.
+        BASE_URL has a trailing slash; React Router wants none, so trim it. */}
+    <BrowserRouter
+      basename={import.meta.env.BASE_URL.replace(/\/$/, '')}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <App />
     </BrowserRouter>
   </React.StrictMode>
@@ -14,6 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Use BASE_URL so the SW path is correct under GitHub Pages too
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
   });
 }
