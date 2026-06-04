@@ -17,9 +17,21 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
+// Service worker registration — defensive version.
+// On first registration, sweep any OLD caches from previous deploys to
+// avoid the "blank page" issue where a stale SW served broken assets.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    // Use BASE_URL so the SW path is correct under GitHub Pages too
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+  window.addEventListener('load', async () => {
+    try {
+      // Nuke any caches the browser may be holding (from earlier failed
+      // deploys, an earlier dev server, etc.). Cheap and safe.
+      if (window.caches?.keys) {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter((k) => !k.includes('v3-2026-06-launch')).map((k) => caches.delete(k)));
+      }
+      await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+    } catch (err) {
+      console.warn('[SW] registration skipped:', err);
+    }
   });
 }

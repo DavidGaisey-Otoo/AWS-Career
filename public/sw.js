@@ -10,7 +10,7 @@
  * fully refresh. Old caches get pruned on activate.
  */
 
-const CACHE_VERSION = 'v2-2025-06';
+const CACHE_VERSION = 'v3-2026-06-launch';  // bumped to bust any stale caches from earlier deploys
 const APP_CACHE = `awscl-app-${CACHE_VERSION}`;
 
 // Assets we want available offline immediately on first visit
