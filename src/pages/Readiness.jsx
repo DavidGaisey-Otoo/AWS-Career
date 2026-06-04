@@ -326,7 +326,7 @@ function DocumentationExporter() {
         title: REPORT_TITLE,
         meta: `Generated ${new Date().toLocaleString()}`,
         documentType: 'Master Setup Report',
-        authorName: 'David Gaisey-Otoo',
+        authorName: 'You',
       });
       toast.success('✅ PDF saved to your Downloads folder');
     } catch (err) {
@@ -364,7 +364,7 @@ function DocumentationExporter() {
         title: REPORT_TITLE,
         meta: `Generated ${new Date().toLocaleString()}`,
         documentType: 'Master Setup Report',
-        authorName: 'David Gaisey-Otoo',
+        authorName: 'You',
       });
       toast.success('✅ HTML file saved — open it from Downloads + Ctrl+P to convert to PDF');
     } catch (err) {
@@ -386,7 +386,7 @@ function DocumentationExporter() {
         title: REPORT_TITLE,
         meta: `Generated ${new Date().toLocaleString()}`,
         documentType: 'Master Setup Report',
-        authorName: 'David Gaisey-Otoo',
+        authorName: 'You',
       });
       toast.success('✅ Print preview opened in a new tab');
     } catch (err) {
@@ -466,7 +466,7 @@ async function composeMasterReport({ aws, deploy }) {
   lines.push('# AWS Career Launchpad — Master Setup Report');
   lines.push('');
   lines.push(`**Generated:** ${new Date().toISOString()}`);
-  lines.push(`**Owner:** ${activeProfile?.gmailAddress || 'gaiseyotood@gmail.com'}`);
+  lines.push(`**Owner:** ${activeProfile?.gmailAddress || 'you@example.com'}`);
   lines.push('');
 
   // 1. Snapshot

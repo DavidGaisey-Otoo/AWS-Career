@@ -21,7 +21,7 @@ export const IAM_BEST_PRACTICES = [
       'After your initial setup is complete (verify your IAM admin can sign in), sign out of root and store the root credentials in a password manager. Pull them out only for: closing the account, changing root email, recovering a fully-locked IAM admin, or addressing AWS account-level support issues.',
     ],
     examples: [
-      { do: 'Sign in to https://<account-id>.signin.aws.amazon.com/console as david_admin', dont: 'Sign in to console.aws.amazon.com with the root email' },
+      { do: 'Sign in to https://<account-id>.signin.aws.amazon.com/console as your IAM admin user', dont: 'Sign in to console.aws.amazon.com with the root email' },
       { do: 'Use IAM users (or IAM Identity Center / SSO) for every developer on your team', dont: 'Share the root password' },
     ],
   },

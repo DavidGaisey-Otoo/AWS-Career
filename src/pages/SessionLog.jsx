@@ -124,7 +124,7 @@ function SessionView({ session }) {
         title: session.title,
         meta: `${session.date} · Account ${session.account?.id || '—'}`,
         documentType: 'AWS Session Report',
-        authorName: 'David Gaisey-Otoo',
+        authorName: 'You',
       });
     } catch (err) {
       alert('PDF generation failed — ' + (err.message || err));

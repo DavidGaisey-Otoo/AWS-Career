@@ -55,7 +55,7 @@ export const ACCOUNT_SETUP_CHECKLIST = [
     icon: '👤',
     why: 'Root has unrevocable powers (delete the account, change root email). An IAM admin user can do everything else, with full audit trail, and you can rotate its access keys without locking yourself out. Treat root the way a bank treats the master vault key.',
     howTo: [
-      'IAM Console → Users → Create user → username e.g. "david_admin"',
+      'IAM Console → Users → Create user → username e.g. "admin_user"',
       'Provide console access → Custom password',
       'Attach policy directly: AdministratorAccess',
       'Save the sign-in URL (https://<account-id>.signin.aws.amazon.com/console)',
@@ -79,7 +79,7 @@ export const ACCOUNT_SETUP_CHECKLIST = [
       'Virtual MFA device → scan QR with Google Authenticator',
       'Enter two consecutive codes',
     ],
-    cliVerify: 'aws iam list-mfa-devices --user-name david_admin   # should return at least one device',
+    cliVerify: 'aws iam list-mfa-devices --user-name admin_user   # should return at least one device',
     docsUrl: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable.html',
   },
 
