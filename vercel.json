@@ -1,0 +1,10 @@
+{
+  "// _comment_": "SPA rewrites — every unmatched path renders index.html so React Router can take over.",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "// _build_": "Vercel auto-detects Vite, but pinning these makes deploys reproducible.",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite"
+}
