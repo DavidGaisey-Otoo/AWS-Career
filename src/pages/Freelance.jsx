@@ -52,24 +52,40 @@ const FINANCE_SUB = [
 ];
 
 export default function Freelance() {
-  const [params] = useSearchParams();
-  const [tab, setTab] = useState(() => {
-    const t = params.get('tab');
-    return TABS.some((x) => x.id === t) ? t : 'overview';
-  });
-  const [propTab, setPropTab] = useState(() => {
-    const sub = params.get('sub');
-    return PROPOSAL_SUB.some((x) => x.id === sub) ? sub : 'builder';
-  });
-  const [finTab, setFinTab] = useState('goals');
+  // URL is the single source of truth for tab state. Clicking a tab
+  // updates the URL with `replace: true` so the back button skips the
+  // intra-page tab changes and goes to the previous PAGE.
+  // (Without this, clicking 5 sub-tabs would queue 5 history entries.)
+  const [params, setParams] = useSearchParams();
 
-  // FR-01 + FR-02: react to deep-links from Gig Feed (?tab=…&sub=…&prefill=…)
-  useEffect(() => {
-    const t = params.get('tab');
-    if (t && TABS.some((x) => x.id === t)) setTab(t);
-    const sub = params.get('sub');
-    if (sub && PROPOSAL_SUB.some((x) => x.id === sub)) setPropTab(sub);
-  }, [params]);
+  const tab = TABS.some((x) => x.id === params.get('tab'))
+    ? params.get('tab')
+    : 'overview';
+  const propTab = PROPOSAL_SUB.some((x) => x.id === params.get('sub'))
+    ? params.get('sub')
+    : 'smart';
+  const finTab = ['goals', 'earnings', 'invoices', 'expenses', 'currency'].includes(params.get('fin'))
+    ? params.get('fin')
+    : 'goals';
+
+  // Setters write to URL — keep other params intact, replace history
+  const setTab = (newTab) => {
+    const next = new URLSearchParams(params);
+    next.set('tab', newTab);
+    next.delete('sub');  // reset sub-tab when main tab changes
+    next.delete('fin');
+    setParams(next, { replace: true });
+  };
+  const setPropTab = (newSub) => {
+    const next = new URLSearchParams(params);
+    next.set('sub', newSub);
+    setParams(next, { replace: true });
+  };
+  const setFinTab = (newFin) => {
+    const next = new URLSearchParams(params);
+    next.set('fin', newFin);
+    setParams(next, { replace: true });
+  };
 
   return (
     <div className="space-y-4">
