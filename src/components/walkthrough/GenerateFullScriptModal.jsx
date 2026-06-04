@@ -11,16 +11,18 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { X, Copy, Download, Check, FileText } from 'lucide-react';
+import { X, Copy, Download, Check, FileText, Rocket } from 'lucide-react';
 import {
   SCRIPT_FORMATS, downloadScript,
 } from '../../lib/walkthroughScriptGenerator.js';
+import { DeployFromScriptModal } from '../deploy/DeployFromScriptModal.jsx';
 import { cn } from '../../lib/utils.js';
 
 export function GenerateFullScriptModal({ walkthrough, open, onClose, region }) {
   const [activeFormatId, setActiveFormatId] = useState('console');
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [deployOpen, setDeployOpen] = useState(false);  // DP-01
 
   // Close on Escape
   useEffect(() => {
@@ -138,8 +140,28 @@ export function GenerateFullScriptModal({ walkthrough, open, onClose, region }) 
             <button onClick={handleDownload} className={cn('btn text-xs', downloaded ? 'btn-primary' : 'btn-primary')}>
               {downloaded ? <><Check size={14} /> Downloaded</> : <><Download size={14} /> Download {activeFormat?.extension?.toUpperCase()}</>}
             </button>
+            {/* DP-01: Deploy to AWS */}
+            <button
+              onClick={() => setDeployOpen(true)}
+              className="btn text-xs inline-flex items-center gap-1.5 bg-gradient-aws text-ink-950 hover:brightness-110"
+              title={activeFormatId === 'cfn'
+                ? 'Deploy this CloudFormation stack to your AWS account'
+                : `Open ${activeFormat?.label} run-locally instructions`}
+            >
+              <Rocket size={14} /> Deploy to AWS
+            </button>
           </div>
         </div>
+
+        {/* DP-01 deploy modal */}
+        <DeployFromScriptModal
+          open={deployOpen}
+          onClose={() => setDeployOpen(false)}
+          format={activeFormatId}
+          script={generated}
+          defaultStackName={`awscl-${walkthrough?.id || 'stack'}-${Date.now().toString(36).slice(-4)}`}
+          defaultRegion={region}
+        />
 
         {/* Preview */}
         <div className="flex-1 overflow-hidden">
