@@ -48,6 +48,7 @@ export const SECTIONS = [
       { id: 'study-plan',  label: 'Study plan',        icon: Calendar,    path: '/ai/study-plan' },
       { id: 'aws-updates', label: 'What\'s New in AWS',icon: Newspaper,   path: '/aws-updates' },
       { id: 'resources',   label: 'Resources',         icon: Library,     path: '/resources' },
+      { id: 'my-notes',    label: 'My Notes',          icon: ListChecks,  path: '/my-notes' },
     ],
   },
   {

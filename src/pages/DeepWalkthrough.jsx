@@ -23,6 +23,7 @@ import { cn } from '../lib/utils.js';
 import { GenerateFullScriptModal } from '../components/walkthrough/GenerateFullScriptModal.jsx';
 import { CostEstimatorCard } from '../components/build/CostEstimatorCard.jsx';
 import { RegionSuggestionChip } from '../components/build/RegionSuggestionChip.jsx';
+import { GenerateNoteButton } from '../components/notes/GenerateNoteButton.jsx';
 import { useProjectRegion } from '../lib/projectRegion.js';
 import {
   useSavedWalkthroughs, getStoredView, setStoredView,
@@ -412,8 +413,23 @@ function WalkthroughView({ walkthrough }) {
       <header className="surface rounded-3xl p-6 gradient-border">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <h1 className="text-2xl font-extrabold mb-2">{walkthrough.title}</h1>
-          {/* AD-01: Region suggestion chip */}
-          <RegionSuggestionChip projectId={walkthrough.id} brief={briefForSuggestion} />
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* AD-01: Region suggestion chip */}
+            <RegionSuggestionChip projectId={walkthrough.id} brief={briefForSuggestion} />
+            {/* NT-01: Generate study notes from this walkthrough */}
+            <GenerateNoteButton
+              mode="walkthrough"
+              walkthrough={{
+                id: walkthrough.id,
+                title: walkthrough.title,
+                brief: walkthrough.blurb || '',
+                services: walkthrough.services || [],
+                steps: walkthrough.steps || [],
+                difficulty: walkthrough.difficulty,
+              }}
+              variant="outline"
+            />
+          </div>
         </div>
         <p className="text-sm opacity-80 mb-3">{walkthrough.blurb}</p>
         <div className="flex flex-wrap gap-3 text-[11.5px] opacity-80">
