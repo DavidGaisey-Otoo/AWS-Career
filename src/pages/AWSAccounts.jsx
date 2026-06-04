@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../components/common/PageHeader.jsx';
+import { SetupDocumentation } from '../components/aws-accounts/SetupDocumentation.jsx';
 import { AWS_REGIONS, PROFILE_COLORS, useAWS } from '../context/AWSContext.jsx';
 import { useDialog } from '../context/DialogContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -60,6 +61,9 @@ export default function AWSAccounts() {
       <CredentialsCard profileId={state.activeProfile} />
 
       <TierStatusCard profileId={state.activeProfile} />
+
+      {/* AC-01 — best-practice checklist + IAM teaching + report generator */}
+      <SetupDocumentation />
 
       <SimulateModeBanner />
 
