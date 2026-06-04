@@ -45,10 +45,12 @@ export const SECTIONS = [
       { id: 'learning',    label: 'Learning Lab',      icon: BookOpen,    path: '/learning' },
       { id: 'ai',          label: 'AI hub',            icon: Brain,       path: '/ai' },
       { id: 'ai-assistant',label: 'AI Study Assistant',icon: Brain,       path: '/ai/assistant' },
-      { id: 'study-plan',  label: 'Study plan',        icon: Calendar,    path: '/ai/study-plan' },
+      { id: 'daily-plan',  label: 'Daily Plan',        icon: Calendar,    path: '/',              // dashboard hosts the live daily plan card
+        hint: 'Today\'s study + work focus (lives on the Dashboard)' },
+      { id: 'study-plan',  label: 'Study plan generator', icon: Calendar, path: '/ai/study-plan' },
+      { id: 'my-notes',    label: 'My Notes',          icon: ListChecks,  path: '/my-notes' },        // NT-01
       { id: 'aws-updates', label: 'What\'s New in AWS',icon: Newspaper,   path: '/aws-updates' },
       { id: 'resources',   label: 'Resources',         icon: Library,     path: '/resources' },
-      { id: 'my-notes',    label: 'My Notes',          icon: ListChecks,  path: '/my-notes' },
     ],
   },
   {
@@ -58,10 +60,13 @@ export const SECTIONS = [
     path: '/exam-hub',
     blurb: 'All 13 AWS certifications — mocks, practice, learning mode.',
     children: [
-      { id: 'exam',         label: 'Exam Center',       icon: GraduationCap, path: '/exam' },
-      { id: 'certs',        label: 'Certifications',    icon: Award,         path: '/certifications' },
-      { id: 'interview',    label: 'Interview prep',    icon: Mic,           path: '/interview' },
-      { id: 'ai-interview', label: 'Interview sim (AI)',icon: Wand2,         path: '/ai/interview' },
+      { id: 'exam',         label: 'Exam Center',           icon: GraduationCap, path: '/exam' },
+      { id: 'certs',        label: 'Certifications',        icon: Award,         path: '/certifications' },
+      { id: 'flashcards',   label: 'Flashcards',            icon: Layers,        path: '/flashcards' },       // EX-19
+      { id: 'smart-review', label: 'Smart Review',          icon: Brain,         path: '/exam',               // EX-18 (mode inside Exam Center)
+        hint: 'Spaced-repetition mode — pick a cert in Exam Center then Smart Review' },
+      { id: 'interview',    label: 'Interview prep',        icon: Mic,           path: '/interview' },
+      { id: 'ai-interview', label: 'Interview sim (AI)',    icon: Wand2,         path: '/ai/interview' },
     ],
   },
   {
@@ -77,7 +82,7 @@ export const SECTIONS = [
       { id: 'architecture', label: 'Architecture Studio', icon: Layers,      path: '/architecture' },
       { id: 'aws-accounts', label: 'AWS Account Manager', icon: Cloud,       path: '/aws-accounts' },
       { id: 'deploy',       label: 'Deploy Console',      icon: Rocket,      path: '/deploy' },
-      { id: 'walkthroughs', label: 'Walkthroughs',        icon: ListChecks,  path: '/walkthroughs' },
+      { id: 'walkthroughs', label: 'Project Walkthroughs',icon: ListChecks,  path: '/walkthroughs' },
       { id: 'session-log',  label: 'Session Log',         icon: FileText,    path: '/session-log' },
     ],
   },
@@ -88,15 +93,23 @@ export const SECTIONS = [
     path: '/earn',
     blurb: 'Land paid AWS work — proposals, CRM, finance, contracts, market intel.',
     children: [
-      { id: 'rate-calc',      label: 'Rate Calculator',       icon: Calculator,   path: '/rate-calculator' },
+      // ── Money tools (calculators + trackers come first) ──
+      { id: 'rate-calc',      label: 'Rate Calculator',       icon: Calculator,   path: '/rate-calculator' },     // EA-01
+      { id: 'income-tracker', label: 'Income Tracker',        icon: TrendingUp,   path: '/freelance?tab=overview',// EA-02 (lives in Freelance Overview)
+        hint: 'Monthly goal + payment log (opens Freelance Hub Overview)' },
+      // ── Lead capture + pipeline ──
       { id: 'job-analyzer',   label: 'Job Analyzer',          icon: FileSearch,   path: '/job-analyzer' },
+      { id: 'freelance',      label: 'Freelance Hub',         icon: DollarSign,   path: '/freelance' },
+      { id: 'my-proposals',   label: 'My Proposals',          icon: Trophy,       path: '/freelance?tab=myproposals',// FR-05 (inside Freelance Hub)
+        hint: 'Win rate tracker — sub-tab of Freelance Hub' },
+      // ── Per-gig delivery tools ──
       { id: 'discovery-call', label: 'Discovery Call Prep',   icon: PhoneCall,    path: '/discovery-call' },
       { id: 'project-plan',   label: 'Project Plan',          icon: GanttChart,   path: '/project-plan' },
       { id: 'presentation',   label: 'Presentation Generator',icon: Presentation, path: '/presentation' },
-      { id: 'email',          label: 'Email System',          icon: Mail,         path: '/email' },
+      { id: 'email',          label: 'Email System (also in Freelance Hub)', icon: Mail, path: '/email' },        // FR-03 cross-link callout
       { id: 'documents',      label: 'Document Center',       icon: FileText,     path: '/documents' },
       { id: 'content-queue',  label: 'Content Queue',         icon: Inbox,        path: '/content-queue' },
-      { id: 'freelance',      label: 'Freelance Hub',         icon: DollarSign,   path: '/freelance' },
+      // ── Career + market context ──
       { id: 'ai-coach',       label: 'AI Career Coach',       icon: Sparkles,     path: '/ai/coach' },
       { id: 'market',         label: 'Market Intel',          icon: TrendingUp,   path: '/market' },
       { id: 'uk',             label: 'UK Transition Planner', icon: Plane,        path: '/uk' },
