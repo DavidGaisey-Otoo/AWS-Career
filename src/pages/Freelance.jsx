@@ -20,6 +20,7 @@ import { ProposalTemplates } from '../components/freelance/ProposalTemplates.jsx
 import { ProposalTracker } from '../components/freelance/ProposalTracker.jsx';
 import { ProposalWinRateTracker } from '../components/freelance/ProposalWinRateTracker.jsx';
 import { SmartProposalGenerator } from '../components/freelance/SmartProposalGenerator.jsx';
+import { IncomeTrackerCard } from '../components/income/IncomeTrackerCard.jsx';
 import { useFreelance } from '../context/FreelanceContext.jsx';
 import { cn, formatCurrency } from '../lib/utils.js';
 
@@ -172,6 +173,9 @@ function OverviewTab({ onJump }) {
 
   return (
     <div className="space-y-4">
+      {/* EA-02 — full Income Tracker at top of Overview */}
+      <IncomeTrackerCard />
+
       {/* Headline strip */}
       <section className="grid gap-3 lg:grid-cols-2">
         <div className="surface rounded-2xl p-5 gradient-border relative overflow-hidden">
