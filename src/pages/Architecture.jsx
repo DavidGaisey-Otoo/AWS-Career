@@ -1,15 +1,18 @@
 import { motion } from 'framer-motion';
 import {
   AlertOctagon, BookmarkPlus, ChevronLeft, ClipboardCopy, DollarSign, Download,
-  Eye, FileImage, FileText, Layers, Link2, Pencil, Plus, RotateCcw, Save,
+  ExternalLink, Eye, FileImage, FileText, Layers, Link2, Pencil, Plus, RotateCcw, Save,
   Shield, Sparkles, Trash2, Wand2, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Markdown } from '../components/ai/Markdown.jsx';
 import { StudioIntelligence } from '../components/architecture/StudioIntelligence.jsx';
+import { FlowCanvas } from '../components/architecture/flow/FlowCanvas.jsx';
+import { DrawioEmbed } from '../components/architecture/flow/DrawioEmbed.jsx';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { ExpertReviewPanel } from '../components/expert-review/ExpertReviewPanel.jsx';
+import { toPng, toSvg } from 'html-to-image';
 import { useAI } from '../context/AIContext.jsx';
 import { useDialog } from '../context/DialogContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -36,11 +39,13 @@ export default function Architecture() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [reviewOpen, setReviewOpen] = useState(false);
   const [expertOpen, setExpertOpen] = useState(false);
-  const [dragState, setDragState] = useState(null);
+  const [drawioOpen, setDrawioOpen] = useState(false);
+  const [drawioXml, setDrawioXml] = useState(null);
   const [didMutate, setDidMutate] = useState(false);
   const [region, setRegion] = useState('us-east-1');
 
   const svgRef = useRef(null);
+  const canvasWrapRef = useRef(null);
   const currentId = state.currentDiagramId;
   const current = state.diagrams.find((d) => d.id === currentId) || null;
 
@@ -204,49 +209,75 @@ export default function Architecture() {
     toast.success(`Saved "${name}"`);
   };
 
-  const exportSVG = () => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const xml = new XMLSerializer().serializeToString(svg);
-    download(`${name || 'diagram'}.svg`, xml, 'image/svg+xml');
-    toast.success('Exported SVG');
+  // Find the react-flow viewport element for screenshot export
+  const findFlowViewport = () => {
+    const wrap = canvasWrapRef.current;
+    if (!wrap) return null;
+    return wrap.querySelector('.react-flow__viewport')?.parentElement
+        || wrap.querySelector('.react-flow')
+        || wrap;
+  };
+
+  const exportSVG = async () => {
+    const el = findFlowViewport();
+    if (!el) { toast.error('Canvas not ready.'); return; }
+    try {
+      const dataUrl = await toSvg(el, {
+        backgroundColor: '#0A0E1A',
+        filter: (node) => !node.classList?.contains('react-flow__minimap') && !node.classList?.contains('react-flow__controls'),
+      });
+      const blob = await (await fetch(dataUrl)).blob();
+      download(`${name || 'diagram'}.svg`, blob, 'image/svg+xml');
+      toast.success('Exported SVG');
+    } catch (err) {
+      toast.error('SVG export failed.');
+      // eslint-disable-next-line no-console
+      console.error(err);
+    }
   };
 
   const exportPNG = async () => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const xml = new XMLSerializer().serializeToString(svg);
-    const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = CANVAS_W * 2; canvas.height = CANVAS_H * 2;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#0A0E1A';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((b) => {
-        if (!b) return;
-        download(`${name || 'diagram'}.png`, b, 'image/png');
-        URL.revokeObjectURL(url);
-        toast.success('Exported PNG');
-      }, 'image/png');
-    };
-    img.src = url;
+    const el = findFlowViewport();
+    if (!el) { toast.error('Canvas not ready.'); return; }
+    try {
+      const dataUrl = await toPng(el, {
+        backgroundColor: '#0A0E1A',
+        pixelRatio: 2,
+        filter: (node) => !node.classList?.contains('react-flow__minimap') && !node.classList?.contains('react-flow__controls'),
+      });
+      const blob = await (await fetch(dataUrl)).blob();
+      download(`${name || 'diagram'}.png`, blob, 'image/png');
+      toast.success('Exported PNG');
+    } catch (err) {
+      toast.error('PNG export failed.');
+      // eslint-disable-next-line no-console
+      console.error(err);
+    }
   };
 
-  const exportPDF = () => {
-    // Print-friendly: open a new tab with a clean SVG render
-    const xml = new XMLSerializer().serializeToString(svgRef.current);
-    const html =
+  const exportPDF = async () => {
+    const el = findFlowViewport();
+    if (!el) { toast.error('Canvas not ready.'); return; }
+    try {
+      const dataUrl = await toPng(el, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        filter: (node) => !node.classList?.contains('react-flow__minimap') && !node.classList?.contains('react-flow__controls'),
+      });
+      const html =
 `<!doctype html><html><head><title>${name}</title>
-<style>body{margin:0;background:#0A0E1A;display:grid;place-items:center;min-height:100vh}
-@media print{@page{size:landscape}body{background:#fff}}</style></head>
-<body>${xml}<script>window.print()<\/script></body></html>`;
-    const w = window.open('', '_blank');
-    if (!w) { toast.error('Pop-up blocked — allow pop-ups to export PDF.'); return; }
-    w.document.write(html); w.document.close();
+<style>body{margin:0;display:grid;place-items:center;min-height:100vh}
+img{max-width:100%;height:auto}
+@media print{@page{size:landscape}}</style></head>
+<body><img src="${dataUrl}" alt="${name}" /><script>window.print()<\/script></body></html>`;
+      const w = window.open('', '_blank');
+      if (!w) { toast.error('Pop-up blocked — allow pop-ups to export PDF.'); return; }
+      w.document.write(html); w.document.close();
+    } catch (err) {
+      toast.error('PDF export failed.');
+      // eslint-disable-next-line no-console
+      console.error(err);
+    }
   };
 
   const shareURL = async () => {
@@ -409,20 +440,37 @@ export default function Architecture() {
                 setExpertOpen(true);
               }}
               hasNodes={nodes.length > 0}
+              onDrawio={() => setDrawioOpen(true)}
             />
           </div>
 
-          <div className="surface rounded-2xl overflow-hidden">
-            <div className="relative" style={{ paddingTop: `${(CANVAS_H / CANVAS_W) * 100}%` }}>
+          <div ref={canvasWrapRef} className="surface rounded-2xl overflow-hidden">
+            <div className="relative h-[640px] bg-[radial-gradient(circle_at_1px_1px,rgba(148,163,184,0.12)_1px,transparent_0)] [background-size:24px_24px]">
+              <FlowCanvas
+                nodes={nodes}
+                edges={edges}
+                onChange={(n, e) => {
+                  setNodes(n);
+                  setEdges(e);
+                  setDidMutate(true);
+                }}
+                onSelectionChange={(ids) => setSelectedNodeId(ids[0] || null)}
+              />
+              {nodes.length === 0 && (
+                <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+                  <div>
+                    <div className="text-lg font-extrabold text-muted">Drag AWS services from the palette, or load a template.</div>
+                    <div className="text-xs text-muted mt-1">Drag from any node handle to connect. Scroll to zoom. Drag background to pan.</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* legacy SVG fallback (kept hidden — used only as a sentinel for older code paths) */}
+            <div className="hidden">
               <svg
                 ref={svgRef}
                 viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
-                onDragOver={onCanvasDragOver}
-                onDrop={onCanvasDrop}
-                onClick={() => { setSelectedNodeId(null); setConnectingFrom(null); }}
-                className="absolute inset-0 w-full h-full select-none"
-                style={{ background: 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.12) 1px, transparent 0)',
-                         backgroundSize: '24px 24px' }}
+                className="w-1 h-1"
               >
                 <defs>
                   <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
@@ -639,6 +687,21 @@ export default function Architecture() {
           onClose={() => setExpertOpen(false)}
         />
       )}
+
+      {/* draw.io full-screen editor */}
+      <DrawioEmbed
+        open={drawioOpen}
+        onClose={() => setDrawioOpen(false)}
+        diagramName={name}
+        nodes={nodes}
+        edges={edges}
+        initialXml={drawioXml}
+        onSaveXml={(xml) => {
+          setDrawioXml(xml);
+          setDidMutate(true);
+          toast.success('Saved draw.io edits — your diagram XML is stored.');
+        }}
+      />
     </div>
   );
 }
@@ -681,19 +744,13 @@ function ExpertReviewModal({ inputs, onClose }) {
 
 function Toolbar({
   connectingFrom, setConnectingFrom, selectedNodeId, removeNode,
-  onNew, onSave, onSVG, onPNG, onPDF, onShare, onReview, onExpertReview, hasNodes,
+  onNew, onSave, onSVG, onPNG, onPDF, onShare, onReview, onExpertReview, hasNodes, onDrawio,
 }) {
   return (
     <>
       <TBtn onClick={onNew} icon={Plus} label="New" />
-      <TBtn
-        onClick={() => setConnectingFrom(selectedNodeId)}
-        icon={Link2}
-        label={connectingFrom ? 'Click target…' : 'Connect'}
-        active={!!connectingFrom}
-        disabled={!selectedNodeId}
-      />
       <TBtn onClick={() => selectedNodeId && removeNode(selectedNodeId)} icon={Trash2} label="Delete" disabled={!selectedNodeId} />
+      <TBtn onClick={onDrawio} icon={ExternalLink} label="Open in draw.io" disabled={!hasNodes} />
       <div className="ml-auto flex items-center gap-1">
         <TBtn onClick={onPNG} icon={FileImage} label="PNG" />
         <TBtn onClick={onSVG} icon={Download} label="SVG" />
