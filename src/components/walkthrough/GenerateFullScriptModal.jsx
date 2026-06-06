@@ -16,6 +16,7 @@ import {
   SCRIPT_FORMATS, downloadScript,
 } from '../../lib/walkthroughScriptGenerator.js';
 import { DeployFromScriptModal } from '../deploy/DeployFromScriptModal.jsx';
+import { DeployReviewPanel } from '../deploy-review/DeployReviewPanel.jsx';
 import { cn } from '../../lib/utils.js';
 
 export function GenerateFullScriptModal({ walkthrough, open, onClose, region }) {
@@ -163,11 +164,20 @@ export function GenerateFullScriptModal({ walkthrough, open, onClose, region }) 
           defaultRegion={region}
         />
 
-        {/* Preview */}
-        <div className="flex-1 overflow-hidden">
-          <pre className="h-full overflow-auto bg-[var(--card-2)]/60 p-4 text-[12px] leading-relaxed font-mono whitespace-pre">
+        {/* Preview + DEPLOY-01 pre-flight review */}
+        <div className="flex-1 overflow-auto">
+          <pre className="bg-[var(--card-2)]/60 p-4 text-[12px] leading-relaxed font-mono whitespace-pre max-h-[40vh] overflow-auto">
             <code>{generated}</code>
           </pre>
+          {generated && generated.length > 50 && (
+            <div className="p-4 border-t border-token">
+              <DeployReviewPanel
+                template={generated}
+                format={activeFormatId === 'cfn' ? 'cfn' : activeFormatId === 'tf' ? 'terraform' : activeFormatId === 'console' ? 'cli' : 'json'}
+                region={region}
+              />
+            </div>
+          )}
         </div>
 
         {/* Footer note */}

@@ -19,6 +19,9 @@ import {
 } from '../data/documents.js';
 import { openPrintable } from '../lib/printableHtml.js';
 import { cn } from '../lib/utils.js';
+import { ContractReviewPanel } from '../components/contract-review/ContractReviewPanel.jsx';
+import { InvoiceReviewPanel } from '../components/invoice-review/InvoiceReviewPanel.jsx';
+import { DocReviewPanel } from '../components/doc-review/DocReviewPanel.jsx';
 
 const TABS = [
   { id: 'overview',   label: 'Overview',   icon: FileText },
@@ -374,6 +377,15 @@ function ContractsTab() {
           </div>
         </div>
       )}
+
+      {/* CONTRACT-01: agent review of the live contract markdown */}
+      {draft && (
+        <ContractReviewPanel
+          contractText={contractToMarkdown(draft)}
+          clientName={draft?.parties?.client?.name || ''}
+          currency={draft?.investment?.currency || 'USD'}
+        />
+      )}
     </div>
   );
 }
@@ -671,6 +683,14 @@ function InvoiceEditor({ draft, setDraft, onSave, onPaid, onReminder, onExport }
           className="w-full bg-[var(--card-2)] border border-token rounded-md px-2 py-1.5 text-xs focus-ring focus:border-aws-orange resize-y"
         />
       </Group>
+
+      {/* INVOICE-01: agent review of the live invoice draft */}
+      {draft && (
+        <InvoiceReviewPanel
+          invoice={draft}
+          supplierCountry="GB"
+        />
+      )}
     </div>
   );
 }
@@ -852,6 +872,9 @@ function DeliveriesTab() {
           <Group label="Package summary (README.md preview)">
             <pre className="rounded-lg bg-[var(--card-2)]/40 border border-token p-3 text-[11px] leading-relaxed overflow-x-auto whitespace-pre-wrap">{active.summary}</pre>
           </Group>
+
+          {/* DOC-01: Handover completeness review on the package summary */}
+          <DocReviewPanel docText={active.summary || ''} docType="handover" />
         </div>
       )}
     </div>
