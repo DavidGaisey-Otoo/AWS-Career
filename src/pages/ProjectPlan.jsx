@@ -16,6 +16,7 @@ import { buildPlan, planToMarkdown, updatePlan } from '../data/projectPlan.js';
 import { openPrintable } from '../lib/printableHtml.js';
 import { cn } from '../lib/utils.js';
 import { useApp } from '../context/AppContext.jsx';
+import { ProjectPlanReviewPanel } from '../components/project-plan-review/ProjectPlanReviewPanel.jsx';
 
 const PHASE_COLOR_TOKEN = {
   orange:  { bg: 'bg-aws-orange/15', text: 'text-aws-orange', border: 'border-aws-orange/40', bar: '#FF9900' },
@@ -227,6 +228,14 @@ export default function ProjectPlan() {
               <PhasesList plan={plan} onEditPhase={editPhase} onEditTask={editTask} onAddTask={addTask} onRemoveTask={removeTask} />
               <PaymentSchedule plan={plan} />
               <RiskRegister plan={plan} onEdit={editPlan} />
+              {/* PLAN-01: realism review */}
+              <ProjectPlanReviewPanel
+                plan={plan}
+                services={plan?.services || []}
+                level={plan?.level || 'intermediate'}
+                teamSize={Number(plan?.teamSize) || 1}
+                startDate={plan?.startDate}
+              />
             </>
           )}
         </div>

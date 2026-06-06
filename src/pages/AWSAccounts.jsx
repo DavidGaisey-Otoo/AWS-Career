@@ -7,6 +7,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { SetupDocumentation } from '../components/aws-accounts/SetupDocumentation.jsx';
+import { AccountHygieneReviewPanel } from '../components/account-hygiene-review/AccountHygieneReviewPanel.jsx';
 import { AWS_REGIONS, PROFILE_COLORS, useAWS } from '../context/AWSContext.jsx';
 import { useDialog } from '../context/DialogContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -64,6 +65,15 @@ export default function AWSAccounts() {
 
       {/* AC-01 — best-practice checklist + IAM teaching + report generator */}
       <SetupDocumentation />
+
+      {/* ACCT-01 — Yusuf El-Sayed's hygiene audit */}
+      <AccountHygieneReviewPanel
+        profile={activeProfile || {}}
+        billingAlerts={activeProfile?.billingAlerts ?? null}
+        services={activeProfile?.services || {}}
+        supportPlan={activeProfile?.supportPlan || 'basic'}
+        freeTierActive={!!activeProfile?.freeTierActive}
+      />
 
       <SimulateModeBanner />
 

@@ -13,6 +13,7 @@ import { useAI } from '../context/AIContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { COMPANIES, LEVELS, ROLES, getInterviewQuestions, scoreAnswer } from '../data/interviewBank.js';
 import { cn } from '../lib/utils.js';
+import { InterviewReviewPanel } from '../components/interview-review/InterviewReviewPanel.jsx';
 
 const COMPANY_FLAVOR = {
   startup:    'I\'m Maya, hiring manager at a 30-person SaaS startup. Move fast — we want pragmatism over perfection.',
@@ -429,6 +430,15 @@ function Results({ interview, onRestart, onSave }) {
                     <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1 mt-2">Model answer</div>
                     <p className="leading-relaxed text-muted">{b.q.modelAnswer}</p>
                   </div>
+                )}
+                {/* INT-01: STAR coach review */}
+                {b.answer && (
+                  <InterviewReviewPanel
+                    question={b.q.q}
+                    answer={b.answer}
+                    questionType={b.q.kind === 'sysdesign' ? 'system-design' : b.q.kind === 'tech' ? 'technical' : 'behavioural'}
+                    className="mt-3"
+                  />
                 )}
               </div>
             </details>
