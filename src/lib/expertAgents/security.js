@@ -104,8 +104,8 @@ Output only actionable findings with severity, fix, and AWS doc URL.`,
         }));
       }
 
-      // S3 encryption at rest
-      if (ctx.isProduction && ctx.solutionText && !/SSE-?KMS|SSE-?S3|aws:kms|AES256|ServerSideEncryption/i.test(ctx.solutionText)) {
+      // S3 encryption at rest — fires also when solutionText is empty (planning phase)
+      if (ctx.isProduction && !/SSE-?KMS|SSE-?S3|aws:kms|AES256|ServerSideEncryption/i.test(ctx.solutionText)) {
         out.push(finding({
           severity: 'high',
           title: 'S3 production bucket has no explicit encryption configuration',
@@ -179,6 +179,19 @@ Output only actionable findings with severity, fix, and AWS doc URL.`,
         fix: 'Add either: (1) Cognito user pool authorizer, (2) IAM authorization, (3) Lambda authorizer, or (4) API keys + usage plan with throttling. Even API keys are better than open.',
         docs: 'https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-control-access-to-api.html',
         ruleId: 'API-AUTH-001',
+      }));
+    }
+
+    // ─── Cognito present but auth flow unclear ────────────
+    if (ctx.has('cognito') && (ctx.has('apigateway') || ctx.has('alb')) &&
+        !/authorizer|user pool|jwt|oauth|oidc/i.test(ctx.solutionText)) {
+      out.push(finding({
+        severity: 'medium',
+        title: 'Cognito present but authorization flow not specified for API/ALB',
+        body: 'Adding Cognito to a service list doesn\'t auto-protect endpoints. You need an explicit authorizer (Cognito User Pool authorizer on API Gateway, OIDC integration on ALB) to actually enforce auth.',
+        fix: 'API Gateway: add Cognito User Pool Authorizer to method auth. ALB: configure OIDC authentication action with Cognito as IdP.',
+        docs: 'https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html',
+        ruleId: 'SEC-API-AUTH-001',
       }));
     }
 

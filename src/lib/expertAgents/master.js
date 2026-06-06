@@ -21,6 +21,8 @@ import { complianceOfficer }   from './compliance.js';
 import { computeArchitect }    from './compute.js';
 import { storageArchitect }    from './storage.js';
 import { reliabilityEngineer } from './reliability.js';
+import { performanceArchitect }       from './performance.js';
+import { architecturePatternsExpert } from './architecture.js';
 
 export const ALL_EXPERTS = [
   securityArchitect,
@@ -31,6 +33,8 @@ export const ALL_EXPERTS = [
   computeArchitect,
   storageArchitect,
   reliabilityEngineer,
+  performanceArchitect,       // AUDIT-02 new
+  architecturePatternsExpert, // AUDIT-02 new
 ];
 
 /**

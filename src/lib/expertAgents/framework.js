@@ -61,7 +61,7 @@ export function finding({ severity, title, body, fix, docs, ruleId, evidence }) 
 export const REGEX = {
   hipaa:     /\b(hipaa|phi|protected health information|patient (data|records?)|medical records?)\b/i,
   pci:       /\b(pci[- ]?dss|cardholder|payment card|credit card data|card processing)\b/i,
-  gdpr:      /\b(gdpr|eu data residency|right to be forgotten|data subject)\b/i,
+  gdpr:      /\b(gdpr|eu (data|customers?|users?|residents?)|european (data|customers?|users?)|right to be forgotten|data subject|data residency)\b/i,
   soc2:      /\b(soc ?2|soc-2)\b/i,
   fedramp:   /\b(fedramp|us govcloud|federal)\b/i,
 
@@ -88,9 +88,41 @@ export function extractBudget(brief) {
 
 export function extractUserScale(brief) {
   const text = String(brief || '');
-  const m = text.match(/\b(\d+(?:,\d+)*)\s*(?:users?|requests?|customers?|orders?|transactions?)/i);
-  if (!m) return null;
-  return parseInt(m[1].replace(/,/g, ''), 10);
+
+  // "1 million users", "10M users", "50K concurrent"
+  const millionMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(?:million|M\b)\s*(?:users?|requests?|customers?|devices?|connections?|skus?|items?|records?|events?|messages?)?/i);
+  if (millionMatch) return Math.round(parseFloat(millionMatch[1]) * 1_000_000);
+
+  const kMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(?:thousand|K\b|k\s)\s*(?:concurrent|users?|requests?|customers?|devices?|connections?|skus?|events?|tps|qps)?/i);
+  if (kMatch) return Math.round(parseFloat(kMatch[1]) * 1_000);
+
+  // "50,000 concurrent users", "10000 events per second"
+  const explicit = text.match(/\b(\d+(?:,\d+)+)\s*(?:concurrent|users?|requests?|customers?|orders?|transactions?|devices?|events?|messages?|tps|qps)/i);
+  if (explicit) return parseInt(explicit[1].replace(/,/g, ''), 10);
+
+  const plain = text.match(/\b(\d{4,})\s*(?:concurrent|users?|requests?|customers?|orders?|transactions?|devices?|events?|messages?|tps|qps)/i);
+  if (plain) return parseInt(plain[1], 10);
+
+  return null;
+}
+
+// Catches "events per second", "requests/second", "TPS", "QPS" rates
+export function extractThroughputRate(brief) {
+  const text = String(brief || '');
+  // "10,000 events per second" / "10K events/sec" / "10000 TPS"
+  const m = text.match(/(\d+(?:[,.]?\d+)*)\s*(?:K\b)?\s*(?:events?|requests?|messages?|writes?|reads?)?\s*\/?\s*(?:per\s+)?(?:sec(?:ond)?|s\b)/i);
+  if (m) {
+    let n = parseInt(m[1].replace(/,/g, ''), 10);
+    if (/K\b/i.test(m[0]) && !/000/.test(m[1])) n *= 1000;
+    return n;
+  }
+  const tps = text.match(/(\d+(?:[,.]?\d+)*)\s*(?:K\b)?\s*(?:tps|qps)/i);
+  if (tps) {
+    let n = parseInt(tps[1].replace(/,/g, ''), 10);
+    if (/K\b/i.test(tps[0])) n *= 1000;
+    return n;
+  }
+  return null;
 }
 
 // ════════════════════════════════════════════════════════════════════
