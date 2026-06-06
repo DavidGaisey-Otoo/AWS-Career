@@ -33,6 +33,7 @@ import { AddToCalendarButton } from '../calendar/AddToCalendarButton.jsx';
 import { ShareButton } from '../common/ShareButton.jsx';
 import { RateBenchmarkCard } from './RateBenchmarkCard.jsx';
 import { ProactiveSuggestionsBanner } from '../common/ProactiveSuggestionsBanner.jsx';
+import { ExpertReviewPanel } from '../expert-review/ExpertReviewPanel.jsx';
 import { cn } from '../../lib/utils.js';
 
 const TARGET_LOW = 200;
@@ -331,6 +332,17 @@ export function SmartProposalGenerator() {
 
       {/* ─────── FR-06 Rate Benchmark ─────── */}
       {proposal && <RateBenchmarkCard brief={jd} />}
+
+      {/* ─────── EXPERT-01 Multi-agent Expert Review ─────── */}
+      {proposal && (
+        <ExpertReviewPanel
+          brief={jd}
+          services={proposal.analysis?.services || []}
+          level={proposal.analysis?.level?.toLowerCase() || 'beginner'}
+          approach={approach || 'console'}
+          solutionText={displayText}
+        />
+      )}
 
       {/* ─────── Output ─────── */}
       {proposal && (

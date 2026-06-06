@@ -17,6 +17,7 @@ import { MasterIntelligencePanel } from '../components/intelligence/MasterIntell
 import { ApproachRecommendationPanel } from '../components/build/ApproachRecommendationPanel.jsx';
 import { RateBenchmarkCard } from '../components/freelance/RateBenchmarkCard.jsx';
 import { ProactiveSuggestionsBanner } from '../components/common/ProactiveSuggestionsBanner.jsx';
+import { ExpertReviewPanel } from '../components/expert-review/ExpertReviewPanel.jsx';
 import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
 import { AutoFillFromBrief } from '../components/build/AutoFillFromBrief.jsx';
 
@@ -297,6 +298,12 @@ function Analysis({ result }) {
 
       {/* FR-06: Rate benchmark */}
       <RateBenchmarkCard brief={result.rawText || result.jdText || text} />
+
+      {/* EXPERT-01: 8-expert review of the implied architecture */}
+      <ExpertReviewPanel
+        brief={result.rawText || result.jdText || text}
+        services={(result.services || []).map((s) => (typeof s === 'string' ? s : s?.id))}
+      />
 
       {/* Existing v1 analysis panels — kept for backwards compatibility */}
       <details className="rounded-2xl border border-token bg-[var(--card-2)]/30 overflow-hidden">
