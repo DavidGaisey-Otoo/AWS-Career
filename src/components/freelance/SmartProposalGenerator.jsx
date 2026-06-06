@@ -34,6 +34,7 @@ import { ShareButton } from '../common/ShareButton.jsx';
 import { RateBenchmarkCard } from './RateBenchmarkCard.jsx';
 import { ProactiveSuggestionsBanner } from '../common/ProactiveSuggestionsBanner.jsx';
 import { ExpertReviewPanel } from '../expert-review/ExpertReviewPanel.jsx';
+import { ProposalReviewPanel } from '../proposal-review/ProposalReviewPanel.jsx';
 import { cn } from '../../lib/utils.js';
 
 const TARGET_LOW = 200;
@@ -333,7 +334,7 @@ export function SmartProposalGenerator() {
       {/* ─────── FR-06 Rate Benchmark ─────── */}
       {proposal && <RateBenchmarkCard brief={jd} />}
 
-      {/* ─────── EXPERT-01 Multi-agent Expert Review ─────── */}
+      {/* ─────── EXPERT-01 Multi-agent Expert Review (technical AWS architecture) ─────── */}
       {proposal && (
         <ExpertReviewPanel
           brief={jd}
@@ -341,6 +342,17 @@ export function SmartProposalGenerator() {
           level={proposal.analysis?.level?.toLowerCase() || 'beginner'}
           approach={approach || 'console'}
           solutionText={displayText}
+        />
+      )}
+
+      {/* ─────── PROP-01 Proposal Quality Review (prose/persuasion/pricing/voice) ─────── */}
+      {proposal && (
+        <ProposalReviewPanel
+          proposalText={displayText}
+          jobBrief={jd}
+          clientName={proposal.analysis?.clientFirstName || ''}
+          level={proposal.analysis?.level?.toLowerCase() || 'intermediate'}
+          services={proposal.analysis?.services || []}
         />
       )}
 
