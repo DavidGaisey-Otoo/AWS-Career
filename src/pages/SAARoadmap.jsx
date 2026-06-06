@@ -3,14 +3,15 @@
  */
 
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   GraduationCap, Calendar, Clock, BookOpen, CheckCircle2, Circle,
   Target, TrendingUp, AlertTriangle, Award, FileText, ChevronDown,
-  ChevronUp, ExternalLink, RotateCcw, Trophy, Zap,
+  ChevronUp, ExternalLink, RotateCcw, Trophy, Zap, ArrowRight,
 } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import {
-  EXAM_INFO, DOMAINS, PHASES, CHEATSHEET, computeReadiness,
+  EXAM_INFO, DOMAINS, PHASES, CHEATSHEET, computeReadiness, guideIdForService,
 } from '../data/saaRoadmap.js';
 import {
   useSAAProgress, toggleService, setExamDate, logHours, logPracticeScore,
@@ -241,37 +242,19 @@ function PhaseCard({ phase, state, isOpen, onToggle }) {
         <div className="px-4 pb-4 space-y-3 border-t border-token pt-3">
           <p className="text-[12px] opacity-90 italic">{phase.rationale}</p>
 
-          {/* Services */}
+          {/* Services — each is a study card with full guide + quiz */}
           {phase.services?.length > 0 && (
             <div>
-              <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-aws-orange mb-1.5">Services to master</div>
-              <div className="space-y-1">
-                {phase.services.map((svc) => {
-                  const checked = state.phaseProgress?.[phase.id]?.services?.[svc.id];
-                  return (
-                    <button key={svc.id} onClick={() => toggleService(phase.id, svc.id)}
-                      className={cn(
-                        'w-full text-left p-2.5 rounded-lg border transition flex items-start gap-2',
-                        checked ? 'border-success/40 bg-success/5' : 'border-token bg-[var(--card-2)] hover:border-aws-orange/40'
-                      )}>
-                      {checked
-                        ? <CheckCircle2 size={14} className="text-success mt-0.5 flex-shrink-0" />
-                        : <Circle size={14} className="opacity-40 mt-0.5 flex-shrink-0" />
-                      }
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          <span className={cn('text-[12.5px] font-extrabold uppercase', checked && 'line-through opacity-65')}>{svc.id}</span>
-                          {svc.must
-                            ? <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-aws-orange/15 text-aws-orange">MUST KNOW</span>
-                            : <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--card)] opacity-65">nice to know</span>
-                          }
-                          <span className="text-[10px] opacity-65">~{svc.hours}h</span>
-                        </div>
-                        <p className="text-[11.5px] opacity-85 leading-snug">{svc.notes}</p>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-aws-orange mb-1.5">Services to master · click to study</div>
+              <div className="space-y-1.5">
+                {phase.services.map((svc) => (
+                  <ServiceStudyCard
+                    key={svc.id}
+                    service={svc}
+                    phaseId={phase.id}
+                    checked={!!state.phaseProgress?.[phase.id]?.services?.[svc.id]}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -333,6 +316,123 @@ function PhaseCard({ phase, state, isOpen, onToggle }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
+// ServiceStudyCard — the heart of the "make it a real study system"
+// upgrade. Each service shows: must-know badge, hour estimate, notes,
+// AND two action buttons:
+//   1. "Read full study guide" → opens the deep TopicStudyGuide page
+//      (sections, exam traps, cheatsheet, flashcards, resources)
+//   2. "Practice 10 questions" → opens Exam Center in topic mode
+//      filtered to the relevant exam topic
+// ════════════════════════════════════════════════════════════════════
+function ServiceStudyCard({ service, phaseId, checked }) {
+  const guideId = guideIdForService(service.id);
+  const hasGuide = !!guideId;
+  // Map service ID → exam topic (Storage / Compute / etc.) for quiz launching
+  const examTopic = mapServiceToExamTopic(service.id);
+
+  return (
+    <div className={cn(
+      'rounded-xl border transition',
+      checked ? 'border-success/40 bg-success/5' : 'border-token bg-[var(--card-2)]'
+    )}>
+      <div className="p-3 flex items-start gap-2.5">
+        <button
+          onClick={() => toggleService(phaseId, service.id)}
+          className="flex-shrink-0 mt-0.5"
+          aria-label={checked ? 'Mark as not done' : 'Mark as done'}
+        >
+          {checked ? <CheckCircle2 size={16} className="text-success" /> : <Circle size={16} className="opacity-40 hover:opacity-80 transition" />}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className={cn('text-[13px] font-extrabold uppercase', checked && 'line-through opacity-65')}>
+              {service.id}
+            </span>
+            {service.must
+              ? <span className="text-[9.5px] font-extrabold px-1.5 py-0.5 rounded-full bg-aws-orange/15 text-aws-orange">MUST KNOW</span>
+              : <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--card)] opacity-65">nice to know</span>
+            }
+            <span className="text-[10px] opacity-65 inline-flex items-center gap-0.5">
+              <Clock size={9} /> ~{service.hours}h
+            </span>
+            {!hasGuide && (
+              <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-warning/15 text-warning">
+                Guide coming · use AWS docs
+              </span>
+            )}
+          </div>
+          <p className="text-[11.5px] opacity-90 leading-snug mb-2">{service.notes}</p>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-1.5">
+            {hasGuide ? (
+              <Link
+                to={`/exam/saa-c03/study/${guideId}`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold border border-aws-orange/40 text-aws-orange hover:bg-aws-orange/10 transition"
+              >
+                <BookOpen size={11} /> Read full study guide <ArrowRight size={9} />
+              </Link>
+            ) : (
+              <a
+                href={`https://docs.aws.amazon.com/search/doc-search.html?searchPath=documentation&searchQuery=${encodeURIComponent(service.id)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
+              >
+                <ExternalLink size={11} /> AWS docs for {service.id.toUpperCase()}
+              </a>
+            )}
+
+            {examTopic && (
+              <Link
+                to={`/exam/saa-c03/run/topic?topic=${encodeURIComponent(examTopic)}`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-gradient-aws text-ink-950 hover:brightness-110 transition"
+              >
+                <Trophy size={11} /> Practice quiz · 10 Qs
+              </Link>
+            )}
+
+            {hasGuide && (
+              <Link
+                to={`/exam/saa-c03/study/${guideId}#flashcards`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
+              >
+                <Zap size={11} /> Flashcards
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Map roadmap service IDs to the exam topic the question bank uses for filtering.
+// (Storage / Compute / Security / Networking / Database / Pricing / Monitoring / Integration)
+function mapServiceToExamTopic(serviceId) {
+  const M = {
+    iam: 'Security', 'iam-adv': 'Security', kms: 'Security', secrets: 'Security',
+    cognito: 'Security', orgs: 'Security', 'guard-macie': 'Security',
+    'waf-shield': 'Security', cloudtrail: 'Security',
+    ec2: 'Compute', asg: 'Compute', lambda: 'Compute', ecs: 'Compute',
+    fargate: 'Compute', eks: 'Compute', beanstalk: 'Compute', 'step-fn': 'Compute',
+    s3: 'Storage', ebs: 'Storage', efs: 'Storage', fsx: 'Storage', 's3-tiering': 'Storage',
+    rds: 'Database', aurora: 'Database', ddb: 'Database', redshift: 'Database',
+    elasticache: 'Database',
+    vpc: 'Networking', 'vpc-adv': 'Networking', route53: 'Networking',
+    cloudfront: 'Networking', 'global-accel': 'Networking', 'direct-conn': 'Networking',
+    vpn: 'Networking', tgw: 'Networking', elb: 'Networking',
+    sqs: 'Integration', sns: 'Integration', eventbridge: 'Integration',
+    cloudwatch: 'Monitoring', xray: 'Monitoring',
+    'savings-plans': 'Pricing', spot: 'Pricing', budgets: 'Pricing',
+    'compute-opt': 'Pricing', 'trusted-adv': 'Pricing', 'wellarch-fw': null,
+    cli: null,
+  };
+  return M[serviceId] || null;
+}
+
 function CheatSheetCard() {
   const [expanded, setExpanded] = useState(false);
   return (

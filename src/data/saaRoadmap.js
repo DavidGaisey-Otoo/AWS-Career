@@ -81,6 +81,44 @@ export const DOMAINS = [
 ];
 
 // ════════════════════════════════════════════════════════════════════
+// SERVICE → STUDY GUIDE MAP
+// Every service in PHASES below has either:
+//   - guideId: matches a key in src/data/topicStudyGuides.js (existing
+//     deep study guide with sections, exam traps, cheatsheet, flashcards)
+//   - guideId: null → no dedicated guide yet (will show "coming soon" +
+//     link to AWS docs)
+// Routes resolve to /exam/saa-c03/study/{guideId} via the existing
+// TopicStudyGuide page (built in EX-11).
+// ════════════════════════════════════════════════════════════════════
+const GUIDE_MAP = {
+  // Foundation
+  iam: 'iam', ec2: 'ec2', s3: 's3', vpc: 'vpc', cli: null,
+  // Storage + DB
+  ebs: 'ec2',  // EBS is covered in EC2 guide (with full table)
+  efs: null, fsx: null, rds: 'rds', aurora: 'aurora', ddb: 'dynamodb',
+  redshift: 'redshift',
+  // Elastic Compute
+  asg: 'asg', elb: 'alb', lambda: 'lambda', ecs: 'ecs', fargate: 'ecs',
+  eks: 'eks', beanstalk: null, 'step-fn': 'step',
+  // Networking + Edge
+  'vpc-adv': 'vpc', route53: 'route53', cloudfront: 'cloudfront',
+  'global-accel': null, 'direct-conn': 'dx', vpn: null, tgw: 'tgw',
+  // Security deep
+  'iam-adv': 'iam', kms: 'kms', secrets: 'secretsmgr', cognito: null,
+  orgs: null, 'guard-macie': null, 'waf-shield': 'waf',
+  // Integration + Monitoring
+  sqs: 'sqs', sns: 'sns', eventbridge: 'eventbridge', cloudwatch: 'cloudwatch',
+  xray: null, cloudtrail: 'cloudtrail',
+  // Cost + WA
+  'savings-plans': 'ec2',  // pricing models live in EC2 guide
+  spot: 'ec2', 's3-tiering': 's3', 'compute-opt': null, 'trusted-adv': null,
+  budgets: null, 'wellarch-fw': null,
+};
+export function guideIdForService(serviceId) {
+  return GUIDE_MAP[serviceId] || null;
+}
+
+// ════════════════════════════════════════════════════════════════════
 // PHASES — week-by-week, ordered by foundational dependencies
 // ════════════════════════════════════════════════════════════════════
 export const PHASES = [
