@@ -2,11 +2,12 @@ import { motion } from 'framer-motion';
 import {
   AlertCircle, BookOpen, Check, ChevronLeft, ChevronRight, ClipboardCopy,
   Edit3, Filter, Inbox, Library, Loader2, Mail, MailPlus, RefreshCw, Search,
-  Send, Sparkles, Star, Trash2, X, Wand2,
+  Send, Shield, Sparkles, Star, Trash2, X, Wand2,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
+import { EmailReviewPanel } from '../components/email-review/EmailReviewPanel.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { useAWS } from '../context/AWSContext.jsx';
 import { useDialog } from '../context/DialogContext.jsx';
@@ -83,6 +84,7 @@ function ComposerTab() {
   const [projectId, setProjectId] = useState('');
   const [notes, setNotes] = useState('');
   const [generated, setGenerated] = useState({ subject: '', body: '' });
+  const [showReview, setShowReview] = useState(false);
   const [generating, setGenerating] = useState(false);
 
   const client = fre.clients.find((c) => c.id === clientId);
@@ -289,11 +291,32 @@ function ComposerTab() {
               <a href={links.gmail}   target="_blank" rel="noreferrer" className="btn btn-ghost !text-xs"><Mail size={12} /> Open in Gmail</a>
               <a href={links.outlook} target="_blank" rel="noreferrer" className="btn btn-ghost !text-xs"><Mail size={12} /> Open in Outlook</a>
               <a href={links.mailto} className="btn btn-ghost !text-xs"><Mail size={12} /> mailto:</a>
+              <button
+                onClick={() => setShowReview((v) => !v)}
+                className={cn('btn !text-xs', showReview ? 'btn-primary' : 'btn-ghost')}
+              >
+                <Shield size={12} /> {showReview ? 'Hide review' : '2 email experts'}
+              </button>
               <div className="ml-auto flex items-center gap-1.5">
                 <button onClick={save} className="btn btn-ghost !text-xs"><Edit3 size={12} /> Save draft</button>
                 <button onClick={send} className="btn btn-primary !text-xs"><Send size={12} /> Mark sent</button>
               </div>
             </div>
+
+            {showReview && (
+              <EmailReviewPanel
+                subject={generated.subject}
+                body={generated.body}
+                recipient={{
+                  name: client?.name,
+                  email: client?.email,
+                  company: client?.company,
+                }}
+                intent="outreach"
+                fromName={profile.name || ''}
+                hasUnsubscribe={/unsubscribe|opt[- ]?out|stop receiving|let me know if you'?d rather not/i.test(generated.body)}
+              />
+            )}
           </>
         )}
       </div>

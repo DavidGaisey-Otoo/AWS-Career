@@ -2,13 +2,14 @@ import { motion } from 'framer-motion';
 import {
   AlertOctagon, BookmarkPlus, ChevronLeft, ClipboardCopy, DollarSign, Download,
   Eye, FileImage, FileText, Layers, Link2, Pencil, Plus, RotateCcw, Save,
-  Sparkles, Trash2, Wand2, X,
+  Shield, Sparkles, Trash2, Wand2, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Markdown } from '../components/ai/Markdown.jsx';
 import { StudioIntelligence } from '../components/architecture/StudioIntelligence.jsx';
 import { PageHeader } from '../components/common/PageHeader.jsx';
+import { ExpertReviewPanel } from '../components/expert-review/ExpertReviewPanel.jsx';
 import { useAI } from '../context/AIContext.jsx';
 import { useDialog } from '../context/DialogContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -34,6 +35,7 @@ export default function Architecture() {
   const [connectingFrom, setConnectingFrom] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [expertOpen, setExpertOpen] = useState(false);
   const [dragState, setDragState] = useState(null);
   const [didMutate, setDidMutate] = useState(false);
   const [region, setRegion] = useState('us-east-1');
@@ -264,6 +266,37 @@ export default function Architecture() {
   const cost = useMemo(() => estimateCost(nodes), [nodes]);
   const review = useMemo(() => reviewArchitecture(nodes, edges), [nodes, edges]);
 
+  // -------- EXPERT-01 multi-agent review (derived from canvas) --------
+
+  // Derive the inputs the 10 AWS experts expect from the current diagram.
+  // services[]  — every unique serviceId actually placed on the canvas
+  // brief       — a synthesized description so compliance/scale rules can fire
+  // level       — inferred from node count (more services → senior tier)
+  const expertInputs = useMemo(() => {
+    const services = Array.from(new Set(nodes.map((n) => n.serviceId).filter(Boolean)));
+    const hasUser     = services.includes('user') || services.includes('client') || services.includes('internet');
+    const hasOnPrem   = services.includes('onprem') || services.includes('dx') || services.includes('vpn');
+    const hasML       = services.some((s) => ['sagemaker', 'bedrock'].includes(s));
+    const hasStream   = services.some((s) => ['kinesis', 'msk'].includes(s));
+    const hasDB       = services.some((s) => ['rds', 'aurora', 'dynamodb', 'redshift', 'neptune'].includes(s));
+
+    const briefParts = [
+      `${name || 'Architecture diagram'} — production AWS workload running ${services.length} services in ${region}.`,
+      hasUser   && 'Customer-facing application accessed by end users over the internet.',
+      hasOnPrem && 'Hybrid topology integrating on-premises infrastructure with AWS.',
+      hasML     && 'ML/AI workload requires inference endpoints with predictable latency.',
+      hasStream && 'Real-time event streaming pipeline with high throughput requirements.',
+      hasDB     && 'Persistent data store backs the production workload.',
+    ].filter(Boolean).join(' ');
+
+    // Level heuristic: 1-5 = beginner, 6-12 = intermediate, 13+ = senior
+    const level = services.length >= 13 ? 'senior'
+                : services.length >= 6  ? 'intermediate'
+                : 'beginner';
+
+    return { brief: briefParts, services, region, level };
+  }, [nodes, name, region]);
+
   // -------- filtered palette --------
 
   const visiblePalette = useMemo(() =>
@@ -368,6 +401,14 @@ export default function Architecture() {
               onSVG={exportSVG} onPNG={exportPNG} onPDF={exportPDF}
               onShare={shareURL}
               onReview={() => setReviewOpen(true)}
+              onExpertReview={() => {
+                if (expertInputs.services.length === 0) {
+                  toast.info('Drop some AWS services on the canvas first — the experts need something to review.');
+                  return;
+                }
+                setExpertOpen(true);
+              }}
+              hasNodes={nodes.length > 0}
             />
           </div>
 
@@ -590,6 +631,48 @@ export default function Architecture() {
         <ReviewModal review={review} onClose={() => setReviewOpen(false)}
                      onSave={() => { saveAINote('architecture-review', review.text); toast.success('Saved to AI notes'); }} />
       )}
+
+      {/* EXPERT-01 multi-agent review modal */}
+      {expertOpen && (
+        <ExpertReviewModal
+          inputs={expertInputs}
+          onClose={() => setExpertOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- Expert review modal (10 AWS agents) ----------
+
+function ExpertReviewModal({ inputs, onClose }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="relative bg-[var(--card-1)] rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 grid place-items-center w-8 h-8 rounded-full hover:bg-[var(--card-2)] focus-ring"
+          aria-label="Close expert review"
+        >
+          <X size={16} />
+        </button>
+        <div className="p-2">
+          <ExpertReviewPanel
+            brief={inputs.brief}
+            services={inputs.services}
+            region={inputs.region}
+            level={inputs.level}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -598,7 +681,7 @@ export default function Architecture() {
 
 function Toolbar({
   connectingFrom, setConnectingFrom, selectedNodeId, removeNode,
-  onNew, onSave, onSVG, onPNG, onPDF, onShare, onReview,
+  onNew, onSave, onSVG, onPNG, onPDF, onShare, onReview, onExpertReview, hasNodes,
 }) {
   return (
     <>
@@ -616,7 +699,8 @@ function Toolbar({
         <TBtn onClick={onSVG} icon={Download} label="SVG" />
         <TBtn onClick={onPDF} icon={FileText} label="PDF" />
         <TBtn onClick={onShare} icon={Link2} label="Share" />
-        <TBtn onClick={onReview} icon={Sparkles} label="AI review" primary />
+        <TBtn onClick={onReview} icon={Sparkles} label="AI review" />
+        <TBtn onClick={onExpertReview} icon={Shield} label="10 Architects" disabled={!hasNodes} primary />
       </div>
     </>
   );
