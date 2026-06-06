@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node scripts/runAgentTests.mjs",
+    "test:agents": "node scripts/runAgentTests.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-budgets": "^3.1053.0",
