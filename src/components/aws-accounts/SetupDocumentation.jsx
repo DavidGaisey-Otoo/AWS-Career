@@ -24,6 +24,7 @@ import {
 } from '../../lib/setupChecklistStore.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { cn } from '../../lib/utils.js';
+import { DocReviewPanel } from '../doc-review/DocReviewPanel.jsx';
 
 export function SetupDocumentation() {
   const state = useSetupChecklist();
@@ -393,8 +394,13 @@ function ReportModal({ state, progress, onClose }) {
           </button>
         </div>
 
-        <div className="rounded-xl bg-[var(--card-2)] border border-token p-4 max-h-[55vh] overflow-y-auto">
+        <div className="rounded-xl bg-[var(--card-2)] border border-token p-4 max-h-[40vh] overflow-y-auto">
           <pre className="text-[12px] whitespace-pre-wrap font-mono leading-relaxed">{markdown}</pre>
+        </div>
+
+        {/* DOC-01: handover completeness review on the generated report */}
+        <div className="mt-3">
+          <DocReviewPanel docText={markdown} docType="handover" />
         </div>
       </div>
     </div>
