@@ -60,6 +60,7 @@ export const SECTIONS = [
     path: '/exam-hub',
     blurb: 'All 13 AWS certifications — mocks, practice, learning mode.',
     children: [
+      { id: 'saa-roadmap',  label: '🎯 SAA-C03 Roadmap',    icon: Target,        path: '/saa-roadmap' },  // SAA-01
       { id: 'exam',         label: 'Exam Center',           icon: GraduationCap, path: '/exam' },
       { id: 'certs',        label: 'Certifications',        icon: Award,         path: '/certifications' },
       { id: 'flashcards',   label: 'Flashcards',            icon: Layers,        path: '/flashcards' },       // EX-19
