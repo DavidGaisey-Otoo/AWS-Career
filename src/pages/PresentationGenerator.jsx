@@ -8,6 +8,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
+import { PresentationReviewPanel } from '../components/presentation-review/PresentationReviewPanel.jsx';
 import { useAI } from '../context/AIContext.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { useDialog } from '../context/DialogContext.jsx';
@@ -282,6 +283,8 @@ export default function PresentationGenerator() {
                 editingNotes={editingNotes}
                 setEditingNotes={setEditingNotes}
               />
+              <PresentationReviewPanel slides={slides} brief={brief} audience="client" />
+
               <div className="flex items-center justify-between text-[11px] text-muted">
                 <button
                   onClick={() => setActiveSlideIdx(Math.max(0, activeSlideIdx - 1))}
