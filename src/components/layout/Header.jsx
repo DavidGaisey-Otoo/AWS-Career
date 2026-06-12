@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { formatDate, cn } from '../../lib/utils.js';
 import { AccountStatusBadge } from '../system/AccountStatusBadge.jsx';
+import { SyncStatusChip } from '../sync/SyncStatusChip.jsx';
 
 export function Header({ onMobileMenu }) {
   const { openPalette, notifications, unreadCount, markAllRead } = useApp();
@@ -36,6 +37,9 @@ export function Header({ onMobileMenu }) {
         </button>
 
         <div className="flex items-center gap-2">
+          {/* Cross-device sync status */}
+          <SyncStatusChip />
+
           {/* AWS account tier badge — always visible */}
           <AccountStatusBadge compact />
 

@@ -23,6 +23,8 @@ import { ThemeProvider } from './context/ThemeContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import { UKProvider } from './context/UKContext.jsx';
 import { WellnessProvider } from './context/WellnessContext.jsx';
+import { SyncProvider } from './context/SyncContext.jsx';
+import { SyncModal } from './components/sync/SyncModal.jsx';
 
 // Eager — entry point + tiny pages that load instantly
 import Dashboard from './pages/Dashboard.jsx';
@@ -121,8 +123,10 @@ export default function App() {
                  <RecorderProvider>
                  <EarnProvider>
                  <GamificationProvider>
+                  <SyncProvider>
                    <DeployApprovalDialog />
                    <PWAInstallPrompt />
+                   <SyncModal />
                    <Routes>
                      <Route element={<AppShell />}>
                        <Route path="/" element={<Dashboard />} />
@@ -188,6 +192,7 @@ export default function App() {
                        <Route path="*" element={<Dashboard />} />
                      </Route>
                    </Routes>
+                  </SyncProvider>
                  </GamificationProvider>
                  </EarnProvider>
                  </RecorderProvider>
