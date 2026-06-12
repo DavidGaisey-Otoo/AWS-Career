@@ -164,6 +164,20 @@ async function ghFetch(path, options = {}) {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
+    // Surface the specific "missing gist scope" case so the UI can render
+    // a one-click fix instead of a wall of JSON.
+    if (res.status === 403 && /Resource not accessible by personal access token|gist/i.test(text)) {
+      const err = new Error('PAT_MISSING_GIST_SCOPE');
+      err.code = 'PAT_MISSING_GIST_SCOPE';
+      err.status = 403;
+      throw err;
+    }
+    if (res.status === 401) {
+      const err = new Error('PAT_INVALID');
+      err.code = 'PAT_INVALID';
+      err.status = 401;
+      throw err;
+    }
     throw new Error(`GitHub ${res.status}: ${text.slice(0, 200)}`);
   }
   return res.json();

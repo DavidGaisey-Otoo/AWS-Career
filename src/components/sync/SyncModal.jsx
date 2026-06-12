@@ -130,6 +130,29 @@ export function SyncModal() {
           </div>
         )}
 
+        {/* PAT scope mismatch — show the one-click fix */}
+        {(lastResult?.error === 'PAT_MISSING_GIST_SCOPE' ||
+          /PAT_MISSING_GIST_SCOPE|Resource not accessible by personal access token/i.test(meta.lastError || '')) && (
+          <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-[12px] space-y-2">
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-warning">Your GitHub PAT can&apos;t create Gists.</strong> By default,
+                fine-grained PATs don&apos;t have permission to write Gists — you have to opt in.
+              </div>
+            </div>
+            <div className="text-[11.5px] opacity-90 pl-5 leading-relaxed">
+              <strong>To fix (60 seconds):</strong>
+              <ol className="list-decimal pl-4 mt-1 space-y-0.5">
+                <li>Open <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-aws-orange font-bold underline">GitHub → Settings → Tokens</a></li>
+                <li>If using a <strong>classic PAT</strong>: edit it and check the <code className="text-aws-orange">gist</code> scope. Save.</li>
+                <li>If using a <strong>fine-grained PAT</strong>: classic PATs are simpler for this. Create a new classic PAT with the <code className="text-aws-orange">gist</code> scope.</li>
+                <li>Paste the new PAT in <a href="/settings" className="text-aws-orange font-bold underline">Settings → Integrations → GitHub</a> and come back here.</li>
+              </ol>
+            </div>
+          </div>
+        )}
+
         {/* Meta */}
         <div className="rounded-lg bg-[var(--card-2)]/50 border border-token p-3 text-[11px] space-y-1 opacity-90">
           <div className="flex items-center justify-between">
