@@ -154,6 +154,34 @@ body {
 
   .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
   .safe-top { padding-top: max(env(safe-area-inset-top), 0px); }
+  .safe-left { padding-left: max(env(safe-area-inset-left), 0px); }
+  .safe-right { padding-right: max(env(safe-area-inset-right), 0px); }
+
+  /* Touch-friendly tap target — meets WCAG 44x44 minimum */
+  .tap-44 { min-width: 44px; min-height: 44px; }
+}
+
+/* ---------- Mobile-polish globals ---------- */
+/* Disable iOS rubber-band overscroll on body so the sticky bottom nav
+   doesn't leave a visible gap when the user pulls down. Inner scrollable
+   areas (modals, lists) can still scroll natively. */
+html, body {
+  overscroll-behavior-y: none;
+}
+
+/* Smooth momentum scrolling on iOS for any element that scrolls */
+* { -webkit-overflow-scrolling: touch; }
+
+/* iOS Safari zooms in on focused inputs unless font-size >= 16px */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px; }
+}
+
+/* On touch devices, suppress the default focus ring that lingers
+   after a tap. Keyboard / mouse users still get focus rings via
+   :focus-visible, applied per-component as `focus-ring`. */
+@media (pointer: coarse) {
+  *:focus:not(:focus-visible) { outline: none; }
 }
 
 /* Ripple effect */

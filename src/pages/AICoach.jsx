@@ -289,7 +289,7 @@ function PricingAdvisor() {
           placeholder="e.g. Migrate a Postgres DB from on-prem to RDS Multi-AZ. ~200GB. Cutover window 2 hours."
           className="w-full bg-[var(--card-2)] border border-token rounded-xl p-3 text-sm leading-relaxed focus-ring focus:border-aws-orange resize-y"
         />
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <SmallSelect label="Experience" value={experience} onChange={setExperience}
             options={[['junior','Junior'],['mid','Mid'],['senior','Senior'],['principal','Principal']]} />
           <SmallSelect label="Region" value={region} onChange={setRegion}

@@ -13,8 +13,8 @@ export function Header({ onMobileMenu }) {
   const [notifsOpen, setNotifsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 glass border-b border-token">
-      <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-16">
+    <header className="sticky top-0 z-30 glass border-b border-token safe-top">
+      <div className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-5 h-16">
         {/* Mobile menu */}
         <button
           onClick={onMobileMenu}
@@ -24,10 +24,17 @@ export function Header({ onMobileMenu }) {
           <Menu size={20} />
         </button>
 
-        {/* Search trigger */}
+        {/* Search trigger — full bar on tablet+, compact icon on mobile */}
         <button
           onClick={openPalette}
-          className="flex-1 max-w-xl flex items-center gap-3 px-3.5 py-2.5 rounded-xl surface-2 text-sm text-muted hover:text-current transition focus-ring group"
+          aria-label="Search"
+          className="sm:hidden grid place-items-center w-10 h-10 rounded-xl hover:bg-[var(--card-2)] focus-ring"
+        >
+          <Search size={20} className="text-aws-orange" />
+        </button>
+        <button
+          onClick={openPalette}
+          className="hidden sm:flex flex-1 max-w-xl items-center gap-3 px-3.5 py-2.5 rounded-xl surface-2 text-sm text-muted hover:text-current transition focus-ring group"
         >
           <Search size={16} className="text-aws-orange" />
           <span className="flex-1 text-left truncate">Search anything — pages, lessons, services, jobs…</span>
@@ -35,6 +42,8 @@ export function Header({ onMobileMenu }) {
             <span className="opacity-80">⌘</span>K
           </kbd>
         </button>
+        {/* Flexible spacer on mobile when search is a tiny button */}
+        <div className="sm:hidden flex-1" />
 
         <div className="flex items-center gap-2">
           {/* Cross-device sync status */}

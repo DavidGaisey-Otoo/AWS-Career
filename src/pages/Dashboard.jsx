@@ -129,7 +129,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right column — badge tiles */}
-          <div className="relative grid grid-cols-2 gap-3 content-center">
+          <div className="relative grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 content-center">
             <BadgeTile icon={Flame}  label="Day streak"  value={String(roadmapState.streak?.current || 0)} accent="orange" />
             <BadgeTile icon={Award}  label="Earned certs" value={String(masterStats.earnedCount || 0)} accent="blue" />
             <BadgeTile icon={Zap}    label="Tasks (life)" value={String(Object.values(roadmapState.subtasks || {}).filter(Boolean).length)} accent="yellow" />
