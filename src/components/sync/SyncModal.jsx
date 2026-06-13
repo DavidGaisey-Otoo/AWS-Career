@@ -1,31 +1,53 @@
 /**
- * SyncModal.jsx — settings + actions for cross-device sync.
+ * SyncModal.jsx — phone-first sync settings + setup guide.
+ *
+ * Three distinct states drive the UI:
+ *
+ *   1. Sync ON, working                   → compact "you're set" view
+ *                                           with phone instructions
+ *   2. Sync OFF or never enabled          → 3-step setup guide
+ *   3. ERROR (esp. PAT_MISSING_GIST_SCOPE)→ specific fix card on top
+ *
+ * Advanced controls (push/pull now, gist link, danger zone) live
+ * behind a single "Advanced" disclosure to keep the default view clean.
  */
 
 import { useEffect, useState } from 'react';
 import {
   Cloud, Upload, Download, X, CheckCircle2, ExternalLink, AlertTriangle,
-  Loader2, Trash2, KeyRound, RefreshCw,
+  Loader2, Trash2, KeyRound, Smartphone, ChevronRight,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useSync } from '../../context/SyncContext.jsx';
 import { getStoredGistId } from '../../lib/gistSync.js';
 import { readToken } from '../../lib/githubToken.js';
 import { cn } from '../../lib/utils.js';
 
 export function SyncModal() {
-  const { openModal, setOpenModal, status, meta, enabled, enable, disable, pushNow, pullNow, stopAndDelete, appliedOnOpen } = useSync();
+  const {
+    openModal, setOpenModal, status, meta, enabled, enable, disable,
+    pushNow, pullNow, stopAndDelete, appliedOnOpen,
+  } = useSync();
   const [busy, setBusy] = useState(false);
   const [lastResult, setLastResult] = useState(null);
   const [gistId, setGistId] = useState(() => getStoredGistId());
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Refresh gist id reading when modal opens
   useEffect(() => {
-    if (openModal) setGistId(getStoredGistId());
+    if (openModal) {
+      setGistId(getStoredGistId());
+      setLastResult(null);
+      setShowAdvanced(false);
+    }
   }, [openModal]);
 
   if (!openModal) return null;
 
   const hasToken = !!readToken()?.token;
+  const hasScopeError =
+    lastResult?.error === 'PAT_MISSING_GIST_SCOPE' ||
+    /PAT_MISSING_GIST_SCOPE|Resource not accessible by personal access token/i.test(meta.lastError || '');
+  const gistUrl = gistId ? `https://gist.github.com/${gistId}` : null;
 
   async function withBusy(label, fn) {
     setBusy(true);
@@ -38,164 +60,291 @@ export function SyncModal() {
     }
   }
 
-  const gistUrl = gistId ? `https://gist.github.com/${gistId}` : null;
-
   return (
-    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm grid place-items-center p-4" onClick={() => setOpenModal(false)}>
-      <div className="surface rounded-2xl max-w-lg w-full p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4"
+      onClick={() => setOpenModal(false)}
+    >
+      <div
+        className="surface rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] overflow-y-auto p-5 space-y-4 safe-bottom"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-1">Cross-device sync</div>
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-1">
+              Cross-device sync
+            </div>
             <h2 className="text-lg font-extrabold flex items-center gap-2">
-              <Cloud size={16} className="text-aws-orange" />
+              <Cloud size={18} className="text-aws-orange" />
               Continue on any device
             </h2>
-            <p className="text-[11.5px] opacity-70 mt-1">
-              Use your GitHub PAT to keep your data in a <strong>private Gist</strong>. Open the app on your phone with the same PAT — it auto-pulls.
-            </p>
           </div>
-          <button onClick={() => setOpenModal(false)} className="p-1 rounded hover:bg-[var(--card-2)]">
-            <X size={16} />
+          <button
+            onClick={() => setOpenModal(false)}
+            className="grid place-items-center w-9 h-9 rounded-full hover:bg-[var(--card-2)] tap-44"
+            aria-label="Close"
+          >
+            <X size={18} />
           </button>
         </div>
 
-        {/* Status banner */}
+        {/* APPLIED ON OPEN — "we just pulled your data" success banner */}
         {appliedOnOpen?.applied && (
-          <div className="rounded-lg border border-success/40 bg-success/5 p-3 text-[12px]">
-            <strong className="text-success">Synced from another device.</strong> Restored on {new Date(appliedOnOpen.remoteTimestamp).toLocaleString()}. Reloading…
-          </div>
-        )}
-        {!hasToken && (
-          <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-[12px] flex items-start gap-2">
-            <KeyRound size={14} className="text-warning shrink-0 mt-0.5" />
-            <div>
-              <strong className="text-warning">No GitHub PAT configured.</strong> Sync needs one. Go to <a href="/settings" className="font-bold underline">Settings</a> and paste your PAT, then come back here.
-            </div>
-          </div>
-        )}
-
-        {/* Toggle row */}
-        <div className="rounded-lg bg-[var(--card-2)] border border-token p-3 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[12.5px] font-extrabold">Auto-sync</div>
-            <div className="text-[11px] opacity-70 mt-0.5">{enabled ? 'On — every change is pushed to your private Gist.' : 'Off — your data stays on this device only.'}</div>
-          </div>
-          <button
-            onClick={() => withBusy('toggle', enabled ? async () => { disable(); return { ok: true }; } : enable)}
-            disabled={busy || !hasToken}
-            className={cn('btn !text-xs', enabled ? 'btn-ghost' : 'btn-primary', (busy || !hasToken) && 'opacity-50 cursor-not-allowed')}
-          >
-            {busy ? <Loader2 size={12} className="animate-spin" /> : enabled ? 'Turn off' : 'Turn on'}
-          </button>
-        </div>
-
-        {/* Gist link */}
-        {gistUrl && (
-          <div className="text-[11.5px] opacity-80 flex items-center gap-1.5">
-            <CheckCircle2 size={12} className="text-success" />
-            Stored in this Gist:
-            <a href={gistUrl} target="_blank" rel="noopener noreferrer" className="text-aws-orange font-bold inline-flex items-center gap-0.5 hover:underline">
-              view on GitHub <ExternalLink size={10} />
-            </a>
-          </div>
-        )}
-
-        {/* Manual actions */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => withBusy('push', pushNow)}
-            disabled={busy || !hasToken}
-            className="btn btn-ghost !text-xs"
-          >
-            <Upload size={12} /> Push now
-          </button>
-          <button
-            onClick={() => withBusy('pull', pullNow)}
-            disabled={busy || !hasToken}
-            className="btn btn-ghost !text-xs"
-          >
-            <Download size={12} /> Pull now
-          </button>
-        </div>
-
-        {/* Result feedback */}
-        {lastResult && (
-          <div className="rounded-lg bg-[var(--card-2)]/50 border border-token p-2.5 text-[11px]">
-            <strong className="capitalize">{lastResult.label}:</strong>{' '}
-            {lastResult.ok
-              ? lastResult.applied === false
-                ? (lastResult.reason || 'No changes')
-                : 'Success'
-              : `Failed — ${lastResult.error || lastResult.reason || 'unknown'}`}
-          </div>
-        )}
-
-        {/* PAT scope mismatch — show the one-click fix */}
-        {(lastResult?.error === 'PAT_MISSING_GIST_SCOPE' ||
-          /PAT_MISSING_GIST_SCOPE|Resource not accessible by personal access token/i.test(meta.lastError || '')) && (
-          <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-[12px] space-y-2">
+          <div className="rounded-xl border border-success/40 bg-success/5 p-4">
             <div className="flex items-start gap-2">
-              <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
+              <CheckCircle2 size={18} className="text-success shrink-0 mt-0.5" />
               <div>
-                <strong className="text-warning">Your GitHub PAT can&apos;t create Gists.</strong> By default,
-                fine-grained PATs don&apos;t have permission to write Gists — you have to opt in.
+                <div className="font-extrabold text-success">Welcome back.</div>
+                <div className="text-[12px] opacity-90 mt-0.5">
+                  Just restored your data from {new Date(appliedOnOpen.remoteTimestamp).toLocaleString()}. Reloading the app…
+                </div>
               </div>
             </div>
-            <div className="text-[11.5px] opacity-90 pl-5 leading-relaxed">
-              <strong>To fix (60 seconds):</strong>
-              <ol className="list-decimal pl-4 mt-1 space-y-0.5">
-                <li>Open <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-aws-orange font-bold underline">GitHub → Settings → Tokens</a></li>
-                <li>If using a <strong>classic PAT</strong>: edit it and check the <code className="text-aws-orange">gist</code> scope. Save.</li>
-                <li>If using a <strong>fine-grained PAT</strong>: classic PATs are simpler for this. Create a new classic PAT with the <code className="text-aws-orange">gist</code> scope.</li>
-                <li>Paste the new PAT in <a href="/settings" className="text-aws-orange font-bold underline">Settings → Integrations → GitHub</a> and come back here.</li>
-              </ol>
-            </div>
           </div>
         )}
 
-        {/* Meta */}
-        <div className="rounded-lg bg-[var(--card-2)]/50 border border-token p-3 text-[11px] space-y-1 opacity-90">
-          <div className="flex items-center justify-between">
-            <span className="opacity-70">Status</span>
-            <span className="font-bold capitalize">{status}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="opacity-70">Last push</span>
-            <span className="font-mono">{meta.lastPushAt ? new Date(meta.lastPushAt).toLocaleString() : '—'}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="opacity-70">Last pull</span>
-            <span className="font-mono">{meta.lastPullAt ? new Date(meta.lastPullAt).toLocaleString() : '—'}</span>
-          </div>
-          {meta.lastError && (
-            <div className="flex items-start gap-1 pt-1 border-t border-token mt-1">
-              <AlertTriangle size={11} className="text-danger shrink-0 mt-0.5" />
-              <span className="text-danger break-all">{meta.lastError}</span>
+        {/* ── SCOPE ERROR — always show first so it can't be missed ── */}
+        {hasScopeError && <ScopeErrorCard />}
+
+        {/* ── STATE 1: SYNC ON ──────────────────────────────────────── */}
+        {enabled && !hasScopeError && (
+          <div className="space-y-3">
+            <div className="rounded-xl border border-success/40 bg-success/5 p-4 flex items-center gap-3">
+              <CheckCircle2 size={20} className="text-success shrink-0" />
+              <div className="flex-1">
+                <div className="font-extrabold text-success text-[13.5px]">Sync is on.</div>
+                <div className="text-[11.5px] opacity-80 mt-0.5">
+                  Every change auto-pushes to your private Gist. {meta.lastPushAt && `Last push ${timeAgo(meta.lastPushAt)}.`}
+                </div>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Honest scope notice */}
-        <div className="text-[10.5px] opacity-65 italic leading-relaxed pt-2 border-t border-token">
-          <strong>Privacy:</strong> The Gist is secret/unlisted — only your PAT can read it. We deliberately
-          skip the encrypted AWS credential vault, raw AWS access keys, and other per-device secrets. Don\'t use
-          this Gist as your only backup.
-        </div>
+            <ContinueOnPhoneCard />
+          </div>
+        )}
 
-        {/* Danger zone */}
-        {enabled && gistUrl && (
-          <details className="text-[11px]">
-            <summary className="cursor-pointer opacity-70 hover:opacity-100">Danger zone</summary>
+        {/* ── STATE 2: SYNC OFF — show the 3-step setup ─────────────── */}
+        {!enabled && !hasScopeError && (
+          <div className="space-y-3">
+            <p className="text-[12.5px] opacity-80 leading-relaxed">
+              Sync your data to a <strong>private GitHub Gist</strong> so you can keep working from your phone, tablet, or another laptop.
+            </p>
+
+            <SetupSteps hasToken={hasToken} />
+
             <button
-              onClick={() => withBusy('delete', stopAndDelete)}
-              disabled={busy}
-              className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-danger/40 text-danger text-[11px] font-bold hover:bg-danger/10"
+              onClick={() => withBusy('toggle', enable)}
+              disabled={busy || !hasToken}
+              className={cn(
+                'w-full btn btn-primary !text-[13px] !py-3 tap-44 gap-2',
+                (busy || !hasToken) && 'opacity-50 cursor-not-allowed'
+              )}
             >
-              <Trash2 size={11} /> Stop syncing + delete cloud Gist
+              {busy ? (
+                <><Loader2 size={14} className="animate-spin" /> Setting up…</>
+              ) : !hasToken ? (
+                <>Add GitHub PAT first</>
+              ) : (
+                <><Cloud size={14} /> Turn on sync</>
+              )}
             </button>
-          </details>
+          </div>
         )}
+
+        {/* ── Last result feedback ─────────────────────────────────── */}
+        {lastResult && !lastResult.ok && !hasScopeError && (
+          <div className="rounded-lg border border-danger/40 bg-danger/5 p-3 text-[12px] flex items-start gap-2">
+            <AlertTriangle size={14} className="text-danger shrink-0 mt-0.5" />
+            <div className="break-words">
+              <strong>Couldn&apos;t {lastResult.label}.</strong> {lastResult.error || lastResult.reason || 'Unknown error.'}
+            </div>
+          </div>
+        )}
+
+        {/* ── ADVANCED disclosure ──────────────────────────────────── */}
+        {enabled && (
+          <div className="pt-2 border-t border-token">
+            <button
+              onClick={() => setShowAdvanced((s) => !s)}
+              className="w-full flex items-center justify-between text-[11.5px] font-bold opacity-70 hover:opacity-100 py-1"
+            >
+              <span>Advanced</span>
+              <ChevronRight size={12} className={cn('transition', showAdvanced && 'rotate-90')} />
+            </button>
+            {showAdvanced && (
+              <div className="space-y-2.5 pt-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => withBusy('push', pushNow)}
+                    disabled={busy}
+                    className="btn btn-ghost !text-[11px] !py-2 tap-44"
+                  >
+                    <Upload size={12} /> Push now
+                  </button>
+                  <button
+                    onClick={() => withBusy('pull', pullNow)}
+                    disabled={busy}
+                    className="btn btn-ghost !text-[11px] !py-2 tap-44"
+                  >
+                    <Download size={12} /> Pull now
+                  </button>
+                </div>
+
+                {gistUrl && (
+                  <a
+                    href={gistUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] inline-flex items-center gap-1 text-aws-orange font-bold hover:underline"
+                  >
+                    View your Gist on GitHub <ExternalLink size={10} />
+                  </a>
+                )}
+
+                <div className="rounded-lg bg-[var(--card-2)]/50 border border-token p-2.5 text-[10.5px] space-y-0.5 opacity-90">
+                  <div className="flex justify-between"><span className="opacity-70">Status</span><span className="capitalize font-bold">{status}</span></div>
+                  <div className="flex justify-between"><span className="opacity-70">Last push</span><span className="font-mono">{meta.lastPushAt ? new Date(meta.lastPushAt).toLocaleString() : '—'}</span></div>
+                  <div className="flex justify-between"><span className="opacity-70">Last pull</span><span className="font-mono">{meta.lastPullAt ? new Date(meta.lastPullAt).toLocaleString() : '—'}</span></div>
+                </div>
+
+                <button
+                  onClick={() => withBusy('disable', async () => { disable(); return { ok: true }; })}
+                  disabled={busy}
+                  className="text-[11px] font-bold opacity-70 hover:opacity-100 underline"
+                >
+                  Pause sync on this device
+                </button>
+
+                <details className="text-[11px]">
+                  <summary className="cursor-pointer text-danger/80 hover:text-danger">Stop sync + delete cloud copy</summary>
+                  <button
+                    onClick={() => withBusy('delete', stopAndDelete)}
+                    disabled={busy}
+                    className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-danger/40 text-danger text-[11px] font-bold hover:bg-danger/10 tap-44"
+                  >
+                    <Trash2 size={12} /> Delete my cloud Gist permanently
+                  </button>
+                </details>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Privacy footer */}
+        <div className="text-[10.5px] opacity-60 italic leading-relaxed pt-2 border-t border-token">
+          <strong>Privacy:</strong> The Gist is secret/unlisted — only your PAT can read it. We skip the
+          encrypted AWS credential vault, raw AWS keys, and other per-device secrets. Not a primary backup.
+        </div>
       </div>
     </div>
   );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Sub-components
+// ════════════════════════════════════════════════════════════════════
+
+function SetupSteps({ hasToken }) {
+  const steps = [
+    {
+      done: hasToken,
+      title: 'Get a GitHub PAT (classic, with `gist` scope)',
+      body: (
+        <a
+          href="https://github.com/settings/tokens/new?scopes=gist&description=AWS%20Launchpad%20sync"
+          target="_blank" rel="noopener noreferrer"
+          className="text-aws-orange font-bold inline-flex items-center gap-0.5 hover:underline"
+        >
+          Open GitHub token page <ExternalLink size={10} />
+        </a>
+      ),
+    },
+    {
+      done: hasToken,
+      title: 'Paste it in the app',
+      body: (
+        <Link to="/settings" className="text-aws-orange font-bold inline-flex items-center gap-0.5 hover:underline">
+          Settings → Integrations → GitHub <ChevronRight size={12} />
+        </Link>
+      ),
+    },
+    {
+      done: false,
+      title: 'Tap "Turn on sync" below',
+      body: <span className="opacity-70 text-[11px]">First push creates your Gist. ~3 seconds.</span>,
+    },
+  ];
+  return (
+    <ol className="space-y-2">
+      {steps.map((s, i) => (
+        <li key={i} className="flex items-start gap-3">
+          <div className={cn(
+            'grid place-items-center w-6 h-6 rounded-full text-[10.5px] font-extrabold shrink-0 mt-0.5',
+            s.done ? 'bg-success/20 text-success' : 'bg-[var(--card-2)] text-current'
+          )}>
+            {s.done ? '✓' : i + 1}
+          </div>
+          <div className="flex-1">
+            <div className="text-[12.5px] font-bold leading-tight">{s.title}</div>
+            <div className="text-[11.5px] mt-0.5">{s.body}</div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ContinueOnPhoneCard() {
+  return (
+    <div className="rounded-xl border border-aws-orange/30 bg-aws-orange/5 p-4 space-y-2">
+      <div className="flex items-center gap-2">
+        <Smartphone size={16} className="text-aws-orange" />
+        <strong className="text-aws-orange text-[12.5px]">Continue on another device</strong>
+      </div>
+      <ol className="text-[11.5px] leading-relaxed space-y-1 pl-1">
+        <li><strong>1.</strong> Open the app URL on your other device.</li>
+        <li><strong>2.</strong> Settings → Integrations → paste the <strong>same GitHub PAT</strong>.</li>
+        <li><strong>3.</strong> Tap the sync chip in the header → <strong>Turn on sync</strong>.</li>
+        <li><strong>4.</strong> Your data restores in 3-5 seconds and the app reloads.</li>
+      </ol>
+    </div>
+  );
+}
+
+function ScopeErrorCard() {
+  return (
+    <div className="rounded-xl border border-warning/40 bg-warning/5 p-4 space-y-2">
+      <div className="flex items-start gap-2">
+        <AlertTriangle size={16} className="text-warning shrink-0 mt-0.5" />
+        <div>
+          <strong className="text-warning text-[13px] block">Your PAT can&apos;t create Gists.</strong>
+          <p className="text-[11.5px] opacity-90 mt-0.5">
+            GitHub PATs don&apos;t have gist permission by default. 60-second fix:
+          </p>
+        </div>
+      </div>
+      <ol className="text-[11.5px] pl-7 space-y-1 leading-relaxed">
+        <li>
+          1. <a
+            href="https://github.com/settings/tokens/new?scopes=gist&description=AWS%20Launchpad%20sync"
+            target="_blank" rel="noopener noreferrer"
+            className="text-aws-orange font-bold underline"
+          >
+            Generate a new classic PAT
+          </a> with the <code className="text-aws-orange">gist</code> scope ticked.
+        </li>
+        <li>2. Paste it in <Link to="/settings" className="text-aws-orange font-bold underline">Settings → Integrations → GitHub</Link>.</li>
+        <li>3. Come back here and tap <strong>Turn on sync</strong> again.</li>
+      </ol>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+function timeAgo(iso) {
+  const t = new Date(iso).getTime();
+  const diffSec = Math.round((Date.now() - t) / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffSec < 3600) return `${Math.round(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.round(diffSec / 3600)}h ago`;
+  return new Date(iso).toLocaleDateString();
 }
