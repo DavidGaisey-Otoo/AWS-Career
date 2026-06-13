@@ -66,7 +66,7 @@ export default function Dashboard() {
   }), [roadmapState, learningOverall, certStats, earningsStats, proposalStats, level, leaderboards, ukState]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Getting Started — only shows until all 9 steps are done (or dismissed) */}
       <GettingStartedWidget />
 
@@ -76,21 +76,21 @@ export default function Dashboard() {
       {/* EX-20: Daily Study Plan — auto-generates from exam date + weak topics */}
       <DailyStudyPlanCard />
 
-      {/* HERO */}
-      <section className="relative overflow-hidden rounded-3xl surface gradient-border">
+      {/* HERO — denser on mobile so the bottom of the fold reaches actionable cards faster */}
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl surface gradient-border">
         <ParticleField className="absolute inset-0 -z-0 opacity-80" />
-        <div className="relative grid gap-6 lg:grid-cols-[1.5fr_1fr] p-6 sm:p-8 lg:p-10">
+        <div className="relative grid gap-6 lg:grid-cols-[1.5fr_1fr] p-4 sm:p-8 lg:p-10">
           <div>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         className="inline-flex items-center gap-2 chip glass text-aws-orange">
               <Sparkles size={12} /> {level.name} · Level {level.n}
             </motion.div>
             <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
-                       className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.05]">
+                       className="mt-2 sm:mt-3 text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.1] sm:leading-[1.05]">
               {greeting}, <span className="text-gradient">{firstName}</span>.
             </motion.h1>
             <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
-                      className="mt-3 text-muted max-w-xl leading-relaxed">
+                      className="mt-2 sm:mt-3 text-muted max-w-xl leading-relaxed text-[13px] sm:text-base">
               {recommendedFocus.headline}{' '}
               {recommendedFocus.detail && <span className="text-current">{recommendedFocus.detail}</span>}
             </motion.p>
@@ -128,8 +128,9 @@ export default function Dashboard() {
             </motion.div>
           </div>
 
-          {/* Right column — badge tiles */}
-          <div className="relative grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 content-center">
+          {/* Right column — badge tiles. Hidden on phones because the Quick Stats row
+              above already conveys the same numbers at a glance. */}
+          <div className="hidden lg:grid relative grid-cols-2 gap-3 content-center">
             <BadgeTile icon={Flame}  label="Day streak"  value={String(roadmapState.streak?.current || 0)} accent="orange" />
             <BadgeTile icon={Award}  label="Earned certs" value={String(masterStats.earnedCount || 0)} accent="blue" />
             <BadgeTile icon={Zap}    label="Tasks (life)" value={String(Object.values(roadmapState.subtasks || {}).filter(Boolean).length)} accent="yellow" />
@@ -265,18 +266,19 @@ function ProgressCard({ to, icon: Icon, accent, label, headline, sub }) {
   }[accent];
   return (
     <Link to={to}
-          className="group surface rounded-2xl p-4 relative overflow-hidden hover:border-aws-orange/40 transition focus-ring">
+          className="group surface rounded-xl sm:rounded-2xl p-3 sm:p-4 relative overflow-hidden hover:border-aws-orange/40 transition focus-ring tap-44">
       <div className={cn('absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl opacity-70 bg-gradient-to-br', accentBg)} />
       <div className="relative">
         <div className="flex items-center justify-between">
-          <div className={cn('w-9 h-9 rounded-xl grid place-items-center bg-gradient-to-br', accentBg)}>
-            <Icon size={16} />
+          <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl grid place-items-center bg-gradient-to-br', accentBg)}>
+            <Icon size={14} className="sm:hidden" />
+            <Icon size={16} className="hidden sm:block" />
           </div>
           <ChevronRight size={14} className="text-muted group-hover:text-aws-orange transition" />
         </div>
-        <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mt-2">{label}</div>
-        <div className="text-2xl font-black tracking-tight tabular-nums mt-1">{headline}</div>
-        <div className="text-[11px] text-muted mt-0.5">{sub}</div>
+        <div className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-muted mt-2">{label}</div>
+        <div className="text-xl sm:text-2xl font-black tracking-tight tabular-nums mt-0.5 sm:mt-1">{headline}</div>
+        <div className="text-[10.5px] sm:text-[11px] text-muted mt-0.5 truncate">{sub}</div>
       </div>
     </Link>
   );
@@ -284,7 +286,7 @@ function ProgressCard({ to, icon: Icon, accent, label, headline, sub }) {
 
 function ChartCard({ title, icon: Icon, children }) {
   return (
-    <section className="surface rounded-2xl p-5">
+    <section className="surface rounded-2xl p-3 sm:p-5">
       <div className="flex items-center gap-2 mb-3">
         <Icon size={14} className="text-aws-orange" />
         <h3 className="text-[11px] font-extrabold uppercase tracking-widest">{title}</h3>
