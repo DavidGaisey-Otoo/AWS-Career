@@ -18,7 +18,7 @@ export function FloatingActionButton() {
   ];
 
   return (
-    <div className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-40">
+    <div className="fixed bottom-24 right-4 lg:bottom-24 lg:right-6 z-40">
       <AnimatePresence>
         {open ? (
           <motion.div
