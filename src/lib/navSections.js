@@ -77,6 +77,8 @@ export const SECTIONS = [
     path: '/build',
     blurb: 'Portfolio projects + architecture studio + AWS account deploys.',
     children: [
+      { id: 'solution-studio', label: '⚡ Solution Studio', icon: Wand2,     path: '/solution',           // GIG-01
+        hint: 'Paste a gig → get the architecture, plan, code, review + a build button' },
       { id: 'idea-studio',  label: 'Idea Studio',          icon: Sparkles,    path: '/idea-studio' },
       { id: 'project-builder', label: 'Project Builder',  icon: Wand2,       path: '/project-builder' },
       { id: 'portfolio',    label: 'Portfolio',           icon: Briefcase,   path: '/portfolio' },
@@ -99,6 +101,8 @@ export const SECTIONS = [
       { id: 'income-tracker', label: 'Income Tracker',        icon: TrendingUp,   path: '/freelance?tab=overview',// EA-02 (lives in Freelance Overview)
         hint: 'Monthly goal + payment log (opens Freelance Hub Overview)' },
       // ── Lead capture + pipeline ──
+      { id: 'solution-studio-earn', label: '⚡ Gig → Solution', icon: Wand2,      path: '/solution',          // GIG-01 cross-link
+        hint: 'Turn any gig into a buildable AWS solution (lives in Build)' },
       { id: 'job-analyzer',   label: 'Job Analyzer',          icon: FileSearch,   path: '/job-analyzer' },
       { id: 'freelance',      label: 'Freelance Hub',         icon: DollarSign,   path: '/freelance' },
       { id: 'my-proposals',   label: 'My Proposals',          icon: Trophy,       path: '/freelance?tab=myproposals',// FR-05 (inside Freelance Hub)

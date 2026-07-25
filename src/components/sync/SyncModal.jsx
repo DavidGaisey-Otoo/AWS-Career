@@ -19,7 +19,9 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSync } from '../../context/SyncContext.jsx';
-import { getStoredGistId } from '../../lib/gistSync.js';
+import {
+  getStoredGistId, readSecurityAdvisory, dismissSecurityAdvisory, recreateSyncGist,
+} from '../../lib/gistSync.js';
 import { readToken } from '../../lib/githubToken.js';
 import { cn } from '../../lib/utils.js';
 
@@ -32,12 +34,14 @@ export function SyncModal() {
   const [lastResult, setLastResult] = useState(null);
   const [gistId, setGistId] = useState(() => getStoredGistId());
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advisory, setAdvisory] = useState(() => readSecurityAdvisory());
 
   useEffect(() => {
     if (openModal) {
       setGistId(getStoredGistId());
       setLastResult(null);
       setShowAdvanced(false);
+      setAdvisory(readSecurityAdvisory());
     }
   }, [openModal]);
 
@@ -106,6 +110,19 @@ export function SyncModal() {
 
         {/* ── SCOPE ERROR — always show first so it can't be missed ── */}
         {hasScopeError && <ScopeErrorCard />}
+
+        {/* ── SECURITY ADVISORY — old gist may contain secrets ─────── */}
+        {advisory && !hasScopeError && (
+          <SecurityAdvisoryCard
+            busy={busy}
+            onSecure={() => withBusy('secure', async () => {
+              const res = await recreateSyncGist();
+              setAdvisory(null);
+              return res;
+            })}
+            onDismiss={() => { dismissSecurityAdvisory(); setAdvisory(null); }}
+          />
+        )}
 
         {/* ── STATE 1: SYNC ON ──────────────────────────────────────── */}
         {enabled && !hasScopeError && (
@@ -306,6 +323,44 @@ function ContinueOnPhoneCard() {
         <li><strong>3.</strong> Tap the sync chip in the header → <strong>Turn on sync</strong>.</li>
         <li><strong>4.</strong> Your data restores in 3-5 seconds and the app reloads.</li>
       </ol>
+    </div>
+  );
+}
+
+function SecurityAdvisoryCard({ busy, onSecure, onDismiss }) {
+  return (
+    <div className="rounded-xl border border-danger/40 bg-danger/5 p-4 space-y-2.5">
+      <div className="flex items-start gap-2">
+        <AlertTriangle size={16} className="text-danger shrink-0 mt-0.5" />
+        <div>
+          <strong className="text-danger text-[13px] block">Secure your sync gist</strong>
+          <p className="text-[11.5px] opacity-90 mt-0.5 leading-relaxed">
+            Your gist was created by an older app version that could include your GitHub
+            token in the synced data. One tap fixes it: we delete the old gist (wiping its
+            entire revision history) and recreate it from a clean, secret-free snapshot.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onSecure}
+        disabled={busy}
+        className={cn('w-full btn btn-primary !text-[12px] !py-2.5 tap-44 gap-2', busy && 'opacity-50')}
+      >
+        {busy ? <><Loader2 size={13} className="animate-spin" /> Securing…</> : <><KeyRound size={13} /> Secure my gist now</>}
+      </button>
+      <p className="text-[10.5px] opacity-70 leading-relaxed">
+        Afterwards, also{' '}
+        <a
+          href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer"
+          className="text-aws-orange font-bold underline"
+        >
+          rotate your GitHub PAT
+        </a>{' '}
+        (and your Google client secret if you use Calendar) — a copy may already exist outside your control.
+      </p>
+      <button onClick={onDismiss} className="text-[10.5px] opacity-60 hover:opacity-100 underline">
+        Dismiss (I've handled it)
+      </button>
     </div>
   );
 }

@@ -212,16 +212,40 @@ export async function deployStack({ credentials, region, stackName, templateBody
 export async function deleteStack({ credentials, region, stackName, onProgress }) {
   const client = mkClient(credentials, region);
   const emit = (type, payload) => { try { onProgress?.({ type, ts: Date.now(), ...payload }); } catch {} };
+  const startedAt = Date.now();
   try {
     emit('step', { message: `Issuing DeleteStack for ${stackName}…` });
     await client.send(new DeleteStackCommand({ StackName: stackName }));
     emit('step', { message: 'Delete initiated. Polling…' });
 
     while (true) {
+      // A stack stuck in DELETE_FAILED never disappears, so poll on a
+      // budget and surface terminal failures instead of looping forever.
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        emit('error', { message: 'Timed out waiting for delete to finish.' });
+        return {
+          ok: false,
+          finalStatus: 'TIMEOUT',
+          error: `Delete did not finish within ${Math.round(POLL_TIMEOUT_MS / 60000)} minutes. Check the CloudFormation console for ${stackName}.`,
+        };
+      }
+
       try {
         const res = await client.send(new DescribeStacksCommand({ StackName: stackName }));
         const s = res.Stacks?.[0];
-        if (s) emit('status', { status: s.StackStatus });
+        if (s) {
+          emit('status', { status: s.StackStatus });
+          if (s.StackStatus === 'DELETE_FAILED') {
+            const reason = await firstFailureReason(client, stackName);
+            emit('error', { message: `Delete failed: ${reason || s.StackStatusReason || 'unknown reason'}` });
+            return {
+              ok: false,
+              finalStatus: 'DELETE_FAILED',
+              error: reason || s.StackStatusReason
+                || 'CloudFormation could not delete every resource. Common causes: a non-empty S3 bucket, or a resource with deletion protection enabled.',
+            };
+          }
+        }
       } catch (err) {
         if (/does not exist/i.test(humanizeError(err))) {
           emit('success', { finalStatus: 'DELETE_COMPLETE' });
@@ -232,6 +256,17 @@ export async function deleteStack({ credentials, region, stackName, onProgress }
     }
   } finally {
     client.destroy?.();
+  }
+}
+
+/** Pull the first failure reason off the stack's event stream, if any. */
+async function firstFailureReason(client, stackName) {
+  try {
+    const res = await client.send(new DescribeStackEventsCommand({ StackName: stackName }));
+    const failed = (res.StackEvents || []).find((e) => /FAILED/.test(e.ResourceStatus || ''));
+    return failed?.ResourceStatusReason || null;
+  } catch {
+    return null;
   }
 }
 

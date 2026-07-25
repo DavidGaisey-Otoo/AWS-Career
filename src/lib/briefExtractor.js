@@ -131,7 +131,7 @@ export function extractTechStack(brief = '') {
 // 4. Client location (delegated to regionSuggester audience detection)
 // ════════════════════════════════════════════════════════════════════
 const LOCATION_KEYWORDS = [
-  { audience: 'uk',             label: 'United Kingdom', patterns: [/\b(uk|britain|british|london|\.co\.uk)\b/i] },
+  { audience: 'uk',             label: 'United Kingdom', patterns: [/\b(uk|united kingdom|great britain|britain|british|england|scotland|wales|london|\.co\.uk)\b/i] },
   { audience: 'us',             label: 'United States',  patterns: [/\b(usa|us\b|united states|america|nyc|san francisco|los angeles|chicago)\b/i] },
   { audience: 'eu',             label: 'Europe / EU',    patterns: [/\b(europe|european|eu(?!c)|germany|france|spain|italy|netherlands|ireland)\b/i] },
   { audience: 'africa',         label: 'West Africa',    patterns: [/\b(ghana|nigeria|lagos|accra|kenya|west africa)\b/i] },

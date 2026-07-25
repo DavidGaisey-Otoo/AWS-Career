@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { AWSUpdatesWidget } from '../components/dashboard/AWSUpdatesWidget.jsx';
 import { GettingStartedWidget } from '../components/dashboard/GettingStartedWidget.jsx';
 import { IncomeTrackerWidget } from '../components/income/IncomeTrackerCard.jsx';
+import { SolutionStudioWidget } from '../components/dashboard/SolutionStudioWidget.jsx';
 import { DailyStudyPlanCard } from '../components/study/DailyStudyPlanCard.jsx';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { DailyDigest } from '../components/learning/DailyDigest.jsx';
@@ -69,6 +70,9 @@ export default function Dashboard() {
     <div className="space-y-4 sm:space-y-6">
       {/* Getting Started — only shows until all 9 steps are done (or dismissed) */}
       <GettingStartedWidget />
+
+      {/* GIG-01: Solution Studio entry — also the live-stack safety net */}
+      <SolutionStudioWidget />
 
       {/* EA-02: Income tracker compact widget */}
       <IncomeTrackerWidget />

@@ -77,6 +77,7 @@ const Updates              = lazy(() => import('./pages/Updates.jsx'));
 const Readiness            = lazy(() => import('./pages/Readiness.jsx'));
 const RenewGithubToken     = lazy(() => import('./pages/RenewGithubToken.jsx'));
 const IdeaStudio           = lazy(() => import('./pages/IdeaStudio.jsx'));
+const SolutionStudio       = lazy(() => import('./pages/SolutionStudio.jsx'));   // GIG-01
 const GoogleCallback       = lazy(() => import('./pages/GoogleCallback.jsx'));
 const SAARoadmap           = lazy(() => import('./pages/SAARoadmap.jsx'));
 const RateCalculator       = lazy(() => import('./pages/RateCalculator.jsx'));
@@ -183,6 +184,7 @@ export default function App() {
                        <Route path="/readiness"       element={<Suspended><Readiness /></Suspended>} />
                        <Route path="/renew-github"    element={<Suspended><RenewGithubToken /></Suspended>} />
                        <Route path="/idea-studio"     element={<Suspended><IdeaStudio /></Suspended>} />
+                       <Route path="/solution"        element={<Suspended><SolutionStudio /></Suspended>} />
                        <Route path="/settings" element={<Suspended><Settings /></Suspended>} />
                        <Route path="/integrations/google/callback" element={<Suspended><GoogleCallback /></Suspended>} />
                        <Route path="/saa-roadmap" element={<Suspended><SAARoadmap /></Suspended>} />

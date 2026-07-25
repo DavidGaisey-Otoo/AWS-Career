@@ -42,11 +42,60 @@ const SYNC_BLOCKLIST = [
   `${STORAGE_KEY}::vault`,                    // encrypted AWS cred vault (per-device)
   `${STORAGE_KEY}::deploy::vault`,            //
   `${STORAGE_KEY}::aws::credentials`,         // raw AWS keys (never sync)
+  `${STORAGE_KEY}::github`,                   // GitHub PAT (plaintext — must never reach the gist)
+  `${STORAGE_KEY}::google`,                   // Google OAuth tokens + clientSecret + PKCE state
   `${STORAGE_KEY}::sync::gistId`,             // sync infrastructure itself
   `${STORAGE_KEY}::sync::meta`,
   `${STORAGE_KEY}::sync::enabled`,
   `${STORAGE_KEY}::sync::deviceId`,
 ];
+
+// Field names that must never appear inside a synced JSON blob, wherever
+// they're nested. Legacy AppContext state kept the GitHub token at
+// integrations.githubToken inside `::app` / `::profile` — those keys ARE
+// synced, so we deep-scrub the parsed JSON before upload AND after pull.
+const SECRET_FIELD_NAMES = /^(githubToken|clientSecret|client_secret|accessToken|access_token|refreshToken|refresh_token|secretAccessKey|sessionToken|apiKey|api_key|password|pat|token)$/i;
+
+// Raw secret patterns — if a value string contains one of these after
+// scrubbing, we drop the whole key rather than risk uploading it.
+const SECRET_VALUE_PATTERNS = [
+  /\bgh[pousr]_[A-Za-z0-9]{20,}\b/,   // GitHub classic + fine-grained prefixes
+  /\bgithub_pat_[A-Za-z0-9_]{20,}\b/,
+  /\bAKIA[0-9A-Z]{16}\b/,             // AWS access key id
+  /\bGOCSPX-[A-Za-z0-9_-]{10,}\b/,    // Google OAuth client secret
+];
+
+function deepScrub(value) {
+  if (Array.isArray(value)) return value.map(deepScrub);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (SECRET_FIELD_NAMES.test(k)) continue;
+      out[k] = deepScrub(v);
+    }
+    return out;
+  }
+  return value;
+}
+
+/**
+ * Sanitize a single localStorage value before it may travel.
+ * Returns the safe string, or null if the value must be dropped entirely.
+ */
+function sanitizeValue(raw) {
+  if (typeof raw !== 'string') return null;
+  let out = raw;
+  // JSON blobs get a structural scrub of secret-named fields
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      out = JSON.stringify(deepScrub(parsed));
+    }
+  } catch { /* not JSON — fall through to pattern check */ }
+  // Belt-and-braces: any surviving raw secret pattern → drop the key
+  if (SECRET_VALUE_PATTERNS.some((p) => p.test(out))) return null;
+  return out;
+}
 
 // ════════════════════════════════════════════════════════════════════
 // Snapshot helpers — read/write localStorage
@@ -61,11 +110,13 @@ export function snapshotLocalStorage() {
     if (SYNC_BLOCKLIST.some((b) => key === b || key.startsWith(`${b}::`))) continue;
     // Skip any key that looks like a raw AWS access key
     if (/AKIA[0-9A-Z]{16}/.test(key)) continue;
-    data[key] = localStorage.getItem(key);
+    const safe = sanitizeValue(localStorage.getItem(key));
+    if (safe === null) continue;
+    data[key] = safe;
     count++;
   }
   return {
-    version: 1,
+    version: 2,
     timestamp: new Date().toISOString(),
     deviceId: getDeviceId(),
     keyCount: count,
@@ -82,11 +133,14 @@ export function restoreLocalStorage(snapshot, options = {}) {
   for (const [key, value] of Object.entries(snapshot.data)) {
     if (typeof value !== 'string') continue;
     if (SYNC_BLOCKLIST.some((b) => key === b || key.startsWith(`${b}::`))) continue;
-    if (mergeStrategy === 'replace') {
-      localStorage.setItem(key, value);
-      written++;
-    } else if (mergeStrategy === 'keep-newer' && !localStorage.getItem(key)) {
-      localStorage.setItem(key, value);
+    // Old snapshots (version 1) may contain secrets captured before the
+    // sanitizer existed — scrub on the way back in too, never reinstate.
+    const safe = sanitizeValue(value);
+    if (safe === null) continue;
+    // 'fill-missing' only writes keys this device doesn't have yet
+    // (there are no per-key timestamps, so "newer" can't be determined).
+    if (mergeStrategy === 'replace' || !localStorage.getItem(key)) {
+      localStorage.setItem(key, safe);
       written++;
     }
   }
@@ -234,10 +288,61 @@ export async function pullSnapshot() {
   const content = file.truncated ? await fetch(file.raw_url).then((r) => r.text()) : file.content;
   try {
     const snapshot = JSON.parse(content);
+    // Pre-v2 snapshots were captured before the secret sanitizer existed —
+    // the gist (and its revision history) may contain the GitHub PAT or
+    // OAuth secrets. Flag it so the UI can walk the user through fixing it.
+    if ((snapshot.version || 1) < 2) raiseSecurityAdvisory('legacy-snapshot');
     return { snapshot, remoteTimestamp: snapshot.timestamp, gistUrl: gist.html_url };
   } catch {
     return null;
   }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Security advisory — set when we detect the gist may hold pre-sanitizer
+// secrets. The SyncModal shows a banner + one-click remediation.
+// ════════════════════════════════════════════════════════════════════
+const ADVISORY_KEY = `${STORAGE_KEY}::sync::advisory`;
+
+function raiseSecurityAdvisory(reason) {
+  try {
+    if (!localStorage.getItem(ADVISORY_KEY)) {
+      localStorage.setItem(ADVISORY_KEY, JSON.stringify({ reason, at: new Date().toISOString() }));
+    }
+  } catch { /* quota */ }
+}
+
+export function readSecurityAdvisory() {
+  try {
+    const raw = localStorage.getItem(ADVISORY_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+export function dismissSecurityAdvisory() {
+  try { localStorage.removeItem(ADVISORY_KEY); } catch { /* */ }
+}
+
+/**
+ * Nuke-and-repave the sync gist: deleting the gist destroys ALL its
+ * revisions (where pre-sanitizer secrets may live), then a fresh gist is
+ * created from a sanitized snapshot. Sync stays enabled throughout.
+ * The user should still rotate their PAT + Google client secret — code
+ * can't un-leak what may have been read already.
+ */
+export async function recreateSyncGist() {
+  const oldId = getStoredGistId();
+  if (oldId) {
+    try {
+      await ghFetch(`/gists/${oldId}`, { method: 'DELETE' });
+    } catch (err) {
+      if (!String(err.message || '').includes('404')) throw err;
+    }
+    setStoredGistId(null);
+  }
+  const res = await pushSnapshot();   // creates a fresh gist from sanitized state
+  dismissSecurityAdvisory();
+  return { ok: true, gistUrl: res.gistUrl };
 }
 
 /**

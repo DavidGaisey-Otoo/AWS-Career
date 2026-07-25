@@ -8,8 +8,11 @@
  * Plans are DAY-DETERMINISTIC (date + cert + hours seed).
  */
 
-import { TOPIC_SERVICES } from '../data/examModes.js';
-import { questionsForCert } from '../data/questionBank.js';
+// NOTE: examModes + questionBank are ~700 questions of data (the single
+// biggest data payload in the app). This module is mounted on the eagerly
+// loaded Dashboard, so those two are loaded via dynamic import() inside
+// generateBlocks() — keeping the entry bundle small. Do not "clean this up"
+// into top-level imports.
 import { getSmartReviewState, topicMastery } from './spacedRepetition.js';
 import { findSustainedWeakness } from './examWeakness.js';
 
@@ -128,6 +131,10 @@ export function getCompletedDays(limit = 30) {
 // Today's plan — get or generate
 // ════════════════════════════════════════════════════════════════════
 
+/**
+ * Synchronous read of today's plan — returns the cached plan if one was
+ * already generated today, else null. Use getTodayPlanAsync() to generate.
+ */
 export function getTodayPlan() {
   const state = readState();
   if (!state.setup) return null;
@@ -141,7 +148,20 @@ export function getTodayPlan() {
       totalMinutes: state.history[key].blocks.reduce((s, b) => s + (b.minutes || 0), 0),
     };
   }
-  const blocks = generateBlocks(state.setup);
+  return null;
+}
+
+/**
+ * Get-or-generate today's plan. Async because generation lazy-loads the
+ * question bank (the app's largest data payload) on first use each day.
+ */
+export async function getTodayPlanAsync() {
+  const cached = getTodayPlan();
+  if (cached) return cached;
+  const state = readState();
+  if (!state.setup) return null;
+  const key = todayKey();
+  const blocks = await generateBlocks(state.setup);
   state.history[key] = { completed: false, blocks };
   writeState(state);
   return {
@@ -163,12 +183,12 @@ export function markTodayDone() {
   return { ...state.history[key], date: key };
 }
 
-export function regenerateTodayPlan() {
+export async function regenerateTodayPlan() {
   const state = readState();
   const key = todayKey();
   if (state.history[key]) delete state.history[key];
   writeState(state);
-  return getTodayPlan();
+  return getTodayPlanAsync();
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -199,11 +219,17 @@ function pickFrom(arr, n, rand) {
   return out;
 }
 
-function generateBlocks(setup) {
+async function generateBlocks(setup) {
   const { certId, hoursPerDay } = setup;
   const totalMinutes = Math.max(15, Math.round(hoursPerDay * 60));
   const seed = `${todayKey()}::${certId}::${hoursPerDay}`;
   const rand = seededRandom(seed);
+
+  // Heavy data loads on demand — see module header note
+  const [{ TOPIC_SERVICES }, { questionsForCert }] = await Promise.all([
+    import('../data/examModes.js'),
+    import('../data/questionBank.js'),
+  ]);
 
   // Topic pool
   const allQs = questionsForCert(certId);

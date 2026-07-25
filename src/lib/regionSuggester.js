@@ -33,7 +33,9 @@ export const AUDIENCE_OPTIONS = [
 // ════════════════════════════════════════════════════════════════════
 const KEYWORD_AUDIENCE = [
   { audience: 'eu',           patterns: [/\beu(rope|ropean|-?wide)?\b/i, /\bgdpr\b/i, /\beea\b/i, /\bgermany|france|spain|italy|netherlands|ireland|belgium|portugal|sweden|denmark|finland|austria|poland\b/i, /\beuro(zone)?\b/i] },
-  { audience: 'uk',           patterns: [/\buk\b/i, /\b(britain|british|england|english|scotland|wales)\b/i, /\blondon\b/i, /\b\.co\.uk\b/i] },
+  // "United Kingdom" / "Great Britain" are what job boards actually send in
+  // their structured location field — match the full names, not just "UK".
+  { audience: 'uk',           patterns: [/\buk\b/i, /\bunited kingdom\b/i, /\bgreat britain\b/i, /\b(britain|british|england|english|scotland|wales)\b/i, /\blondon\b/i, /\b\.co\.uk\b/i] },
   { audience: 'us',           patterns: [/\b(usa|us|united states|america(n)?|stateside)\b/i, /\b(new york|california|texas|florida|chicago|virginia|oregon)\b/i, /\bnorth america\b/i] },
   { audience: 'africa',       patterns: [/\b(ghana|nigeria(n)?|lagos|accra|kenya|kenyan|nairobi|uganda|ethiopia|tanzania|ivory coast|cote d'ivoire|senegal|morocco|egypt)\b/i, /\bwest africa(n)?\b/i, /\bafrica(n)?\b/i] },
   { audience: 'south-africa', patterns: [/\bsouth africa(n)?\b/i, /\b(johannesburg|cape town|pretoria|durban)\b/i, /\bsouthern africa\b/i] },

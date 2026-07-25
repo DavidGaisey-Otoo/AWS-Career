@@ -19,7 +19,7 @@ import {
 import { CERTS } from '../../data/certs.js';
 import {
   getSchedulerSetup, saveSchedulerSetup, clearSchedulerSetup,
-  getTodayPlan, markTodayDone, regenerateTodayPlan,
+  getTodayPlan, getTodayPlanAsync, markTodayDone, regenerateTodayPlan,
   getSchedulerSummary, daysToExam,
 } from '../../lib/studyScheduler.js';
 import { cn } from '../../lib/utils.js';
@@ -27,8 +27,21 @@ import { cn } from '../../lib/utils.js';
 export function DailyStudyPlanCard({ compact = false }) {
   const [tick, setTick] = useState(0);   // bump to re-read storage
   const summary = useMemo(() => getSchedulerSummary(), [tick]);
-  const plan = useMemo(() => (summary.hasSetup ? getTodayPlan() : null), [summary.hasSetup, tick]);
+  // Cached plan renders instantly; generation (which lazy-loads the
+  // question bank) fills in async on the first visit of the day.
+  const [plan, setPlan] = useState(() => (summary.hasSetup ? getTodayPlan() : null));
   const [showSetup, setShowSetup] = useState(!summary.hasSetup);
+
+  useEffect(() => {
+    let alive = true;
+    if (!summary.hasSetup) { setPlan(null); return undefined; }
+    const cached = getTodayPlan();
+    setPlan(cached);
+    if (!cached) {
+      getTodayPlanAsync().then((p) => { if (alive) setPlan(p); }).catch(() => {});
+    }
+    return () => { alive = false; };
+  }, [summary.hasSetup, tick]);
 
   // Sync setup-visibility whenever storage refreshes
   useEffect(() => { if (summary.hasSetup) setShowSetup(false); }, [summary.hasSetup]);
@@ -47,7 +60,7 @@ export function DailyStudyPlanCard({ compact = false }) {
     summary={summary}
     plan={plan}
     onDone={() => { markTodayDone(); setTick((t) => t + 1); }}
-    onRegenerate={() => { regenerateTodayPlan(); setTick((t) => t + 1); }}
+    onRegenerate={async () => { await regenerateTodayPlan(); setTick((t) => t + 1); }}
     onEditSetup={() => setShowSetup(true)}
   />;
 }

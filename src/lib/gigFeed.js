@@ -1,12 +1,17 @@
 /**
  * gigFeed.js — FR-01 Live Gig Feed sourcing.
  *
- * Honest reality check:
- *   - RemoteOK has a public JSON API with CORS — works directly from the browser.
- *   - WeWorkRemotely + Upwork + Indeed RSS feeds are not CORS-enabled. We
- *     try via a public proxy (corsproxy.io); if that fails we skip the source.
- *   - Indeed killed their public RSS in 2023 — included only as a graceful
- *     no-op so the UI doesn't show it as "broken".
+ * Source reality (verified live 2026-07-25):
+ *   - RemoteOK, Remotive, Jobicy, Arbeitnow: public JSON APIs with
+ *     `Access-Control-Allow-Origin: *` — fetched directly from the browser.
+ *   - Himalayas: public JSON API but NO CORS header → proxy chain.
+ *   - We Work Remotely: RSS, no CORS → proxy chain.
+ *   - Upwork: killed public RSS in 2024 (HTTP 410 Gone) — removed.
+ *
+ * Proxy chain: each proxied source tries every proxy in order until one
+ * works. A custom proxy (e.g. the user's own Cloudflare Worker) can be
+ * set in localStorage under `awscl-pro::v1::gigfeed::proxy` and is tried
+ * first.
  *
  * Returns a normalised list of GigItem:
  *   {
@@ -18,10 +23,36 @@
  */
 
 const CACHE_KEY = 'awscl-pro::v1::gig-feed';
+const CUSTOM_PROXY_KEY = 'awscl-pro::v1::gigfeed::proxy';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-// Public CORS proxy — best-effort fallback for RSS sources without CORS
-const CORS_PROXY = 'https://corsproxy.io/?';
+// Public CORS proxies — best-effort fallback chain for non-CORS sources.
+// Each entry turns a target URL into a proxied URL.
+const PUBLIC_PROXIES = [
+  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+];
+
+export function getCustomProxy() {
+  try { return localStorage.getItem(CUSTOM_PROXY_KEY) || null; } catch { return null; }
+}
+
+export function setCustomProxy(prefix) {
+  try {
+    if (prefix) localStorage.setItem(CUSTOM_PROXY_KEY, prefix);
+    else localStorage.removeItem(CUSTOM_PROXY_KEY);
+  } catch { /* quota */ }
+}
+
+function proxyChain() {
+  const chain = [...PUBLIC_PROXIES];
+  const custom = getCustomProxy();
+  if (custom) {
+    // Custom proxy is "prefix + encoded url", tried first
+    chain.unshift((url) => `${custom}${encodeURIComponent(url)}`);
+  }
+  return chain;
+}
 
 // ════════════════════════════════════════════════════════════════════
 // Source definitions
@@ -36,21 +67,44 @@ const SOURCES = [
     parse: parseRemoteOK,
   },
   {
+    id: 'remotive',
+    label: 'Remotive',
+    url: 'https://remotive.com/api/remote-jobs?search=aws&limit=50',
+    type: 'json',
+    needsProxy: false,
+    parse: parseRemotive,
+  },
+  {
+    id: 'jobicy',
+    label: 'Jobicy',
+    url: 'https://jobicy.com/api/v2/remote-jobs?count=50&tag=aws',
+    type: 'json',
+    needsProxy: false,
+    parse: parseJobicy,
+  },
+  {
+    id: 'arbeitnow',
+    label: 'Arbeitnow',
+    url: 'https://arbeitnow.com/api/job-board-api',
+    type: 'json',
+    needsProxy: false,
+    parse: parseArbeitnow,
+  },
+  {
+    id: 'himalayas',
+    label: 'Himalayas',
+    url: 'https://himalayas.app/jobs/api?limit=50',
+    type: 'json',
+    needsProxy: true,
+    parse: parseHimalayas,
+  },
+  {
     id: 'weworkremotely',
     label: 'We Work Remotely',
     url: 'https://weworkremotely.com/categories/remote-programming-jobs.rss',
     type: 'rss',
     needsProxy: true,
     parse: parseWeWorkRemotely,
-  },
-  {
-    id: 'upwork',
-    label: 'Upwork',
-    // Upwork RSS for AWS keyword search (when available)
-    url: 'https://www.upwork.com/ab/feed/jobs/rss?q=aws',
-    type: 'rss',
-    needsProxy: true,
-    parse: parseUpworkRss,
   },
 ];
 
@@ -113,21 +167,27 @@ export async function fetchAllGigs({ force = false } = {}) {
 
   await Promise.all(SOURCES.map(async (src) => {
     try {
-      const url = src.needsProxy ? CORS_PROXY + encodeURIComponent(src.url) : src.url;
-      const res = await fetch(url, {
-        method: 'GET',
-        // RemoteOK requires a real User-Agent in some browsers — can't set in fetch but they accept browser UA
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const urls = src.needsProxy
+        ? proxyChain().map((wrap) => wrap(src.url))
+        : [src.url];
 
-      let parsed;
-      if (src.type === 'json') {
-        const json = await res.json();
-        parsed = src.parse(json);
-      } else {
-        const text = await res.text();
-        parsed = src.parse(text);
+      let lastErr = null;
+      let parsed = null;
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, { method: 'GET' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (src.type === 'json') {
+            parsed = src.parse(await res.json());
+          } else {
+            parsed = src.parse(await res.text());
+          }
+          break;   // this proxy (or direct URL) worked — stop trying
+        } catch (err) {
+          lastErr = err;
+        }
       }
+      if (parsed === null) throw lastErr || new Error('all proxies failed');
 
       sourceResults[src.id] = { ok: true, count: parsed.length };
       allGigs.push(...parsed);
@@ -136,6 +196,17 @@ export async function fetchAllGigs({ force = false } = {}) {
       sourceResults[src.id] = { ok: false, count: 0, error: err.message };
     }
   }));
+
+  // De-duplicate cross-source reposts (same title + company from 2 boards)
+  const seen = new Set();
+  const deduped = allGigs.filter((g) => {
+    const sig = `${(g.title || '').toLowerCase().trim()}::${(g.company || '').toLowerCase().trim()}`;
+    if (seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+  allGigs.length = 0;
+  allGigs.push(...deduped);
 
   // Sort newest first
   allGigs.sort((a, b) => {
@@ -229,8 +300,118 @@ function parseWeWorkRemotely(xml) {
   return parseRss(xml, 'weworkremotely', 'We Work Remotely');
 }
 
-function parseUpworkRss(xml) {
-  return parseRss(xml, 'upwork', 'Upwork');
+/**
+ * Remotive: { jobs: [{ id, url, title, company_name, category, tags[],
+ *   job_type, publication_date, candidate_required_location, salary,
+ *   description }] } — CORS: *, verified 2026-07-25.
+ */
+function parseRemotive(json) {
+  const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
+  return jobs.map((j) => ({
+    id: `remotive-${j.id}`,
+    title: j.title,
+    company: j.company_name || null,
+    url: j.url,
+    source: 'remotive',
+    sourceLabel: 'Remotive',
+    postedAt: j.publication_date ? new Date(j.publication_date).toISOString() : null,
+    budget: j.salary || extractBudgetFromText(j.description),
+    rate: null,
+    skills: Array.isArray(j.tags) ? j.tags.slice(0, 10) : [],
+    description: stripHtml(j.description || '').slice(0, 300),
+    location: j.candidate_required_location || null,
+    raw: { id: j.id, category: j.category, job_type: j.job_type },
+  })).filter(looksAwsRelated);
+}
+
+/**
+ * Jobicy: { jobs: [{ id, url, jobTitle, companyName, jobIndustry,
+ *   jobType, jobGeo, jobLevel, jobExcerpt, pubDate (ISO),
+ *   salaryMin, salaryMax, salaryCurrency, salaryPeriod }] }
+ * CORS: *, verified 2026-07-25.
+ */
+function parseJobicy(json) {
+  const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
+  return jobs.map((j) => ({
+    id: `jobicy-${j.id}`,
+    title: j.jobTitle,
+    company: j.companyName || null,
+    url: j.url,
+    source: 'jobicy',
+    sourceLabel: 'Jobicy',
+    postedAt: j.pubDate ? new Date(j.pubDate).toISOString() : null,
+    budget: formatSalaryRange(j.salaryMin, j.salaryMax, j.salaryCurrency, j.salaryPeriod),
+    rate: null,
+    skills: extractSkillsFromText(`${j.jobTitle} ${j.jobExcerpt || ''}`),
+    description: stripHtml(j.jobExcerpt || '').slice(0, 300),
+    location: j.jobGeo || null,
+    raw: { id: j.id, level: j.jobLevel, industry: j.jobIndustry },
+  })).filter(looksAwsRelated);
+}
+
+/**
+ * Arbeitnow: { data: [{ slug, company_name, title, description, url,
+ *   tags[], job_types[], location, created_at (epoch seconds) }] }
+ * CORS: *, verified 2026-07-25. General board → AWS-filtered client-side.
+ */
+function parseArbeitnow(json) {
+  const jobs = Array.isArray(json?.data) ? json.data : [];
+  return jobs.map((j) => ({
+    id: `arbeitnow-${j.slug}`,
+    title: j.title,
+    company: j.company_name || null,
+    url: j.url,
+    source: 'arbeitnow',
+    sourceLabel: 'Arbeitnow',
+    postedAt: j.created_at ? new Date(j.created_at * 1000).toISOString() : null,
+    budget: extractBudgetFromText(j.description),
+    rate: null,
+    skills: extractSkillsFromText(`${j.title} ${(j.tags || []).join(' ')} ${j.description || ''}`),
+    description: stripHtml(j.description || '').slice(0, 300),
+    location: j.location || (j.remote ? 'Remote' : null),
+    raw: { slug: j.slug, tags: j.tags, types: j.job_types },
+  })).filter(looksAwsRelated);
+}
+
+/**
+ * Himalayas: { jobs: [{ guid, title, companyName, applicationLink,
+ *   excerpt, description, pubDate (epoch seconds), minSalary, maxSalary,
+ *   currency, salaryPeriod, categories[], locationRestrictions[] }] }
+ * No CORS header → reached via proxy chain. Verified 2026-07-25.
+ */
+function parseHimalayas(json) {
+  const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
+  return jobs.map((j) => ({
+    id: `himalayas-${hashCode(j.guid || j.applicationLink || j.title)}`,
+    title: j.title,
+    company: j.companyName || null,
+    url: j.applicationLink || j.guid,
+    source: 'himalayas',
+    sourceLabel: 'Himalayas',
+    postedAt: j.pubDate ? new Date(j.pubDate * 1000).toISOString() : null,
+    budget: formatSalaryRange(j.minSalary, j.maxSalary, j.currency, j.salaryPeriod),
+    rate: null,
+    skills: [
+      ...(Array.isArray(j.categories) ? j.categories : []),
+      ...extractSkillsFromText(`${j.title} ${j.excerpt || ''}`),
+    ].slice(0, 8),
+    description: stripHtml(j.excerpt || j.description || '').slice(0, 300),
+    location: Array.isArray(j.locationRestrictions) && j.locationRestrictions.length
+      ? j.locationRestrictions.join(', ')
+      : 'Remote',
+    raw: { guid: j.guid, seniority: j.seniority },
+  })).filter(looksAwsRelated);
+}
+
+function formatSalaryRange(min, max, currency, period) {
+  if (!min && !max) return null;
+  const sym = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : (currency ? `${currency} ` : '$');
+  const fmt = (n) => (n >= 1000 ? `${sym}${Math.round(n / 1000)}k` : `${sym}${n}`);
+  const per = period === 'hourly' || period === 'hour' ? '/hr'
+            : period === 'monthly' || period === 'month' ? '/mo'
+            : '/yr';
+  if (min && max) return `${fmt(min)}-${fmt(max)}${per}`;
+  return `${fmt(min || max)}+${per}`;
 }
 
 // ════════════════════════════════════════════════════════════════════

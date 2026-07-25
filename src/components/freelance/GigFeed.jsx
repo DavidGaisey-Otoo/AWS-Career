@@ -115,7 +115,7 @@ export function GigFeed() {
               )}
             </h2>
             <p className="text-[12px] opacity-80 mt-1">
-              Live from RemoteOK + We Work Remotely + Upwork RSS. Auto-refreshes every 30 minutes.
+              Live from RemoteOK, Remotive, Jobicy, Arbeitnow, Himalayas + We Work Remotely. Auto-refreshes every 30 minutes.
               {data.fetchedAt && (
                 <span className="opacity-60"> · Last refresh {cacheAgeMin != null ? `${cacheAgeMin} min ago` : 'just now'}</span>
               )}
@@ -258,6 +258,9 @@ function GigCard({ gig }) {
   const proposalHref = `/freelance?tab=proposals&sub=smart&prefill=${briefForActions}`;
   const analyzeHref = `/job-analyzer?prefill=${briefForActions}`;
   const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(gig.title)}&brief=${briefForActions.slice(0, 600)}&source=freelance`;
+  // GIG-01: carry the whole gig (not just text) into Solution Studio so it
+  // keeps the budget, company, skills + source link for the solution header.
+  const solutionHref = `/solution?gig=${encodeGig(gig)}`;
 
   const postedAgo = gig.postedAt ? humanAge(gig.postedAt) : null;
 
@@ -320,8 +323,17 @@ function GigCard({ gig }) {
         <RateBenchmarkCard brief={`${gig.title}\n${gig.description}\n${(gig.skills || []).join(' ')} ${gig.location || ''}`} variant="compact" />
       </div>
 
-      {/* Action buttons */}
-      <div className="flex flex-wrap gap-1.5 mt-1 pt-2 border-t border-token">
+      {/* PRIMARY action — the whole point of the app: gig → buildable solution */}
+      <Link
+        to={solutionHref}
+        className="mt-1 inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-[12px] font-extrabold bg-gradient-aws text-ink-950 hover:brightness-110 transition tap-44"
+        title="Architecture, plan, code, expert review + a build button"
+      >
+        <Wand2 size={13} /> Build this solution
+      </Link>
+
+      {/* Secondary actions */}
+      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-token">
         <a
           href={gig.url}
           target="_blank"
@@ -346,7 +358,7 @@ function GigCard({ gig }) {
         </Link>
         <Link
           to={generateHref}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold bg-gradient-aws text-ink-950 hover:brightness-110 transition"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
           title="Generate a Deep Walkthrough for this gig"
         >
           ✨ Walkthrough
@@ -373,6 +385,31 @@ function GigApproachBadge({ gig }) {
       ✦ Recommended: {opt.label}
     </div>
   );
+}
+
+/**
+ * Pack a gig into a URL-safe base64 blob for /solution?gig=…
+ * Trimmed to the fields Solution Studio actually reads, so the URL stays
+ * short enough for every browser. btoa() is latin1-only, hence the
+ * unescape(encodeURIComponent(...)) round-trip for non-ASCII job posts.
+ */
+function encodeGig(gig) {
+  const slim = {
+    title: gig.title,
+    company: gig.company,
+    description: (gig.description || '').slice(0, 1200),
+    skills: (gig.skills || []).slice(0, 12),
+    budget: gig.budget,
+    location: gig.location,
+    url: gig.url,
+    source: gig.source,
+    sourceLabel: gig.sourceLabel,
+  };
+  try {
+    return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(slim)))));
+  } catch {
+    return '';
+  }
 }
 
 function humanAge(iso) {
