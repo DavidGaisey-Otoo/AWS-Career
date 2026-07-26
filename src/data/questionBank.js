@@ -1683,6 +1683,10 @@ import { SAA_V2_XL } from './questionBankV2_saaXL.js';
 // EX-17 fill batches: bring every thin topic to ≥20 questions.
 import { SAA_V2_FILL } from './questionBankV2_saaFill.js';
 import { SAA_V2_FILL2 } from './questionBankV2_saaFill2.js';
+// EX-21: 40 MULTIPLE-RESPONSE ("choose TWO") scenarios. The bank previously
+// held only 2 multi-answer questions against an exam that mixes them in
+// heavily, so practice did not match the real format.
+import { SAA_V2_MULTI } from './questionBankV2_saaMulti.js';
 
 export const QUESTION_BANK = [
   ...QUESTION_BANK_V2,
@@ -1693,6 +1697,7 @@ export const QUESTION_BANK = [
   ...SAA_V2_XL,
   ...SAA_V2_FILL,
   ...SAA_V2_FILL2,
+  ...SAA_V2_MULTI,
   ...CLF, ...SAA, ...DVA, ...SOA, ...DEA, ...MLA,
   ...SAP, ...DOP, ...SCS, ...ANS, ...DBS, ...MLS, ...AIF,
 ];
@@ -1748,7 +1753,44 @@ function seededShuffle(arr, seed) {
  *  - Avoids questions already used in the SAME attempt (no duplicates).
  *  - Pads from the broader pool if the cert pool isn't large enough.
  */
-export function pickExamQuestions({ cert, count, seed = Date.now(), filters = {} }) {
+/**
+ * Target share of multiple-response ("choose TWO/THREE") questions in a
+ * generated exam. The real SAA-C03 mixes them in at roughly this rate, and
+ * they are where most candidates lose marks because partial credit does not
+ * exist. Sampling purely at random from the pool under-represents them
+ * badly (the pool is ~6% multi), so the selector reserves a share instead.
+ */
+const MULTI_RESPONSE_TARGET_RATIO = 0.25;
+
+const isMulti = (q) => q.type === 'multi' && Array.isArray(q.answer) && q.answer.length > 1;
+
+/**
+ * Take up to `n` questions from `list`, reserving `ratio` of them for
+ * multiple-response format where the list has enough of them. Falls back to
+ * single-answer questions rather than returning short.
+ */
+function sampleWithFormatMix(list, n, seed, ratio) {
+  if (n <= 0 || list.length === 0) return [];
+  const multi = list.filter(isMulti);
+  const single = list.filter((q) => !isMulti(q));
+
+  const wantMulti = Math.min(multi.length, Math.round(n * ratio));
+  const pickedMulti = seededShuffle(multi, seed).slice(0, wantMulti);
+  const pickedSingle = seededShuffle(single, seed + 1).slice(0, n - pickedMulti.length);
+
+  // If single-answer ran short, backfill with any remaining multi
+  const out = [...pickedMulti, ...pickedSingle];
+  if (out.length < n) {
+    const usedIds = new Set(out.map((q) => q.id));
+    out.push(...multi.filter((q) => !usedIds.has(q.id)).slice(0, n - out.length));
+  }
+  return out;
+}
+
+export function pickExamQuestions({
+  cert, count, seed = Date.now(), filters = {},
+  multiRatio = MULTI_RESPONSE_TARGET_RATIO,
+}) {
   const pool = questionsForCert(cert.id).filter((q) =>
     (!filters.difficulty || q.difficulty === filters.difficulty) &&
     (!filters.domainId || q.domainIds.includes(filters.domainId)) &&
@@ -1763,7 +1805,7 @@ export function pickExamQuestions({ cert, count, seed = Date.now(), filters = {}
     for (const dom of cert.domains) {
       const share = Math.max(1, Math.round((dom.weight / 100) * count));
       const fromDom = pool.filter((q) => q.domainIds.includes(dom.id) && !used.has(q.id));
-      const chosen = seededShuffle(fromDom, seed + hashId(dom.id)).slice(0, share);
+      const chosen = sampleWithFormatMix(fromDom, share, seed + hashId(dom.id), multiRatio);
       for (const q of chosen) { out.push(q); used.add(q.id); }
     }
     // Top up if rounding came up short
@@ -1776,7 +1818,8 @@ export function pickExamQuestions({ cert, count, seed = Date.now(), filters = {}
     return seededShuffle(out, seed + 7).slice(0, count);
   }
 
-  return seededShuffle(pool, seed).slice(0, count);
+  // Single-domain or small-pool path — still honour the format mix
+  return seededShuffle(sampleWithFormatMix(pool, count, seed, multiRatio), seed + 3);
 }
 
 function hashId(s) {
