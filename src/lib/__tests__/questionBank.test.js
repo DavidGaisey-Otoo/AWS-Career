@@ -15,6 +15,7 @@
 
 import { QUESTION_BANK, questionsForCert, pickExamQuestions } from '../../data/questionBank.js';
 import { SAA_V2_MULTI } from '../../data/questionBankV2_saaMulti.js';
+import { classifyDomain, shouldReclassify } from '../../data/examDomainClassifier.js';
 import { getCert } from '../../data/certs.js';
 
 function assert(cond, msg) {
@@ -116,6 +117,84 @@ const CHECKS = [
       assert(dom['saa-d4'] <= dom['saa-d3'], `D4 (${dom['saa-d4']}) should not exceed D3 (${dom['saa-d3']})`);
       for (const d of ['saa-d1', 'saa-d2', 'saa-d3', 'saa-d4']) {
         assert(dom[d] >= 5, `${d} has only ${dom[d] || 0} multi-response questions`);
+      }
+    },
+  },
+
+  // ── EX-22 domain classification ───────────────────────────────────
+  // Before this, 549 questions inherited a ['saa-d3'] factory default and
+  // 83% of the SAA pool sat in a domain worth 24% of the exam.
+  {
+    name: 'classifier agrees with the hand-tagged validation set',
+    run: () => {
+      let ok = 0;
+      const misses = [];
+      for (const q of SAA_V2_MULTI) {
+        const { domainIds } = classifyDomain(q);
+        if (domainIds.includes(q.domainIds[0])) ok += 1;
+        else misses.push(`${q.id} want ${q.domainIds[0]} got ${domainIds.join('+')}`);
+      }
+      const pct = ok / SAA_V2_MULTI.length;
+      assert(pct >= 0.9,
+        `classifier agreement fell to ${(pct * 100).toFixed(0)}% on the hand-tagged set: ${misses.slice(0, 4).join('; ')}`);
+    },
+  },
+  {
+    name: 'no domain is starved — every domain has a usable practice pool',
+    run: () => {
+      const saa = questionsForCert('saa-c03');
+      for (const d of ['saa-d1', 'saa-d2', 'saa-d3', 'saa-d4']) {
+        const n = saa.filter((q) => q.domainIds.includes(d)).length;
+        // 50 is enough that a 10-question set does not repeat immediately
+        assert(n >= 50, `${d} has only ${n} questions — practice will repeat heavily`);
+      }
+    },
+  },
+  {
+    name: 'Domain 1 is no longer the smallest pool despite being 30% of the exam',
+    run: () => {
+      const saa = questionsForCert('saa-c03');
+      const count = (d) => saa.filter((q) => q.domainIds.includes(d)).length;
+      const d1 = count('saa-d1');
+      for (const d of ['saa-d2', 'saa-d4']) {
+        assert(d1 >= count(d),
+          `D1 (${d1}) is smaller than ${d} (${count(d)}) — D1 is the largest exam domain at 30%`);
+      }
+    },
+  },
+  {
+    name: 'no single domain hoards the bank the way the default did',
+    run: () => {
+      const saa = questionsForCert('saa-c03');
+      for (const d of ['saa-d1', 'saa-d2', 'saa-d3', 'saa-d4']) {
+        const share = saa.filter((q) => q.domainIds.includes(d)).length / saa.length;
+        assert(share < 0.55,
+          `${d} holds ${(share * 100).toFixed(0)}% of the bank — the default-inheritance bug may have returned`);
+      }
+    },
+  },
+  {
+    name: 'author-declared domains are never overwritten by the classifier',
+    run: () => {
+      // The multi-response batch declares its domains explicitly, so no
+      // question in it may be reclassified.
+      for (const q of SAA_V2_MULTI) {
+        assert(!shouldReclassify(q), `${q.id} is author-declared but was eligible for reclassification`);
+      }
+      const touched = QUESTION_BANK.filter((q) => q._domainSource === 'classified' && !shouldReclassify(q));
+      assert(touched.length === 0, `${touched.length} declared questions were reclassified`);
+    },
+  },
+  {
+    name: 'reclassified questions keep an audit trail',
+    run: () => {
+      const changed = QUESTION_BANK.filter((q) => q._domainSource === 'classified');
+      assert(changed.length > 100, `only ${changed.length} questions reclassified — expected several hundred`);
+      for (const q of changed.slice(0, 50)) {
+        assert(Array.isArray(q._domainWas), `${q.id} lost its previous domain record`);
+        assert(typeof q._domainConfidence === 'number', `${q.id} has no confidence score`);
+        assert(q.domainIds.length >= 1 && q.domainIds.length <= 2,
+          `${q.id} has ${q.domainIds.length} domains — expected 1 or 2`);
       }
     },
   },

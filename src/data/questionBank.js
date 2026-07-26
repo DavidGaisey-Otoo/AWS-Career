@@ -1687,8 +1687,14 @@ import { SAA_V2_FILL2 } from './questionBankV2_saaFill2.js';
 // held only 2 multi-answer questions against an exam that mixes them in
 // heavily, so practice did not match the real format.
 import { SAA_V2_MULTI } from './questionBankV2_saaMulti.js';
+import { applyDomainClassification } from './examDomainClassifier.js';
 
-export const QUESTION_BANK = [
+// EX-22: five of the V2 banks never passed domainIds, so 549 questions
+// inherited the factory default ['saa-d3'] — 83% of the SAA pool sat in a
+// domain that is 24% of the exam. applyDomainClassification re-derives the
+// domain from each question's own content. Author-declared domains are left
+// untouched; see examDomainClassifier.js for the full rationale.
+const RAW_BANK = [
   ...QUESTION_BANK_V2,
   ...SAA_V2_EXTRAS,
   ...SAA_V2_BULK,
@@ -1701,6 +1707,8 @@ export const QUESTION_BANK = [
   ...CLF, ...SAA, ...DVA, ...SOA, ...DEA, ...MLA,
   ...SAP, ...DOP, ...SCS, ...ANS, ...DBS, ...MLS, ...AIF,
 ];
+
+export const QUESTION_BANK = applyDomainClassification(RAW_BANK);
 
 // ---------- helpers ----------
 
