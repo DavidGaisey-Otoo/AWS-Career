@@ -17,7 +17,13 @@
  *   resources[] — { label, url }
  */
 
-export const TOPIC_STUDY_GUIDES = {
+// EX-24: guides written later for roadmap services that had none (EFS,
+// Cognito, Organizations, VPN, Well-Architected, plus a combined guide for
+// the recognition-level services). Kept in a separate file to avoid growing
+// this one past 4,000 lines; merged into the exported map at the bottom.
+import { TOPIC_STUDY_GUIDES_FILL } from './topicStudyGuidesFill.js';
+
+const BASE_GUIDES = {
   // ════════════════════════════════════════════════════════════════════
   mixed: {
     title: 'Multi-Service Scenarios',
@@ -4074,3 +4080,5 @@ and choosing the right engine.`,
     ],
   },
 };
+
+export const TOPIC_STUDY_GUIDES = { ...BASE_GUIDES, ...TOPIC_STUDY_GUIDES_FILL };

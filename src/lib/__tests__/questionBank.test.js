@@ -16,6 +16,8 @@
 import { QUESTION_BANK, questionsForCert, pickExamQuestions } from '../../data/questionBank.js';
 import { SAA_V2_MULTI } from '../../data/questionBankV2_saaMulti.js';
 import { classifyDomain, shouldReclassify } from '../../data/examDomainClassifier.js';
+import { PHASES, guideIdForService } from '../../data/saaRoadmap.js';
+import { TOPIC_STUDY_GUIDES } from '../../data/topicStudyGuides.js';
 import { getCert } from '../../data/certs.js';
 
 function assert(cond, msg) {
@@ -195,6 +197,46 @@ const CHECKS = [
         assert(typeof q._domainConfidence === 'number', `${q.id} has no confidence score`);
         assert(q.domainIds.length >= 1 && q.domainIds.length <= 2,
           `${q.id} has ${q.domainIds.length} domains — expected 1 or 2`);
+      }
+    },
+  },
+
+  // ── EX-24 roadmap → study guide linkage ───────────────────────────
+  // 14 of 47 roadmap services previously resolved to null, so following the
+  // SAA roadmap dead-ended with no study guide on EFS, Cognito,
+  // Organizations, VPN and the Well-Architected Framework.
+  {
+    name: 'every roadmap service resolves to a study guide that exists',
+    run: () => {
+      const broken = [];
+      for (const phase of PHASES) {
+        for (const svc of (phase.services || [])) {
+          const guideId = guideIdForService(svc.id);
+          if (!guideId) broken.push(`${svc.id} (unmapped)`);
+          else if (!TOPIC_STUDY_GUIDES[guideId]) broken.push(`${svc.id} → ${guideId} (guide missing)`);
+        }
+      }
+      assert(broken.length === 0,
+        `roadmap items with no usable guide: ${broken.slice(0, 6).join(', ')}`);
+    },
+  },
+  {
+    name: 'every study guide has the fields the guide page renders',
+    run: () => {
+      const required = ['title', 'subtitle', 'estReadMin', 'overview',
+                        'sections', 'examTraps', 'cheatsheet', 'flashcards', 'resources'];
+      for (const [id, guide] of Object.entries(TOPIC_STUDY_GUIDES)) {
+        for (const field of required) {
+          assert(guide[field] !== undefined, `guide "${id}" is missing ${field}`);
+        }
+        // A section must render as either bullets or a table
+        for (const s of guide.sections) {
+          assert(s.title && (s.bullets || s.table),
+            `guide "${id}" has a section with neither bullets nor a table`);
+        }
+        for (const r of guide.resources) {
+          assert(r.label && r.url, `guide "${id}" has a resource missing label or url`);
+        }
       }
     },
   },

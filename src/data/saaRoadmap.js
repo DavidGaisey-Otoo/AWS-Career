@@ -90,29 +90,35 @@ export const DOMAINS = [
 // Routes resolve to /exam/saa-c03/study/{guideId} via the existing
 // TopicStudyGuide page (built in EX-11).
 // ════════════════════════════════════════════════════════════════════
+// EX-24: every entry now resolves to a real guide. Fourteen were previously
+// null, so following this roadmap dead-ended on EFS, Cognito, Organizations,
+// VPN, the Well-Architected Framework and nine recognition-level services.
+// The recognition-level ones share the 'lightly-tested' guide, matching the
+// one-hour budget this roadmap gives each of them.
 const GUIDE_MAP = {
   // Foundation
-  iam: 'iam', ec2: 'ec2', s3: 's3', vpc: 'vpc', cli: null,
+  iam: 'iam', ec2: 'ec2', s3: 's3', vpc: 'vpc', cli: 'lightly-tested',
   // Storage + DB
   ebs: 'ec2',  // EBS is covered in EC2 guide (with full table)
-  efs: null, fsx: null, rds: 'rds', aurora: 'aurora', ddb: 'dynamodb',
+  efs: 'efs', fsx: 'lightly-tested', rds: 'rds', aurora: 'aurora', ddb: 'dynamodb',
   redshift: 'redshift',
   // Elastic Compute
   asg: 'asg', elb: 'alb', lambda: 'lambda', ecs: 'ecs', fargate: 'ecs',
-  eks: 'eks', beanstalk: null, 'step-fn': 'step',
+  eks: 'eks', beanstalk: 'lightly-tested', 'step-fn': 'step',
   // Networking + Edge
   'vpc-adv': 'vpc', route53: 'route53', cloudfront: 'cloudfront',
-  'global-accel': null, 'direct-conn': 'dx', vpn: null, tgw: 'tgw',
+  'global-accel': 'lightly-tested', 'direct-conn': 'dx', vpn: 'vpn', tgw: 'tgw',
   // Security deep
-  'iam-adv': 'iam', kms: 'kms', secrets: 'secretsmgr', cognito: null,
-  orgs: null, 'guard-macie': null, 'waf-shield': 'waf',
+  'iam-adv': 'iam', kms: 'kms', secrets: 'secretsmgr', cognito: 'cognito',
+  orgs: 'orgs', 'guard-macie': 'lightly-tested', 'waf-shield': 'waf',
   // Integration + Monitoring
   sqs: 'sqs', sns: 'sns', eventbridge: 'eventbridge', cloudwatch: 'cloudwatch',
-  xray: null, cloudtrail: 'cloudtrail',
+  xray: 'lightly-tested', cloudtrail: 'cloudtrail',
   // Cost + WA
   'savings-plans': 'ec2',  // pricing models live in EC2 guide
-  spot: 'ec2', 's3-tiering': 's3', 'compute-opt': null, 'trusted-adv': null,
-  budgets: null, 'wellarch-fw': null,
+  spot: 'ec2', 's3-tiering': 's3', 'compute-opt': 'lightly-tested',
+  'trusted-adv': 'lightly-tested', budgets: 'lightly-tested',
+  'wellarch-fw': 'wellarch-fw',
 };
 export function guideIdForService(serviceId) {
   return GUIDE_MAP[serviceId] || null;
