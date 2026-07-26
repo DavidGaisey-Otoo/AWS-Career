@@ -1687,6 +1687,11 @@ import { SAA_V2_FILL2 } from './questionBankV2_saaFill2.js';
 // held only 2 multi-answer questions against an exam that mixes them in
 // heavily, so practice did not match the real format.
 import { SAA_V2_MULTI } from './questionBankV2_saaMulti.js';
+// EX-23: 50 Domain 4 cost-optimisation questions. After EX-22 corrected the
+// domain tagging, D4 held only 60 questions (8%) against a 20% exam weight —
+// a genuine content gap, so a candidate drilling cost exhausted the pool in
+// about four mocks.
+import { SAA_V2_COST } from './questionBankV2_saaCost.js';
 import { applyDomainClassification } from './examDomainClassifier.js';
 
 // EX-22: five of the V2 banks never passed domainIds, so 549 questions
@@ -1704,6 +1709,7 @@ const RAW_BANK = [
   ...SAA_V2_FILL,
   ...SAA_V2_FILL2,
   ...SAA_V2_MULTI,
+  ...SAA_V2_COST,
   ...CLF, ...SAA, ...DVA, ...SOA, ...DEA, ...MLA,
   ...SAP, ...DOP, ...SCS, ...ANS, ...DBS, ...MLS, ...AIF,
 ];
