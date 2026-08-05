@@ -15,6 +15,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { AWS_LEVELS, GOALS, STORAGE_KEY } from '../lib/constants.js';
 import { cn, formatCurrency } from '../lib/utils.js';
 import { GoogleCalendarConnectCard } from '../components/integrations/GoogleCalendarConnectCard.jsx';
+import { LocalAIPanel } from '../components/settings/LocalAIPanel.jsx';
 
 const SECTIONS = [
   { id: 'profile',       label: 'Profile',          icon: User },
@@ -326,7 +327,11 @@ function IntegrationSection() {
   const toast = useToast();
   return (
     <Section title="Integrations" subtitle="Link your external profiles so the app can reference them in proposals + portfolio.">
+      {/* EX-26: free local AI via Ollama — no key, no cost, nothing leaves the device */}
+      <LocalAIPanel />
+
       {/* IN-01: Google Calendar OAuth connect */}
+      <div className="mt-3" />
       <GoogleCalendarConnectCard />
 
       <div className="grid sm:grid-cols-2 gap-3 mt-3">

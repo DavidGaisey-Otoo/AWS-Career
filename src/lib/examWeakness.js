@@ -64,10 +64,20 @@ export function recordAttempt(certId, attempt) {
     byDomain[dId] = { correct: dv.correct, total: dv.total, pct };
   }
 
+  // EX-25: per-service results too. Domains are only four buckets, so a
+  // domain score cannot tell you what to actually go and study. Services
+  // can — and each one maps to a study guide you can open.
+  const byService = {};
+  for (const [sId, sv] of Object.entries(attempt.byService || {})) {
+    const pct = sv.total > 0 ? Math.round((sv.correct / sv.total) * 100) : 0;
+    byService[sId] = { correct: sv.correct, total: sv.total, pct };
+  }
+
   state.attempts[certId].unshift({
     at: new Date().toISOString(),
     scorePct: Math.max(0, Math.min(100, Math.round(attempt.scoreOverall))),
     byDomain,
+    byService,
   });
 
   // Cap history so localStorage doesn't bloat

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { BookOpen, Check, ExternalLink, Flag, Lightbulb, Target, X, XCircle } from 'lucide-react';
+import { ExplainDifferently } from './ExplainDifferently.jsx';
 import { cn } from '../../lib/utils.js';
 
 /**
@@ -220,6 +221,10 @@ export function QuestionRenderer({
               )}
             </div>
           )}
+
+          {/* EX-26: re-explain via a local model. Renders nothing unless the
+              user has switched local AI on in Settings. */}
+          <ExplainDifferently question={q} />
         </motion.div>
       )}
     </div>

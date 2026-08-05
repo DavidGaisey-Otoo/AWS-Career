@@ -163,12 +163,11 @@ export function buildContext({
 // Score → grade (same scale as AWS expert agents)
 // ═══════════════════════════════════════════════════════════════════
 
-export function scoreFromFindings(findings) {
-  if (!findings || findings.length === 0) return 100;
-  const weights = { critical: -25, high: -10, medium: -4, low: -1, info: 0 };
-  const total = findings.reduce((s, f) => s + (weights[f.severity] || 0), 0);
-  return Math.max(0, Math.min(100, 100 + total));
-}
+// EX-25: scoring moved to the shared src/lib/agentScoring.js. The old local
+// copy saturated at zero after four criticals, double-counted one root cause
+// repeated across resources, and ignored the context the agents had already
+// computed. Re-exported here so every existing import keeps working.
+export { scoreFromFindings } from '../agentScoring.js';
 
 export function gradeFromScore(score) {
   if (score >= 90) return { letter: 'A+', tone: 'success' };

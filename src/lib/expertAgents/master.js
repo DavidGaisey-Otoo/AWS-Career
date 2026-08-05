@@ -12,7 +12,8 @@
  *   // → { score, findings, perExpert, summary, criticalCount, ... }
  */
 
-import { buildContext, bySeverity, scoreFromFindings, SEVERITY } from './framework.js';
+import { buildContext, bySeverity, scoreFromFindings, explainScore, SEVERITY } from './framework.js';
+import { synthesise } from './synthesis.js';
 import { securityArchitect }   from './security.js';
 import { databaseArchitect }   from './database.js';
 import { networkArchitect }    from './network.js';
@@ -79,10 +80,27 @@ export function runExpertReview(input) {
     return true;
   });
 
+  // ── Cross-agent synthesis ────────────────────────────────────────
+  // Run AFTER dedupe so compound rules read the same finding set a human
+  // reviewer would. These are conclusions no single agent can reach —
+  // "unencrypted" plus "PCI-DSS" is an audit failure, not two observations.
+  let compound = [];
+  try {
+    compound = synthesise(allFindings, ctx);
+  } catch (err) {
+    console.warn('[ExpertReview] synthesis failed:', err);
+  }
+  // Don't re-raise a compound finding an agent already made verbatim
+  const existingRules = new Set(allFindings.map((f) => f.ruleId).filter(Boolean));
+  compound = compound.filter((f) => !existingRules.has(f.ruleId));
+  allFindings.push(...compound);
+
   // Sort by severity, then by expert order
   allFindings.sort(bySeverity);
 
-  const overallScore = scoreFromFindings(allFindings.filter((f) => f.severity !== 'info'));
+  // Context is passed so scoring can weight findings by relevance —
+  // a compliance brief makes security findings count for more.
+  const overallScore = scoreFromFindings(allFindings.filter((f) => f.severity !== 'info'), ctx);
   const criticalCount = allFindings.filter((f) => f.severity === 'critical').length;
   const highCount     = allFindings.filter((f) => f.severity === 'high').length;
   const mediumCount   = allFindings.filter((f) => f.severity === 'medium').length;
@@ -103,6 +121,11 @@ export function runExpertReview(input) {
     lowCount,
     positiveCount,
     expertCount: ALL_EXPERTS.length,
+    // Findings that required two or more agents' observations to reach —
+    // surfaced separately so the UI can show them as the senior read.
+    compoundFindings: compound,
+    compoundCount: compound.length,
+    scoreExplanation: explainScore(allFindings.filter((f) => f.severity !== 'info'), ctx),
     runMode: 'rules', // future: 'llm' when Anthropic API is wired
     timestamp: new Date().toISOString(),
   };

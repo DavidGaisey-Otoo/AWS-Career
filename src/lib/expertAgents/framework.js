@@ -170,9 +170,8 @@ export function buildContext({
 // Helper: derive a 0-100 score from a list of findings
 // (used by orchestrator to grade overall solution quality)
 // ════════════════════════════════════════════════════════════════════
-export function scoreFromFindings(findings) {
-  if (!findings || findings.length === 0) return 100;
-  const weights = { critical: -25, high: -10, medium: -4, low: -1, info: 0 };
-  const total = findings.reduce((sum, f) => sum + (weights[f.severity] || 0), 0);
-  return Math.max(0, Math.min(100, 100 + total));
-}
+// EX-25: scoring moved to the shared src/lib/agentScoring.js. The old local
+// copy saturated at zero after four criticals, double-counted one root cause
+// repeated across resources, and ignored the context the agents had already
+// computed. Re-exported here so every existing import keeps working.
+export { scoreFromFindings, explainScore } from '../agentScoring.js';

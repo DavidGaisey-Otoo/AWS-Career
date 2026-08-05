@@ -9,7 +9,11 @@
          connect-src allows all https because the app talks to user-chosen
          endpoints (any AWS region, custom CORS proxy, 6 gig APIs).
          ws://localhost is for Vite dev HMR only — harmless in prod. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: blob: ws://localhost:* ws://127.0.0.1:*; frame-src https://embed.diagrams.net; object-src 'none'; base-uri 'self'" />
+    <!-- http://localhost:* in connect-src is for a locally-run Ollama on
+         :11434 (free, private, offline AI). Only reachable when the app is
+         itself served over http locally; an HTTPS deployment blocks it as
+         mixed content, which localLLM.js detects and reports. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: blob: ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:*; frame-src https://embed.diagrams.net; object-src 'none'; base-uri 'self'" />
     <meta name="description" content="AWS Career Launchpad Pro — the most ambitious AWS learning and freelance career platform." />
     <link rel="manifest" href="./manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
