@@ -1,7 +1,10 @@
-import { createContext, useCallback, useContext, useMemo } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import {
   PROJECTS, SERVICE_DOMAINS, DIFFICULTY, getServiceMeta, PORTFOLIO_DOMAIN_COVERAGE,
 } from '../data/projects.js';
+import {
+  listCustomProjects, saveCustomProject, deleteCustomProject,
+} from '../lib/customProjects.js';
 import { useLocalStorage } from '../hooks/useLocalStorage.js';
 import { STORAGE_KEY } from '../lib/constants.js';
 
@@ -125,9 +128,38 @@ export function PortfolioProvider({ children }) {
 
   const resetPortfolio = useCallback(() => setState(DEFAULT_STATE), [setState]);
 
+  // ---------- BUILD-01: user-authored projects sit alongside the presets ----
+  // Custom projects are generated into the same shape as data/projects.js
+  // entries, so merging them here is all that is required — the Kanban
+  // board, filters, stats, detail page and export already read from this
+  // list and cannot tell the difference.
+  const [customTick, setCustomTick] = useState(0);
+  const customProjects = useMemo(() => listCustomProjects(), [customTick]);
+  const allProjects = useMemo(
+    () => [...PROJECTS, ...customProjects],
+    [customProjects]
+  );
+
+  const addCustomProject = useCallback((project) => {
+    const saved = saveCustomProject(project);
+    setCustomTick((t) => t + 1);
+    return saved;
+  }, []);
+
+  const removeCustomProject = useCallback((id) => {
+    deleteCustomProject(id);
+    // Drop its progress record too so storage doesn't accumulate orphans
+    setState((s) => {
+      const next = { ...s, projects: { ...(s.projects || {}) } };
+      delete next.projects[id];
+      return next;
+    });
+    setCustomTick((t) => t + 1);
+  }, [setState]);
+
   // ---------- derived: project completion %, totals, intelligence ----------
   const projectStats = useMemo(() => {
-    return PROJECTS.map((p) => {
+    return allProjects.map((p) => {
       const ps = { ...PROJECT_DEFAULTS, ...(state.projects?.[p.id] || {}) };
       const totalSteps = p.buildSteps.length;
       const doneSteps = p.buildSteps.filter((s) => ps.completedSteps[s.id]).length;
@@ -151,7 +183,7 @@ export function PortfolioProvider({ children }) {
         actualMinutes: ps.actualMinutes,
       };
     });
-  }, [state.projects]);
+  }, [state.projects, allProjects]);
 
   const intelligence = useMemo(() => {
     // Portfolio score: weighted by status + detail + difficulty
@@ -160,7 +192,7 @@ export function PortfolioProvider({ children }) {
     let totalWeight = 0;
     let completeCount = 0;
     let inProgressCount = 0;
-    for (const p of PROJECTS) {
+    for (const p of allProjects) {
       const stat = projectStats.find((s) => s.id === p.id);
       const diffWeight = DIFFICULTY[p.difficulty]?.level || 1;
       const statusScore = STATUS_WEIGHT[stat.status] || 0;
@@ -179,11 +211,11 @@ export function PortfolioProvider({ children }) {
     const avgDetail = completedDetail.length
       ? completedDetail.reduce((a, b) => a + b, 0) / completedDetail.length
       : 0;
-    const clientReadiness = Math.round((completeCount / PROJECTS.length) * 100 * 0.6 + avgDetail * 100 * 0.4);
+    const clientReadiness = Math.round((completeCount / allProjects.length) * 100 * 0.6 + avgDetail * 100 * 0.4);
 
     // Skill coverage by domain (only count from completed or in-progress)
     const domainCounts = Object.fromEntries(SERVICE_DOMAINS.map((d) => [d, 0]));
-    for (const p of PROJECTS) {
+    for (const p of allProjects) {
       const stat = projectStats.find((s) => s.id === p.id);
       if (stat.status === 'not-started') continue;
       const seen = new Set();
@@ -204,7 +236,7 @@ export function PortfolioProvider({ children }) {
     const gaps = coverageArr.filter((c) => c.done === 0 && c.possible > 0).map((c) => c.domain);
 
     // Complexity progression: are user's completed projects trending harder?
-    const completedByOrder = PROJECTS
+    const completedByOrder = allProjects
       .filter((p) => projectStats.find((s) => s.id === p.id).status === 'complete')
       .map((p) => DIFFICULTY[p.difficulty]?.level || 1);
     let progression = 'unknown';
@@ -216,7 +248,7 @@ export function PortfolioProvider({ children }) {
 
     // Recommendation: next project to attempt — highest priority not-started,
     // preferring those that fill a gap domain.
-    const notStarted = PROJECTS.filter((p) => projectStats.find((s) => s.id === p.id).status === 'not-started');
+    const notStarted = allProjects.filter((p) => projectStats.find((s) => s.id === p.id).status === 'not-started');
     const recommendations = notStarted
       .map((p) => {
         const ps = projectStats.find((s) => s.id === p.id);
@@ -241,7 +273,7 @@ export function PortfolioProvider({ children }) {
 
   const value = useMemo(() => ({
     state,
-    projects: PROJECTS,
+    projects: allProjects,
     projectStats,
     intelligence,
     getProjectState,
@@ -253,10 +285,16 @@ export function PortfolioProvider({ children }) {
     togglePublicShare,
     bumpVisitor,
     resetPortfolio,
+    // BUILD-01
+    presetProjects: PROJECTS,
+    customProjects,
+    addCustomProject,
+    removeCustomProject,
   }), [
-    state, projectStats, intelligence,
+    state, allProjects, projectStats, intelligence,
     getProjectState, updateProjectState, moveToStatus, toggleStep,
     addScreenshot, removeScreenshot, togglePublicShare, bumpVisitor, resetPortfolio,
+    customProjects, addCustomProject, removeCustomProject,
   ]);
 
   return <PortfolioContext.Provider value={value}>{children}</PortfolioContext.Provider>;

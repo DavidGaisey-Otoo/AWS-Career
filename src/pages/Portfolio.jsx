@@ -7,13 +7,15 @@ import { KanbanBoard } from '../components/portfolio/KanbanBoard.jsx';
 import { PortfolioExportShare } from '../components/portfolio/PortfolioExportShare.jsx';
 import { PortfolioFilters } from '../components/portfolio/PortfolioFilters.jsx';
 import { PortfolioIntelligence } from '../components/portfolio/PortfolioIntelligence.jsx';
+import { BuildYourOwnCard } from '../components/portfolio/BuildYourOwnCard.jsx';
 import { usePortfolio } from '../context/PortfolioContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { PROJECTS, getServiceMeta } from '../data/projects.js';
+import { getServiceMeta } from '../data/projects.js';
 import { cn } from '../lib/utils.js';
 
 export default function Portfolio() {
-  const { resetPortfolio, bumpVisitor, state } = usePortfolio();
+  // `projects` is presets + anything the user has built themselves
+  const { resetPortfolio, bumpVisitor, state, projects } = usePortfolio();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const initialMode = params.get('view') === 'public' ? 'public' : 'editor';
@@ -26,11 +28,12 @@ export default function Portfolio() {
   const [service, setService] = useState('all');
 
   // Collect every unique service across the catalog for the filter dropdown.
+  // Includes custom projects, so filtering works on what you built too.
   const allServices = useMemo(() => {
     const set = new Set();
-    PROJECTS.forEach((p) => p.services.forEach((s) => set.add(s)));
+    projects.forEach((p) => (p.services || []).forEach((s) => set.add(s)));
     return [...set];
-  }, []);
+  }, [projects]);
 
   // Bump the visitor count once on a public-view landing.
   useEffect(() => {
@@ -117,6 +120,10 @@ export default function Portfolio() {
           services={allServices}
         />
       )}
+
+      {/* BUILD-01: the catalogue is a fixed eight. This is the way in for
+          anything else — describe it and get the same guided build. */}
+      {previewMode === 'editor' && <BuildYourOwnCard />}
 
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}

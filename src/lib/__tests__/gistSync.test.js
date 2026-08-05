@@ -9,16 +9,26 @@
  * Runs in Node, so localStorage is shimmed below.
  */
 
-// ── localStorage shim (must exist before importing gistSync) ──────────
+// ── localStorage shim ─────────────────────────────────────────────────
+// Installed at import (gistSync reads storage at module scope) AND again
+// when the suite runs. The re-install matters: other suites in the same
+// process install their own shim on the same global, and whichever
+// imported last would otherwise own it — leaving these tests writing to
+// one store and asserting against another. That exact collision made this
+// suite fail the moment a second storage-backed suite was added.
 const store = new Map();
-globalThis.localStorage = {
-  get length() { return store.size; },
-  key: (i) => [...store.keys()][i] ?? null,
-  getItem: (k) => (store.has(k) ? store.get(k) : null),
-  setItem: (k, v) => { store.set(k, String(v)); },
-  removeItem: (k) => { store.delete(k); },
-  clear: () => store.clear(),
-};
+
+function installShim() {
+  globalThis.localStorage = {
+    get length() { return store.size; },
+    key: (i) => [...store.keys()][i] ?? null,
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => { store.set(k, String(v)); },
+    removeItem: (k) => { store.delete(k); },
+    clear: () => store.clear(),
+  };
+}
+installShim();
 
 const { snapshotLocalStorage, restoreLocalStorage } = await import('../gistSync.js');
 
@@ -164,6 +174,7 @@ const CHECKS = [
 ];
 
 export function runGistSyncTests() {
+  installShim();   // reclaim the global from any other suite's shim
   const results = CHECKS.map((c) => {
     try {
       c.run();

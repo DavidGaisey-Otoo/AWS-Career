@@ -622,7 +622,24 @@ export const PROJECTS = [
 ];
 
 // ---------- Lookup helpers ----------
-export const getProjectById = (id) => PROJECTS.find((p) => p.id === id);
+/**
+ * BUILD-01: the detail page resolves a project purely from the URL, so this
+ * must also find user-authored projects or /portfolio/custom-xyz 404s.
+ * Custom projects are generated into this exact shape and live in
+ * localStorage; read lazily so this module stays import-free at the top.
+ */
+export const getProjectById = (id) => {
+  const preset = PROJECTS.find((p) => p.id === id);
+  if (preset) return preset;
+  if (!String(id || '').startsWith('custom-')) return undefined;
+  try {
+    const raw = localStorage.getItem('awscl-pro::v1::custom-projects');
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.find((p) => p.id === id) : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 export const PORTFOLIO_DOMAIN_COVERAGE = () => {
   // Maps domain → number of projects touching it
