@@ -28,6 +28,7 @@ import { SyncModal } from './components/sync/SyncModal.jsx';
 
 // Eager — entry point + tiny pages that load instantly
 import Dashboard from './pages/Dashboard.jsx';
+import SAAHome from './pages/SAAHome.jsx';
 import SectionLanding from './pages/SectionLanding.jsx';
 
 // Lazy — everything else. Loads on demand for a smaller initial bundle.
@@ -82,6 +83,9 @@ const GoogleCallback       = lazy(() => import('./pages/GoogleCallback.jsx'));
 const SAARoadmap           = lazy(() => import('./pages/SAARoadmap.jsx'));
 const RateCalculator       = lazy(() => import('./pages/RateCalculator.jsx'));
 const MyNotes              = lazy(() => import('./pages/MyNotes.jsx'));
+const ExamStrategy          = lazy(() => import('./pages/ExamStrategy.jsx'));
+const ServiceComparisons    = lazy(() => import('./pages/ServiceComparisons.jsx'));
+const SAAReview             = lazy(() => import('./pages/SAAReview.jsx'));
 const NoteDetail           = lazy(() => import('./pages/MyNotes.jsx').then((m) => ({ default: m.NoteDetail })));
 
 /**
@@ -130,7 +134,11 @@ export default function App() {
                    <SyncModal />
                    <Routes>
                      <Route element={<AppShell />}>
-                       <Route path="/" element={<Dashboard />} />
+                       <Route path="/" element={<SAAHome />} />
+                       <Route path="/career-dashboard" element={<Dashboard />} />
+                       <Route path="/exam-strategy" element={<Suspended><ExamStrategy /></Suspended>} />
+                       <Route path="/service-comparisons" element={<Suspended><ServiceComparisons /></Suspended>} />
+                       <Route path="/saa-review" element={<Suspended><SAAReview /></Suspended>} />
                        <Route path="/roadmap" element={<Suspended><Roadmap /></Suspended>} />
                        <Route path="/portfolio" element={<Suspended><Portfolio /></Suspended>} />
                        <Route path="/portfolio/:projectId" element={<Suspended><ProjectDetail /></Suspended>} />

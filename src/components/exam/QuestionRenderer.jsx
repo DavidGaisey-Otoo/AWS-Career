@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
-import { BookOpen, Check, ExternalLink, Flag, Lightbulb, Target, X, XCircle } from 'lucide-react';
+import { Bookmark, BookOpen, Check, ExternalLink, Flag, Lightbulb, RotateCcw, X, XCircle } from 'lucide-react';
 import { ExplainDifferently } from './ExplainDifferently.jsx';
 import { cn } from '../../lib/utils.js';
+import { useExam } from '../../context/ExamContext.jsx';
 
 /**
  * Pure presentational renderer for a single exam question.
@@ -30,6 +31,9 @@ export function QuestionRenderer({
   total,
   hideFlag = false,
 }) {
+  const { getCertState, toggleBookmark, toggleRevision } = useExam();
+  const certId = q.certIds?.[0];
+  const bookmark = certId ? getCertState(certId).bookmarks?.[q.id] : null;
   const isMulti = q.type === 'multi';
   const isTF = q.type === 'tf';
 
@@ -92,6 +96,13 @@ export function QuestionRenderer({
           {isMulti && <span className="chip border border-electric/40 text-electric bg-electric/10 text-[10px]">multi-answer</span>}
           {isTF && <span className="chip border border-electric/40 text-electric bg-electric/10 text-[10px]">true / false</span>}
         </div>
+        <div className="flex items-center gap-1.5">
+        {certId && (
+          <button onClick={() => toggleBookmark(certId, q.id)} aria-pressed={!!bookmark}
+            className={cn('inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition focus-ring border', bookmark ? 'border-electric bg-electric/15 text-electric' : 'border-token text-muted hover:text-current')}>
+            <Bookmark size={12} className={bookmark ? 'fill-current' : ''} /> {bookmark ? 'Saved' : 'Bookmark'}
+          </button>
+        )}
         {!hideFlag && (
           <button
             onClick={onToggleFlag}
@@ -105,6 +116,7 @@ export function QuestionRenderer({
             {flagged ? 'Flagged' : 'Flag'}
           </button>
         )}
+        </div>
       </div>
 
       {/* Question text */}
@@ -225,6 +237,14 @@ export function QuestionRenderer({
           {/* EX-26: re-explain via a local model. Renders nothing unless the
               user has switched local AI on in Settings. */}
           <ExplainDifferently question={q} />
+          {certId && (
+            <div className="p-3.5 border-t border-electric/20">
+              <button onClick={() => toggleRevision(certId, q.id)}
+                className={cn('inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold border focus-ring', bookmark?.revision ? 'border-warning bg-warning/15 text-warning' : 'border-token text-muted')}>
+                <RotateCcw size={12} /> {bookmark?.revision ? 'In revision queue' : 'Add to revision'}
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
     </div>

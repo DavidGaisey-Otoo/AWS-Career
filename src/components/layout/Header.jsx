@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Menu, Moon, Search, Sun, X, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, Check, Menu, Moon, RefreshCw, Search, Sun, X } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
@@ -23,6 +23,22 @@ export function Header({ onMobileMenu }) {
         >
           <Menu size={20} />
         </button>
+
+        {/* Browser-style page controls — available throughout the app. */}
+        <div className="flex items-center rounded-xl border border-token bg-[var(--card-2)]/50 p-0.5">
+          <button onClick={() => window.history.back()} aria-label="Go back" title="Back"
+            className="grid place-items-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-muted hover:text-current hover:bg-[var(--card)] focus-ring">
+            <ArrowLeft size={16} />
+          </button>
+          <button onClick={() => window.history.forward()} aria-label="Go forward" title="Forward"
+            className="hidden sm:grid place-items-center w-9 h-9 rounded-lg text-muted hover:text-current hover:bg-[var(--card)] focus-ring">
+            <ArrowRight size={16} />
+          </button>
+          <button onClick={() => window.location.reload()} aria-label="Refresh page" title="Refresh"
+            className="grid place-items-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-muted hover:text-aws-orange hover:bg-[var(--card)] focus-ring">
+            <RefreshCw size={15} />
+          </button>
+        </div>
 
         {/* Search trigger — full bar on tablet+, compact icon on mobile */}
         <button

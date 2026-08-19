@@ -1,7 +1,7 @@
 /**
  * sw.js — Service worker for AWS Career Launchpad Pro.
  *
- * Strategy: stale-while-revalidate for app shell + assets, network-only
+ * Strategy: network-first for navigations, stale-while-revalidate for assets, network-only
  * for AWS SDK API calls. Means the app launches instantly on second
  * visit (and works offline for content you've already viewed), but
  * any LIVE deploy / API call still hits the network for fresh data.
@@ -10,7 +10,7 @@
  * fully refresh. Old caches get pruned on activate.
  */
 
-const CACHE_VERSION = 'v3-2026-06-launch';  // bumped to bust any stale caches from earlier deploys
+const CACHE_VERSION = 'v4-2026-08-saa';
 const APP_CACHE = `awscl-app-${CACHE_VERSION}`;
 
 // Assets we want available offline immediately on first visit
@@ -64,6 +64,13 @@ self.addEventListener('fetch', (event) => {
   // Skip cross-origin to-be-network-only hosts
   if (NETWORK_ONLY_HOSTS.some((h) => url.hostname.endsWith(h))) return;
 
+  // HTML/navigation must prefer the latest deployment. Falling back to the
+  // cached shell keeps offline support without trapping users on an old UI.
+  if (req.mode === 'navigate') {
+    event.respondWith(networkFirst(req));
+    return;
+  }
+
   // Same-origin assets — stale-while-revalidate
   if (url.origin === self.location.origin) {
     event.respondWith(staleWhileRevalidate(req));
@@ -87,6 +94,17 @@ async function staleWhileRevalidate(req) {
     return res;
   }).catch(() => cached);
   return cached || fetchPromise;
+}
+
+async function networkFirst(req) {
+  const cache = await caches.open(APP_CACHE);
+  try {
+    const res = await fetch(req, { cache: 'no-store' });
+    if (res.ok) cache.put(req, res.clone()).catch(() => {});
+    return res;
+  } catch {
+    return (await cache.match(req)) || (await cache.match('./index.html'));
+  }
 }
 
 async function cacheFirst(req) {

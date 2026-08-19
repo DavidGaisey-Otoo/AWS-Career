@@ -12,6 +12,7 @@ const CERT_DEFAULTS = {
   voucher: null,        // { code, expiry, source, addedAt }
   bestScore: 0,
   passStreak: 0,
+  bookmarks: {},       // { [qId]: { addedAt, revision: boolean } }
 };
 
 const DEFAULT_STATE = {
@@ -93,6 +94,26 @@ export function ExamProvider({ children }) {
           },
         },
       };
+    });
+  }, [setState]);
+
+  const toggleBookmark = useCallback((certId, qId) => {
+    setState((s) => {
+      const cs = { ...CERT_DEFAULTS, ...(s.certs?.[certId] || {}) };
+      const bookmarks = { ...(cs.bookmarks || {}) };
+      if (bookmarks[qId]) delete bookmarks[qId];
+      else bookmarks[qId] = { addedAt: isoNow(), revision: false };
+      return { ...s, certs: { ...s.certs, [certId]: { ...cs, bookmarks } } };
+    });
+  }, [setState]);
+
+  const toggleRevision = useCallback((certId, qId) => {
+    setState((s) => {
+      const cs = { ...CERT_DEFAULTS, ...(s.certs?.[certId] || {}) };
+      const bookmarks = { ...(cs.bookmarks || {}) };
+      const current = bookmarks[qId] || { addedAt: isoNow(), revision: false };
+      bookmarks[qId] = { ...current, revision: !current.revision };
+      return { ...s, certs: { ...s.certs, [certId]: { ...cs, bookmarks } } };
     });
   }, [setState]);
 
@@ -289,6 +310,8 @@ export function ExamProvider({ children }) {
     getCertState,
     recordAttempt,
     markQuestion,
+    toggleBookmark,
+    toggleRevision,
     generateStudyPlan,
     clearStudyPlan,
     setVoucher,
@@ -296,7 +319,7 @@ export function ExamProvider({ children }) {
     resetExam,
   }), [
     state, certStats, masterStats,
-    getCertState, recordAttempt, markQuestion,
+    getCertState, recordAttempt, markQuestion, toggleBookmark, toggleRevision,
     generateStudyPlan, clearStudyPlan, setVoucher, markCertEarned, resetExam,
   ]);
 

@@ -36,7 +36,8 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         const keys = await caches.keys();
         await Promise.all(keys.filter((k) => !k.includes('v3-2026-06-launch')).map((k) => caches.delete(k)));
       }
-      await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+      const registration = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+      await registration.update();
     } catch (err) {
       console.warn('[SW] registration skipped:', err);
     }

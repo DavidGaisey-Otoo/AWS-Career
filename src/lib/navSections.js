@@ -13,7 +13,7 @@ import {
   Calculator, Calendar, Cloud, DollarSign, FileSearch, FileText, FlaskConical, GanttChart,
   GraduationCap, Hammer, Heart, Home, Inbox, Layers, Library, Mail, Map as MapIcon,
   Newspaper, PhoneCall, Plane, Presentation, Settings, Sparkles, Target,
-  TrendingUp, Trophy, Users, Wand2, Mic, ShieldCheck, Rocket, ListChecks,
+  TrendingUp, Trophy, Users, Wand2, Mic, ShieldCheck, Rocket, ListChecks, Swords, KeyRound, RotateCcw,
 } from 'lucide-react';
 
 export const SECTIONS = [
@@ -24,7 +24,8 @@ export const SECTIONS = [
     path: '/',
     blurb: 'Your live progress, focus for today, and recent activity.',
     children: [
-      { id: 'dashboard', label: 'Dashboard',         icon: Home,       path: '/' },
+      { id: 'dashboard', label: 'SAA-C03 Dashboard', icon: Home,       path: '/' },
+      { id: 'career-dashboard', label: 'Career Dashboard', icon: TrendingUp, path: '/career-dashboard' },
       { id: 'profile',   label: 'Profile + Badges',  icon: Trophy,     path: '/profile' },
       { id: 'community', label: 'Community',         icon: Users,      path: '/community' },
       { id: 'wellness',  label: 'Wellness',          icon: Heart,      path: '/wellness' },
@@ -62,6 +63,11 @@ export const SECTIONS = [
     children: [
       { id: 'saa-roadmap',  label: '🎯 SAA-C03 Roadmap',    icon: Target,        path: '/saa-roadmap' },  // SAA-01
       { id: 'exam',         label: 'Exam Center',           icon: GraduationCap, path: '/exam' },
+      { id: 'saa-questions', label: 'SAA-C03 Questions',      icon: Target,        path: '/exam/saa-c03',
+        hint: 'Practice, learning mode, service drills, and the full 65-question mock exam' },
+      { id: 'exam-strategy', label: 'Exam Strategy',         icon: KeyRound,      path: '/exam-strategy' },
+      { id: 'service-battles', label: 'Service Comparisons', icon: Swords,        path: '/service-comparisons' },
+      { id: 'saa-review',   label: 'Mistakes & Bookmarks',   icon: RotateCcw,      path: '/saa-review' },
       { id: 'certs',        label: 'Certifications',        icon: Award,         path: '/certifications' },
       { id: 'flashcards',   label: 'Flashcards',            icon: Layers,        path: '/flashcards' },       // EX-19
       { id: 'smart-review', label: 'Smart Review',          icon: Brain,         path: '/exam',               // EX-18 (mode inside Exam Center)
