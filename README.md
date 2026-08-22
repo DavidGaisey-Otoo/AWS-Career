@@ -17,10 +17,13 @@ live feed (or any brief you paste) runs an eight-stage pipeline:
 2. **Match** — ranks the brief against 8 proven architecture blueprints
 3. **Name** — derives AWS-legal project, stack, bucket and repo names
 4. **Approach** — recommends Console / CLI / Terraform / CloudFormation
-5. **Generate** — emits working Terraform, CloudFormation and CLI scripts
+5. **Generate** — emits reviewed project artifacts; CloudFormation coverage is
+   reported service by service and unsupported resources block one-click deploy
 6. **Review** — 10 specialist architect agents grade the design before you ship
-7. **Build** — one-click CloudFormation deploy straight from the browser
-8. **Tear down** — one-click delete, so nothing is left billing
+7. **Build** — reviewed CloudFormation can be deployed from the browser only
+   after the readiness and human-approval gates pass
+8. **Tear down** — deletes the tracked CloudFormation stack and reports AWS API
+   evidence; independently created resources remain the operator's responsibility
 
 The deploy button reports its own honest coverage (which services it can and
 can't provision), and the dashboard shows a permanent banner whenever a stack
@@ -77,20 +80,53 @@ Deployed to GitHub Pages at: https://davidgaisey-otoo.github.io/AWS-Career/
 npm test
 ```
 
-Three suites, all pure functions — no network, no AWS, no browser needed:
+Nine suites, all pure functions — no network, no AWS, no browser needed:
 
 - **Agent review** — 8 scenarios (PCI-DSS, HIPAA, IoT, ML, multi-region…) against the 10 architect agents
-- **Solution pipeline** — 21 checks covering template validity, YAML scalar safety, AWS naming rules, region routing, and that every field the UI renders is a primitive
-- **Sync secret-leak** — 8 checks proving no credential can reach the sync gist
+- **Solution pipeline** — 24 checks covering template validity, readiness gates,
+  evidence integrity, YAML safety, AWS naming rules, and region routing
+- **Sync secret-leak** — 8 checks proving credentials cannot reach remote sync
+- **Custom projects** — 15 checks covering service selection, plans, naming and architecture consistency
+- **Exam content** — 21 integrity, weighting, answer and mock-generation checks
+- **Draw.io bridge** — 5 origin, XML-safety and graph-integrity checks
+- **Deployment safety** — fail-closed executor and recursive audit-redaction checks
+- **Business workflow** — draft, payment-evidence, acceptance and unresolved-marker checks
+- **Generated artifacts** — mechanical safety gates for incomplete CLI, Terraform and CloudFormation output
+
+`npm run build` is the production compilation gate. `npm audit
+--audit-level=moderate` is used before release.
 
 ## Privacy & data
 
-The app is a **pure client-side application**. No backend, no database, no analytics. All your data — notes, proposals, exam progress, AWS credentials, income entries — lives in **your browser's localStorage** and never leaves your device.
+The main app is client-side and has no application database or analytics.
+Notes, proposals, exam progress and business records start in this browser's
+localStorage. When cross-device sync is enabled, a sanitized subset is copied
+to an access-controlled private repository in the connected GitHub account.
 
 **Credentials specifically:**
 
-- AWS keys used for deploys are held in memory for the duration of a single call and are never persisted. If you opt into saving them, they go through an AES-GCM 256 vault (PBKDF2, 220k iterations) that is useless without your password.
-- The GitHub PAT and Google OAuth secrets are **excluded from cross-device sync**, and every synced value is deep-scrubbed for credential patterns before upload. If the app detects a gist created by an older version, it offers one-click remediation (delete the gist, wiping its revision history, and recreate it clean).
+- AWS Account Manager identity-check keys are ephemeral and cleared after the
+  request. Deploy Console can optionally store deployment credentials in an
+  AES-GCM 256 vault (PBKDF2, 220k iterations) protected by the user's password.
+- GitHub, Google and AWS credentials are **excluded from cross-device sync**,
+  and synced values are deep-scrubbed for credential patterns. Legacy Gist data
+  is sanitized, written to the private repository, read back and verified before
+  the old Gist is removed.
+- Generated proposals begin as drafts. The app does not submit marketplace
+  applications. Invoice and payment features are recordkeeping only and do not
+  connect to Stripe, Wise, PayPal, banks or payment webhooks.
+
+## Production operator checklist
+
+1. Connect the GitHub App in **Settings → Integrations** for private-repository sync.
+2. Use temporary, least-privilege AWS credentials where possible. Review the
+   generated CloudFormation and readiness disclosures before approval.
+3. Deploy only through **Build → Deploy Console**. AWS Account Manager is a
+   planning and identity-check surface, not a second deployment engine.
+4. After delivery, collect client acceptance evidence, verify the tracked stack
+   deletion in AWS, and check Cost Explorer/Budgets for independently created resources.
+5. Treat generated plans, estimates and documents as drafts requiring professional
+   and client review; no application can safely infer every unstated requirement.
 
 The repository contains only the application code. Personal data is never committed.
 

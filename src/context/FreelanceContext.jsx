@@ -93,7 +93,7 @@ export function FreelanceProvider({ children }) {
     setState((s) => ({
       ...s,
       proposals: [
-        { id: uid(), sentAt: new Date().toISOString(), status: 'sent', ...p },
+        { id: uid(), createdAt: new Date().toISOString(), status: 'draft', ...p },
         ...s.proposals,
       ].slice(0, 200),
     }));
@@ -242,16 +242,18 @@ export function FreelanceProvider({ children }) {
 
   // Proposal stats
   const proposalStats = useMemo(() => {
-    const total = state.proposals.length;
-    const hired = state.proposals.filter((p) => p.status === 'hired').length;
-    const responded = state.proposals.filter((p) =>
+    const submitted = state.proposals.filter((p) => p.status !== 'draft');
+    const drafts = state.proposals.length - submitted.length;
+    const total = submitted.length;
+    const hired = submitted.filter((p) => p.status === 'hired').length;
+    const responded = submitted.filter((p) =>
       ['responded', 'hired'].includes(p.status)).length;
     const winRate = total ? Math.round((hired / total) * 100) : 0;
     const responseRate = total ? Math.round((responded / total) * 100) : 0;
 
     // best-performing platform by win rate
     const byPlatform = {};
-    for (const p of state.proposals) {
+    for (const p of submitted) {
       const k = p.platform || 'Unknown';
       if (!byPlatform[k]) byPlatform[k] = { sent: 0, hired: 0 };
       byPlatform[k].sent += 1;
@@ -266,7 +268,7 @@ export function FreelanceProvider({ children }) {
     const overdueFollowUps = state.proposals.filter((p) =>
       p.followUpAt && p.followUpAt < today && !['hired', 'rejected', 'no-response'].includes(p.status)).length;
 
-    return { total, hired, responded, winRate, responseRate, byPlatform, bestPlatform, overdueFollowUps };
+    return { total, drafts, hired, responded, winRate, responseRate, byPlatform, bestPlatform, overdueFollowUps };
   }, [state.proposals]);
 
   // Earnings stats (everything normalised to USD)

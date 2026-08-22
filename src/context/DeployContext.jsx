@@ -20,6 +20,7 @@ import { uid } from '../lib/utils.js';
 import * as vault from '../lib/cryptoVault.js';
 import { resolveAction, TIERS } from '../data/awsActions.js';
 import { EXECUTORS, hasExecutor } from '../lib/awsDeploy.js';
+import { assertVerifiedResult, sanitizeAuditValue } from '../lib/deploySafety.js';
 
 const DeployContext = createContext(null);
 
@@ -123,7 +124,7 @@ export function DeployProvider({ children }) {
       const item = {
         id: uid(),
         at: new Date().toISOString(),
-        ...entry,
+        ...sanitizeAuditValue(entry),
       };
       // Cap the log at 1000 entries to keep localStorage manageable.
       return [item, ...log].slice(0, 1000);
@@ -243,6 +244,7 @@ export function DeployProvider({ children }) {
       const fn = EXECUTORS[actionId];
       const region = params.region || creds?.defaultRegion || 'eu-west-1';
       result = await fn({ creds, region, params });
+      assertVerifiedResult(result, actionId);
     } catch (err) {
       appendAudit({
         tier: action.tier, actionId, params, ok: false,
@@ -303,15 +305,25 @@ export function DeployProvider({ children }) {
     if (!action) throw new Error(`Unknown action: ${actionId}`);
     if (action.tier !== 'READ') throw new Error(`${actionId} is not a read-tier action.`);
     if (!vaultBlob) throw new Error('No vault set up.');
-    const decrypted = await vault.decrypt(vaultBlob, password);
-    const region = params.region || 'eu-west-1';
-    const fn = EXECUTORS[actionId];
-    const result = await fn({ creds: decrypted.creds, region, params });
-    appendAudit({
-      tier: 'READ', actionId, params, ok: true,
-      summary: action.summary, result: result.result,
-    });
-    return result;
+    let decrypted = null;
+    try {
+      decrypted = await vault.decrypt(vaultBlob, password);
+      const region = params.region || decrypted.creds?.defaultRegion || 'eu-west-1';
+      const fn = EXECUTORS[actionId];
+      if (!fn) throw new Error(`No executor wired for ${actionId}.`);
+      const result = await fn({ creds: decrypted.creds, region, params });
+      assertVerifiedResult(result, actionId);
+      appendAudit({
+        tier: 'READ', actionId, params, ok: true,
+        summary: action.summary, result: result.result,
+      });
+      return result;
+    } catch (err) {
+      appendAudit({ tier: 'READ', actionId, params, ok: false, summary: `Read failed: ${err.message}` });
+      throw err;
+    } finally {
+      decrypted = null;
+    }
   }, [vaultBlob, appendAudit]);
 
   // ---------------- settings ----------------

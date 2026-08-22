@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { cn, formatDate } from '../../lib/utils.js';
 
 const STATUS_META = {
+  draft:       { label: 'Draft',        color: 'bg-[var(--card-2)] text-muted border border-token' },
   sent:        { label: 'Sent',         color: 'bg-[var(--card-2)] text-muted border border-token' },
   viewed:      { label: 'Viewed',       color: 'bg-electric/15 text-electric border border-electric/30' },
   responded:   { label: 'Responded',    color: 'bg-warning/15 text-warning border border-warning/30' },
@@ -16,7 +17,7 @@ const STATUS_META = {
   rejected:    { label: 'Rejected',     color: 'bg-danger/15 text-danger border border-danger/30' },
   'no-response': { label: 'No response', color: 'bg-[var(--card-2)] text-muted border border-token' },
 };
-const STATUS_KEYS = ['sent', 'viewed', 'responded', 'hired', 'rejected', 'no-response'];
+const STATUS_KEYS = ['draft', 'sent', 'viewed', 'responded', 'hired', 'rejected', 'no-response'];
 
 const PLATFORMS = ['Upwork', 'LinkedIn', 'Direct', 'Referral', 'Other'];
 
@@ -44,6 +45,11 @@ export function ProposalTracker() {
 
   const onSave = () => {
     if (!editing) return;
+    if (editing.status === 'sent' && !editing.submittedAt) {
+      if (!confirm('Confirm you personally reviewed and submitted this proposal on the marketplace. The app did not submit it for you.')) return;
+      editing.submittedAt = new Date().toISOString();
+      editing.approvedByHumanAt = editing.submittedAt;
+    }
     if (editing.id) {
       const { id, ...rest } = editing;
       updateProposal(id, rest);
@@ -54,6 +60,16 @@ export function ProposalTracker() {
     }
     setDrawer(false);
     setEditing(null);
+  };
+
+  const changeStatus = (proposal, status) => {
+    if (status === 'sent' && proposal.status === 'draft') {
+      if (!confirm('Confirm you personally reviewed and submitted this proposal.')) return;
+      const now = new Date().toISOString();
+      updateProposal(proposal.id, { status, submittedAt: now, approvedByHumanAt: now });
+      return;
+    }
+    updateProposal(proposal.id, { status });
   };
 
   const onDelete = () => {
@@ -139,7 +155,7 @@ export function ProposalTracker() {
         </select>
         <div className="ml-auto flex items-center gap-1">
           <button onClick={exportCSV} className="btn btn-ghost !text-xs !py-1.5"><Download size={12} /> CSV</button>
-          <button onClick={() => { setEditing({ status: 'sent', platform: 'Upwork', sentAt: new Date().toISOString() }); setDrawer(true); }}
+          <button onClick={() => { setEditing({ status: 'draft', platform: 'Upwork', createdAt: new Date().toISOString(), sentAt: new Date().toISOString() }); setDrawer(true); }}
                   className="btn btn-primary !text-xs !py-1.5"><Plus size={12} /> New</button>
         </div>
       </div>
@@ -179,9 +195,9 @@ export function ProposalTracker() {
                     <td className="p-3 text-xs">{p.budget || '—'}</td>
                     <td className="p-3">
                       <select
-                        value={p.status || 'sent'}
-                        onChange={(e) => updateProposal(p.id, { status: e.target.value })}
-                        className={cn('rounded-md px-1.5 py-0.5 text-[10px] font-bold focus:outline-none', STATUS_META[p.status || 'sent']?.color)}
+                        value={p.status || 'draft'}
+                        onChange={(e) => changeStatus(p, e.target.value)}
+                        className={cn('rounded-md px-1.5 py-0.5 text-[10px] font-bold focus:outline-none', STATUS_META[p.status || 'draft']?.color)}
                       >
                         {STATUS_KEYS.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
                       </select>

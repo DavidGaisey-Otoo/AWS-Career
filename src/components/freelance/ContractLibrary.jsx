@@ -5,6 +5,7 @@ import { useFreelance } from '../../context/FreelanceContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { CONTRACT_TEMPLATES, PRE_SIGN_CHECKLIST } from '../../data/contractTemplates.js';
 import { cn } from '../../lib/utils.js';
+import { findDraftMarkers } from '../../lib/businessWorkflow.js';
 
 export function ContractLibrary() {
   const [active, setActive] = useState(null);
@@ -38,11 +39,13 @@ export function ContractLibrary() {
   };
 
   const filledBody = active ? interpolate(active.body, vars) : '';
+  const draftMarkers = findDraftMarkers(filledBody);
 
   const copy = async () => {
+    if (draftMarkers.length && !confirm(`This draft still contains ${draftMarkers.length} unresolved placeholder(s). Copy it as an incomplete draft anyway?`)) return;
     try {
       await navigator.clipboard.writeText(filledBody);
-      toast.success('Template copied');
+      toast.success(draftMarkers.length ? 'Incomplete draft copied — review before sharing' : 'Reviewed draft copied');
     } catch { toast.error('Could not copy'); }
   };
 
@@ -119,6 +122,10 @@ export function ContractLibrary() {
               <button onClick={copy} className="btn btn-primary !text-xs !py-1.5">
                 <ClipboardCopy size={12} /> Copy
               </button>
+            </div>
+            <div className="rounded-lg border border-warning/35 bg-warning/5 p-2.5 text-[11px] mb-3 leading-relaxed">
+              <strong>Draft only.</strong> This is not legal advice, an electronic signature, client acceptance, or a sent contract.
+              {draftMarkers.length > 0 && <> Resolve {draftMarkers.length} highlighted-style placeholder(s) before sharing: {draftMarkers.slice(0, 4).join(', ')}.</>}
             </div>
             {/* Placeholders */}
             {active.placeholders?.length > 0 && (

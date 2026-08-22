@@ -35,6 +35,7 @@ import { gmailComposeUrl, outlookComposeUrl, mailtoUrl } from '../../data/emailT
 import { BookDiscoveryCallButton } from '../calendar/BookDiscoveryCallButton.jsx';
 import { AddToCalendarButton } from '../calendar/AddToCalendarButton.jsx';
 import { cn } from '../../lib/utils.js';
+import { findDraftMarkers } from '../../lib/businessWorkflow.js';
 
 // ════════════════════════════════════════════════════════════════════
 // Outreach modes
@@ -121,7 +122,7 @@ function bodyFor(mode, { gigTitle, firstName, recipientName }) {
         `I came across your work and noticed you are running on AWS. I am an AWS-certified architect who has built ${t.length < 30 ? 'production stacks' : 'similar production stacks'} for teams like yours.`,
         '',
         `Without making this a long pitch — here is one specific idea I would explore at your company:`,
-        ` • Move the [workload] to [service] to cut [cost/latency/effort] by ~30%`,
+        ` • Review [workload] and evaluate whether [service] can reduce [cost/latency/effort]`,
         '',
         `If that sounds useful, I would happily share a free 1-page architecture sketch in exchange for 15 minutes of your time. No commitment.`,
         '',
@@ -225,6 +226,8 @@ export function EmailOutreach() {
   const gmailHref = gmailComposeUrl(ctx);
   const outlookHref = outlookComposeUrl(ctx);
   const mailtoHref = mailtoUrl(ctx);
+  const draftMarkers = findDraftMarkers(`${subject}\n${body}`);
+  const canOpenMail = !!body && draftMarkers.length === 0;
 
   return (
     <div className="space-y-4">
@@ -243,6 +246,9 @@ export function EmailOutreach() {
               A focused composer for the 3 emails that move freelance work forward:
               <strong> follow-up</strong>, <strong>cold outreach</strong>, and <strong>thank you</strong>.
               Use this for quick sends; jump to the full system for tracker + 10 templates + library.
+            </p>
+            <p className="text-[11px] text-warning mt-2">
+              This creates a draft and opens your mail client. It never sends email, verifies delivery, or tracks replies automatically.
             </p>
           </div>
           <Link
@@ -395,6 +401,11 @@ export function EmailOutreach() {
             </span>
           </div>
         )}
+        {body && draftMarkers.length > 0 && (
+          <div className="rounded-lg border border-warning/40 bg-warning/5 px-3 py-2 text-[11.5px]">
+            Replace these draft markers before opening a mail client: <strong>{draftMarkers.join(', ')}</strong>
+          </div>
+        )}
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2 pt-2 border-t border-token">
@@ -409,32 +420,32 @@ export function EmailOutreach() {
             href={gmailHref}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => { if (!body) e.preventDefault(); }}
+            onClick={(e) => { if (!canOpenMail) e.preventDefault(); }}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold bg-gradient-aws text-ink-950 hover:brightness-110 transition',
-              !body && 'opacity-50 pointer-events-none'
+              !canOpenMail && 'opacity-50 pointer-events-none'
             )}
           >
-            <Send size={12} /> Open in Gmail <ExternalLink size={10} />
+            <Send size={12} /> Open reviewed draft in Gmail <ExternalLink size={10} />
           </a>
           <a
             href={outlookHref}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => { if (!body) e.preventDefault(); }}
+            onClick={(e) => { if (!canOpenMail) e.preventDefault(); }}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition',
-              !body && 'opacity-50 pointer-events-none'
+              !canOpenMail && 'opacity-50 pointer-events-none'
             )}
           >
-            <Send size={12} /> Open in Outlook <ExternalLink size={10} />
+            <Send size={12} /> Open reviewed draft in Outlook <ExternalLink size={10} />
           </a>
           <a
             href={mailtoHref}
-            onClick={(e) => { if (!body) e.preventDefault(); }}
+            onClick={(e) => { if (!canOpenMail) e.preventDefault(); }}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition',
-              !body && 'opacity-50 pointer-events-none'
+              !canOpenMail && 'opacity-50 pointer-events-none'
             )}
           >
             <Mail size={12} /> Default mail app

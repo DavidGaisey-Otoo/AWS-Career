@@ -186,6 +186,13 @@ export async function deployStack({ credentials, region, stackName, templateBody
               stackName: stack.StackName,
               outputs,
               finalStatus: lastStatus,
+              evidence: {
+                source: 'cloudformation:DescribeStacks',
+                region,
+                observedAt: new Date().toISOString(),
+                stackId: stack.StackId,
+                status: lastStatus,
+              },
               error: ok ? null : `Stack ended in ${lastStatus}. See events for details.`,
             };
           }
@@ -196,6 +203,8 @@ export async function deployStack({ credentials, region, stackName, templateBody
           emit('error', { message: 'Stack was deleted during the deploy.' });
           return { ok: false, error: msg, finalStatus: 'GONE' };
         }
+        emit('error', { message: `Unable to verify stack status: ${msg}` });
+        return { ok: false, error: `Unable to verify stack status: ${msg}`, finalStatus: 'STATUS_UNVERIFIED' };
       }
 
       await sleep(POLL_INTERVAL_MS);
@@ -247,10 +256,23 @@ export async function deleteStack({ credentials, region, stackName, onProgress }
           }
         }
       } catch (err) {
-        if (/does not exist/i.test(humanizeError(err))) {
+        const msg = humanizeError(err);
+        if (/does not exist/i.test(msg)) {
           emit('success', { finalStatus: 'DELETE_COMPLETE' });
-          return { ok: true, finalStatus: 'DELETE_COMPLETE' };
+          return {
+            ok: true,
+            stackName,
+            finalStatus: 'DELETE_COMPLETE',
+            evidence: {
+              source: 'cloudformation:DescribeStacks',
+              region,
+              observedAt: new Date().toISOString(),
+              stackAbsent: true,
+            },
+          };
         }
+        emit('error', { message: `Unable to verify deletion: ${msg}` });
+        return { ok: false, stackName, finalStatus: 'DELETE_UNVERIFIED', error: msg };
       }
       await sleep(POLL_INTERVAL_MS);
     }
@@ -311,6 +333,12 @@ async function snapshotStack(client, stackName) {
     stackName: s.StackName,
     outputs: (s.Outputs || []).map((o) => ({ key: o.OutputKey, value: o.OutputValue, description: o.Description })),
     finalStatus: s.StackStatus,
+    evidence: {
+      source: 'cloudformation:DescribeStacks',
+      observedAt: new Date().toISOString(),
+      stackId: s.StackId,
+      status: s.StackStatus,
+    },
   };
 }
 

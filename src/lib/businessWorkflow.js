@@ -26,3 +26,12 @@ export function assessMilestoneAcceptance(invoice = {}) {
     ],
   };
 }
+
+export function findDraftMarkers(text) {
+  const value = String(text || '');
+  const markers = [
+    ...(value.match(/\{\{?[^{}]+\}\}?/g) || []),
+    ...(value.match(/\[[^\]\n]+\]/g) || []),
+  ];
+  return [...new Set(markers)];
+}

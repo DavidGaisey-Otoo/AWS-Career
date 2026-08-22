@@ -329,7 +329,7 @@ function GigCard({ gig }) {
         className="mt-1 inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-[12px] font-extrabold bg-gradient-aws text-ink-950 hover:brightness-110 transition tap-44"
         title="Architecture, plan, code, expert review + a build button"
       >
-        <Wand2 size={13} /> Build this solution
+        <Wand2 size={13} /> Plan and validate this solution
       </Link>
 
       {/* Secondary actions */}

@@ -1,4 +1,4 @@
-import { createManualPaymentRecord, assessMilestoneAcceptance } from '../businessWorkflow.js';
+import { createManualPaymentRecord, assessMilestoneAcceptance, findDraftMarkers } from '../businessWorkflow.js';
 import { getStats } from '../proposalLog.js';
 
 function assert(value, message) { if (!value) throw new Error(message); }
@@ -27,9 +27,9 @@ export function runBusinessWorkflowTests() {
     const stats = getStats([{ status: 'draft' }, { status: 'sent' }, { status: 'won' }]);
     assert(stats.drafts === 1 && stats.total === 2 && stats.won === 1, 'draft counted as submitted');
   });
+  check('unresolved document and email placeholders are detected', () => {
+    const markers = findDraftMarkers('Hi {{company}}, move [workload] to {service}.');
+    assert(markers.length === 3, `expected 3 markers, got ${markers.length}`);
+  });
   return { results, allPassed: results.every((r) => r.pass) };
 }
-
-const report = runBusinessWorkflowTests();
-for (const result of report.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
-if (!report.allPassed) process.exitCode = 1;

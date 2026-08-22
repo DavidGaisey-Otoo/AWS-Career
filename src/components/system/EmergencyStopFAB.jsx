@@ -1,13 +1,9 @@
 /**
- * EmergencyStopFAB.jsx — the always-visible "nuclear button" for AWS costs.
+ * EmergencyStopFAB.jsx — emergency guidance and local-record cleanup.
  *
  * Lives in the bottom-right corner globally (mounted in AppShell).
- * When the user clicks, opens a confirm dialog requiring "STOP" typed.
- * On confirm:
- *   • Iterates every running deployment in AWSContext + destroys it
- *   • Renders a completion report (resources destroyed, cost saved)
- *
- * Designed for the "I see unexpected charges" panic moment.
+ * AWSContext contains planning/legacy records only; this component never
+ * claims that clearing them deleted resources in AWS.
  */
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -25,27 +21,24 @@ export function EmergencyStopFAB() {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState(null);
 
-  // Count live deployments + resources for the badge
+  // These are legacy/unverified local records, not a live AWS inventory.
   const liveDeployments = (aws?.state?.deployments || []).filter((d) => d.status === 'complete' || d.status === 'running');
   const liveResources = (aws?.state?.resources || []).length;
 
-  function destroyAll() {
+  function clearLocalRecords() {
     setBusy(true);
     try {
       const before = {
         deployments: liveDeployments.length,
         resources: liveResources,
       };
-      const totalHourly = (aws?.state?.resources || []).reduce((s, r) => s + (r.hourly || 0), 0);
       aws.destroyAll?.();
-      const savedPerMonth = Math.round(totalHourly * 24 * 30 * 100) / 100;
       setReport({
         ok: true,
-        deploymentsDestroyed: before.deployments,
-        resourcesDestroyed: before.resources,
-        estMonthlySaved: savedPerMonth,
+        deploymentsCleared: before.deployments,
+        resourcesCleared: before.resources,
       });
-      toast.success(`🚨 Destroyed ${before.deployments} deployment(s) · ${before.resources} resource(s).`);
+      toast.info(`Cleared ${before.deployments} planning record(s) and ${before.resources} unverified resource record(s). No AWS API call was made.`);
     } catch (err) {
       setReport({ ok: false, error: err.message || String(err) });
     } finally {
@@ -53,7 +46,7 @@ export function EmergencyStopFAB() {
     }
   }
 
-  const ready = confirmText === 'STOP';
+  const ready = confirmText === 'CLEAR';
 
   return (
     <>
@@ -62,8 +55,8 @@ export function EmergencyStopFAB() {
         className="fixed bottom-6 right-6 z-[80] grid place-items-center w-14 h-14 rounded-full shadow-2xl bg-gradient-to-br from-rose-500 to-rose-700 text-white hover:scale-105 transition-all focus-ring"
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.96 }}
-        title={`Emergency Stop — destroy ${liveResources} live AWS resource${liveResources === 1 ? '' : 's'}`}
-        aria-label="Emergency Stop — destroy all AWS resources"
+        title="Emergency AWS guidance"
+        aria-label="Open emergency AWS guidance"
       >
         <ShieldAlert size={22} strokeWidth={2.5} />
         {liveResources > 0 && (
@@ -83,37 +76,34 @@ export function EmergencyStopFAB() {
               <div>
                 <h2 className="text-xl font-bold">🚨 Emergency Stop</h2>
                 <p className="text-sm opacity-80 mt-1">
-                  Immediately destroys <strong>ALL {liveResources} tracked resource{liveResources === 1 ? '' : 's'}</strong> across <strong>{liveDeployments.length} deployment{liveDeployments.length === 1 ? '' : 's'}</strong>.
+                  Review urgent cleanup steps and clear <strong>{liveResources} unverified local resource record{liveResources === 1 ? '' : 's'}</strong>.
                 </p>
                 <p className="text-xs opacity-70 mt-2">
-                  Use this if you see unexpected charges, made a mistake, or want to clean up after testing.
-                  This action cannot be undone — terminated resources are gone.
+                  If you see unexpected charges, open AWS Billing and CloudFormation immediately. This button cannot terminate AWS resources because these local records are not verified deployment evidence.
                 </p>
               </div>
             </div>
 
             <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-3 mb-4 text-xs">
-              <strong className="text-rose-300">⚠️ Local tracking only:</strong> this destroys the resources this app
-              knows about (from the deploy console / approvals). If you created resources via the AWS console directly,
-              you\'ll need to delete those manually. The Orphan Scanner can help find them.
+              <strong className="text-rose-300">No AWS deletion occurs here.</strong> Delete verified stacks through Deploy Console and confirm <code>DELETE_COMPLETE</code> in CloudFormation. Use AWS Resource Explorer, Tag Editor, and Billing to find anything else.
             </div>
 
             <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1.5 block">
-              Type <span className="font-mono text-rose-300">STOP</span> to confirm
+              Type <span className="font-mono text-rose-300">CLEAR</span> to clear local records
             </label>
             <input
               type="text"
               autoFocus
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="STOP"
+              placeholder="CLEAR"
               className="w-full px-3 py-2.5 rounded-xl bg-[var(--card-2)] border border-token text-sm font-mono focus:border-rose-400 focus:outline-none"
             />
 
             <div className="mt-5 flex justify-between gap-2">
               <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
-              <Button variant="danger" onClick={destroyAll} disabled={!ready || busy} icon={Trash2}>
-                {busy ? 'Destroying…' : `🚨 Destroy ${liveResources} resource${liveResources === 1 ? '' : 's'}`}
+              <Button variant="danger" onClick={clearLocalRecords} disabled={!ready || busy} icon={Trash2}>
+                {busy ? 'Clearing…' : `Clear ${liveResources} local record${liveResources === 1 ? '' : 's'}`}
               </Button>
             </div>
           </div>
@@ -126,10 +116,10 @@ export function EmergencyStopFAB() {
                 {report.ok ? <CheckCircle2 size={22} /> : <XCircle size={22} />}
               </div>
               <div>
-                <h2 className="text-xl font-bold">{report.ok ? 'All clear ✓' : 'Couldn\'t complete'}</h2>
+                <h2 className="text-xl font-bold">{report.ok ? 'Local records cleared' : 'Couldn\'t complete'}</h2>
                 <p className="text-sm opacity-80 mt-1">
                   {report.ok
-                    ? `Destroyed ${report.deploymentsDestroyed} deployment(s) + ${report.resourcesDestroyed} resource(s).`
+                    ? `Cleared ${report.deploymentsCleared} planning record(s) and ${report.resourcesCleared} unverified resource record(s). No AWS deletion was attempted.`
                     : report.error}
                 </p>
               </div>
@@ -139,22 +129,21 @@ export function EmergencyStopFAB() {
               <div className="grid grid-cols-3 gap-2 mb-4">
                 <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3 text-center">
                   <div className="text-[10px] uppercase tracking-widest opacity-60">Deployments</div>
-                  <div className="text-2xl font-bold mt-1">{report.deploymentsDestroyed}</div>
+                  <div className="text-2xl font-bold mt-1">{report.deploymentsCleared}</div>
                 </div>
                 <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3 text-center">
                   <div className="text-[10px] uppercase tracking-widest opacity-60">Resources</div>
-                  <div className="text-2xl font-bold mt-1">{report.resourcesDestroyed}</div>
+                  <div className="text-2xl font-bold mt-1">{report.resourcesCleared}</div>
                 </div>
                 <div className="rounded-xl border border-success/30 bg-success/5 p-3 text-center">
-                  <div className="text-[10px] uppercase tracking-widest text-success">Saved / mo</div>
-                  <div className="text-2xl font-bold mt-1 text-success">${report.estMonthlySaved.toFixed(2)}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-warning">AWS deletions</div>
+                  <div className="text-2xl font-bold mt-1 text-warning">0 verified</div>
                 </div>
               </div>
             )}
 
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs">
-              <strong>Next step:</strong> open the AWS Cost Console to confirm — the app\'s view of "destroyed"
-              may not match AWS\'s view if resources were created outside this app.
+              <strong>Required next step:</strong> open AWS Billing and CloudFormation. Only AWS service responses can confirm deletion and stopped billing.
             </div>
 
             <div className="mt-5 flex justify-end">

@@ -361,6 +361,10 @@ function DeploymentColumn({ title, subtitle, tone, analysis, mode, scriptOpts, c
    */
   function runDeployment() {
     try {
+      if (!active.deployReady) {
+        toast.error('Deployment blocked: this generated artifact has unsupported services or unresolved placeholders.');
+        return;
+      }
       if (mode === 'client') {
         const ok = confirm(
           '⚠️ Client production scripts use EXACT specs from the brief — including any paid services.\n\n' +
@@ -455,6 +459,12 @@ function DeploymentColumn({ title, subtitle, tone, analysis, mode, scriptOpts, c
       </div>
 
       <div className="rounded-lg border border-token overflow-hidden">
+        {!active.deployReady && (
+          <div className="flex items-start gap-2 px-3 py-2 border-b border-warning/40 bg-warning/10 text-warning text-[11px]">
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+            <span><strong>Draft only — deployment blocked.</strong> Implement unsupported services and replace every placeholder before review and execution.</span>
+          </div>
+        )}
         <div className="flex items-center justify-between px-3 py-1.5 border-b border-token bg-[var(--card-2)]/60">
           <span className="text-[10px] font-mono opacity-70">{active.filename}</span>
           <div className="flex gap-1">
@@ -466,8 +476,9 @@ function DeploymentColumn({ title, subtitle, tone, analysis, mode, scriptOpts, c
               <Download size={10} /> Download
               {downloadOk && <CheckCircle2 size={11} className="text-success" />}
             </button>
-            <button onClick={runDeployment} className={cn(
+            <button onClick={runDeployment} disabled={!active.deployReady} className={cn(
               'text-[10px] flex items-center gap-1 px-2 py-0.5 rounded font-bold transition',
+              !active.deployReady && 'opacity-45 cursor-not-allowed',
               mode === 'test'
                 ? 'bg-gradient-aws text-ink-950 hover:brightness-110 shadow-glow-orange'
                 : 'bg-warning/20 text-warning hover:bg-warning/30 border border-warning/30'

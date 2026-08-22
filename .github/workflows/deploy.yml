@@ -37,6 +37,12 @@ jobs:
       - name: Install dependencies (clean)
         run: npm ci
 
+      - name: Security audit
+        run: npm audit --audit-level=moderate
+
+      - name: Run regression suites
+        run: npm test
+
       - name: Build for GitHub Pages
         run: npm run build
         env:
