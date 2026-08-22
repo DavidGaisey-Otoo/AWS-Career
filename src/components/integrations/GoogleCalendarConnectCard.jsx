@@ -18,6 +18,7 @@ import {
   getClientId, setClientId, clearClientId,
   getClientSecret, setClientSecret, clearClientSecret,
   readTokens, isConnected, disconnect, startOAuth, verifyConnection,
+  getGoogleRedirectUri,
 } from '../../lib/googleCalendar.js';
 import { cn } from '../../lib/utils.js';
 
@@ -42,7 +43,7 @@ export function GoogleCalendarConnectCard() {
     }
   }, []);
 
-  const redirectUri = `${window.location.origin}/integrations/google/callback`;
+  const redirectUri = getGoogleRedirectUri();
 
   async function handleConnect() {
     setError('');

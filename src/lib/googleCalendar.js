@@ -35,6 +35,11 @@ export const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 export const AUTH_URL  = 'https://accounts.google.com/o/oauth2/v2/auth';
 export const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 export const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
+
+export function getGoogleRedirectUri() {
+  const base = import.meta.env?.BASE_URL || '/';
+  return new URL(`${base}integrations/google/callback`, window.location.origin).href;
+}
 export const API_BASE  = 'https://www.googleapis.com/calendar/v3';
 
 // ════════════════════════════════════════════════════════════════════
@@ -164,7 +169,7 @@ function clearPkceState() {
 // ════════════════════════════════════════════════════════════════════
 export async function startOAuth({ clientId, redirectUri }) {
   if (!clientId) throw new Error('Missing Google OAuth Client ID. Add it in Settings → Integrations.');
-  if (!redirectUri) redirectUri = `${window.location.origin}/integrations/google/callback`;
+  if (!redirectUri) redirectUri = getGoogleRedirectUri();
 
   const { verifier, challenge } = await makePkcePair();
   const state = randomString(16);
@@ -200,7 +205,7 @@ export async function exchangeCodeForTokens({ code, state, clientId, redirectUri
   }
   if (state !== pkce.state) throw new Error('OAuth state mismatch — please retry the connection.');
   if (!clientId) clientId = getClientId();
-  if (!redirectUri) redirectUri = `${window.location.origin}/integrations/google/callback`;
+  if (!redirectUri) redirectUri = getGoogleRedirectUri();
   const clientSecret = getClientSecret();
 
   const body = new URLSearchParams({
