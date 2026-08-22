@@ -1,7 +1,10 @@
 import { STORAGE_KEY } from './constants.js';
 
 const KEY = `${STORAGE_KEY}::github-app`;
-const API_BASE = (import.meta.env.VITE_GITHUB_AUTH_API || '').replace(/\/$/, '');
+const DEFAULT_API_BASE = typeof window !== 'undefined' && window.location.hostname.endsWith('github.io')
+  ? 'https://aws-career.vercel.app'
+  : '';
+const API_BASE = (import.meta.env.VITE_GITHUB_AUTH_API || DEFAULT_API_BASE).replace(/\/$/, '');
 const REFRESH_EARLY_MS = 5 * 60 * 1000;
 
 export function readGithubAppSession() {

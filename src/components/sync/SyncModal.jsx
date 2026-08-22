@@ -267,12 +267,12 @@ function SetupSteps({ hasToken }) {
       done: hasToken,
       title: 'Connect the GitHub App',
       body: (
-        <a
-          href="/settings?section=integrations"
+        <Link
+          to="/settings?section=integrations"
           className="text-aws-orange font-bold inline-flex items-center gap-0.5 hover:underline"
         >
           Open Settings → Integrations <ExternalLink size={10} />
-        </a>
+        </Link>
       ),
     },
     {
