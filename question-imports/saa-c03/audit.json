@@ -1,0 +1,20 @@
+{
+  "sourceFile": "raw/AWS SAA-C03 Dumps Q&A.pdf",
+  "sourcePages": 1051,
+  "numberedQuestions": 1019,
+  "answerMarkers": 1020,
+  "currentAppSaaQuestions": 794,
+  "comparison": {
+    "questionMarkers": 1019,
+    "parseablePromptSubset": 896,
+    "exactExistingPromptMatches": 0,
+    "privateSourceNearVerbatimDuplicateSignals": 8,
+    "privateSourceStrongOverlapSignals": 2,
+    "method": "Prompt-only TF-IDF word/bigram triage. Similarity is a review signal, not proof that differently worded questions test different concepts.",
+    "limitations": "123 source items could not be paired reliably with their answer marker because of PDF extraction order/layout and were excluded from similarity totals."
+  },
+  "assessment": "Use as private calibration material; do not expose or copy verbatim.",
+  "decision": "Retain the validated 794-question application bank. Do not replace it with the raw 1019-question source and do not infer 225 unique gaps from the count difference.",
+  "recommendedAction": "Review concept and objective coverage, then create only deduplicated, original derived questions for genuine gaps. Never publish source wording.",
+  "auditedAt": "2026-08-22"
+}

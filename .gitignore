@@ -4,6 +4,10 @@ dist/
 .env.local
 .DS_Store
 *.log
+.saa-dump-audit.txt
+
+# Private calibration sources. Never publish raw exam-dump PDFs.
+question-imports/**/raw/*.pdf
 
 # Claude Code local settings (per-developer)
 .claude/settings.local.json
