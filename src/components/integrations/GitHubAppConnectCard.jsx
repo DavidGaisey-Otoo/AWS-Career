@@ -1,10 +1,11 @@
-import { CheckCircle2, ExternalLink, Github, Loader2, LogOut } from 'lucide-react';
+import { Check, CheckCircle2, Copy, ExternalLink, Github, Loader2, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
   clearGithubAppSession, hasGithubAppSession, pollGithubDeviceFlow,
   readGithubAppSession, startGithubDeviceFlow,
 } from '../../lib/githubAppAuth.js';
+import { pullSnapshot, restoreLocalStorage, setSyncEnabled } from '../../lib/gistSync.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -13,6 +14,7 @@ export function GitHubAppConnectCard() {
   const [connected, setConnected] = useState(() => hasGithubAppSession());
   const [connecting, setConnecting] = useState(false);
   const [code, setCode] = useState('');
+  const [copied, setCopied] = useState(false);
   const [verifyUrl, setVerifyUrl] = useState('https://github.com/login/device');
 
   useEffect(() => {
@@ -26,7 +28,11 @@ export function GitHubAppConnectCard() {
     try {
       const flow = await startGithubDeviceFlow();
       setCode(flow.user_code || '');
+      setCopied(false);
       setVerifyUrl(flow.verification_uri || 'https://github.com/login/device');
+      if (flow.user_code && navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(flow.user_code).then(() => setCopied(true)).catch(() => {});
+      }
       window.open(flow.verification_uri || 'https://github.com/login/device', '_blank', 'noopener,noreferrer');
       const interval = Math.max(Number(flow.interval || 5), 5) * 1000;
       const deadline = Date.now() + Number(flow.expires_in || 900) * 1000;
@@ -36,7 +42,17 @@ export function GitHubAppConnectCard() {
         if (result.ok) {
           setConnected(true);
           setCode('');
-          toast.success('GitHub connected. Future access tokens renew automatically.');
+          // A newly approved browser should become useful immediately: locate the
+          // deterministic private sync repository, restore it, and enable future sync.
+          const remote = await pullSnapshot();
+          if (remote?.snapshot) {
+            restoreLocalStorage(remote.snapshot, { mergeStrategy: 'replace' });
+            setSyncEnabled(true);
+            toast.success('GitHub connected. Your synced data is restored.');
+            setTimeout(() => window.location.reload(), 500);
+          } else {
+            toast.success('GitHub connected. Future access tokens renew automatically.');
+          }
           return;
         }
         if (!result.pending && result.error !== 'slow_down') throw new Error(result.error_description || result.error);
@@ -47,6 +63,13 @@ export function GitHubAppConnectCard() {
     } finally {
       setConnecting(false);
     }
+  };
+
+  const copyCode = async () => {
+    if (!code || !navigator.clipboard?.writeText) return;
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    toast.success('GitHub code copied.');
   };
 
   const disconnect = () => {
@@ -80,8 +103,14 @@ export function GitHubAppConnectCard() {
       </div>
       {code && (
         <div className="mt-3 rounded-lg border border-aws-orange/30 bg-aws-orange/5 p-3 text-xs">
-          Enter code <code className="mx-1 font-mono font-extrabold text-aws-orange text-sm">{code}</code> on GitHub, then approve the app.
-          <a href={verifyUrl} target="_blank" rel="noreferrer" className="ml-2 font-bold text-aws-orange inline-flex items-center gap-1">Open GitHub <ExternalLink size={11} /></a>
+          <div className="font-bold">Approve this browser once. Your data will restore automatically afterwards.</div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <code className="font-mono font-extrabold text-aws-orange text-sm">{code}</code>
+            <button type="button" onClick={copyCode} className="btn-secondary !px-2 !py-1 text-[10px] inline-flex items-center gap-1">
+              {copied ? <Check size={11} /> : <Copy size={11} />} {copied ? 'Copied' : 'Copy code'}
+            </button>
+            <a href={verifyUrl} target="_blank" rel="noreferrer" className="font-bold text-aws-orange inline-flex items-center gap-1">Open GitHub <ExternalLink size={11} /></a>
+          </div>
         </div>
       )}
     </div>

@@ -319,9 +319,8 @@ function ContinueOnPhoneCard() {
       </div>
       <ol className="text-[11.5px] leading-relaxed space-y-1 pl-1">
         <li><strong>1.</strong> Open the app URL on your other device.</li>
-        <li><strong>2.</strong> Settings → Integrations → <strong>Connect GitHub</strong>.</li>
-        <li><strong>3.</strong> Tap the sync chip in the header → <strong>Turn on sync</strong>.</li>
-        <li><strong>4.</strong> Your data restores in 3-5 seconds and the app reloads.</li>
+        <li><strong>2.</strong> Settings → Integrations → <strong>Connect GitHub</strong> and approve that browser once.</li>
+        <li><strong>3.</strong> Your data restores automatically and the app reloads. No separate sync step.</li>
       </ol>
     </div>
   );
