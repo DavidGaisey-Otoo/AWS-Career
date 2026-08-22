@@ -27,14 +27,14 @@
   </head>
   <body class="bg-ink-950 text-white antialiased">
     <div id="root">
-      <!-- Inline fallback shown if the JS bundle takes >5s OR if it
+      <!-- Inline fallback shown while the JS bundle loads OR if it
            throws before React mounts. Gives the user something to look
            at (and copy/paste to me) instead of a blank screen. -->
       <div id="bootstrap-fallback" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;color:#fff;background:#0A0E1A;padding:24px;text-align:center;">
         <div style="max-width:520px;">
           <div style="font-size:32px;margin-bottom:12px;">⚡</div>
           <div id="bootstrap-status" style="font-size:18px;font-weight:700;margin-bottom:8px;">Loading AWS Launchpad...</div>
-          <div id="bootstrap-detail" style="font-size:13px;opacity:0.7;">If this message persists for more than 10 seconds, the JS bundle may be blocked. See diagnostics below.</div>
+          <div id="bootstrap-detail" style="font-size:13px;opacity:0.7;">The first load may take a little longer while the exam library is cached.</div>
           <div id="bootstrap-error" style="margin-top:16px;font-family:monospace;font-size:12px;color:#FF6B6B;background:#1a1a2e;padding:12px;border-radius:8px;text-align:left;white-space:pre-wrap;word-break:break-word;display:none;"></div>
         </div>
       </div>
@@ -61,11 +61,13 @@
         window.addEventListener('unhandledrejection', function(e) {
           window.__showBootError('Promise rejection: ' + (e.reason && (e.reason.message || e.reason) || 'unknown'));
         });
-        // If the JS bundle never executes (blocked / 404), show diagnostics after 8s
+        // The initial bundle includes a large offline exam library. On a cold
+        // browser cache it can legitimately need more than eight seconds, so
+        // only report a likely blocked/failed bundle after a generous window.
         setTimeout(function() {
           if (document.getElementById('bootstrap-fallback')) {
             window.__showBootError(
-              'JavaScript bundle did not execute within 8 seconds.\n\n' +
+              'JavaScript bundle did not execute within 30 seconds.\n\n' +
               'Likely causes:\n' +
               '  - Browser extension (ad blocker / privacy tool) blocking modulepreload\n' +
               '  - Network blocking github.io assets\n' +
@@ -73,7 +75,7 @@
               'Try: open in private/incognito window or different browser.'
             );
           }
-        }, 8000);
+        }, 30000);
       })();
     </script>
     <script type="module" src="/src/main.jsx"></script>
