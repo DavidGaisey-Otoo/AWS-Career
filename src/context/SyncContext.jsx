@@ -31,18 +31,25 @@ export function SyncProvider({ children }) {
   const [enabled, setEnabled] = useState(() => isSyncEnabled());
   const [openModal, setOpenModal] = useState(false);
   const [appliedOnOpen, setAppliedOnOpen] = useState(null);
+  const [authRevision, setAuthRevision] = useState(0);
   const pushTimer = useRef(null);
   const localDirty = useRef(false);
   const remoteCheckBusy = useRef(false);
   const localFingerprint = useRef(null);
-  const hasRunInitial = useRef(false);
+
+  // GitHubAppConnectCard saves the session independently. Re-evaluate sync
+  // immediately when that session is created, refreshed, or cleared so the
+  // header chip cannot remain yellow while the settings card is green.
+  useEffect(() => {
+    const onAuthChange = () => setAuthRevision((value) => value + 1);
+    window.addEventListener('github-auth-change', onAuthChange);
+    return () => window.removeEventListener('github-auth-change', onAuthChange);
+  }, []);
 
   // ──────────────────────────────────────────────────────────────────
   // Initial sync: pull on mount if enabled
   // ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (hasRunInitial.current) return;
-    hasRunInitial.current = true;
     if (!enabled) return;
     if (!hasGithubAuth()) {
       setStatus('no-token');
@@ -68,7 +75,7 @@ export function SyncProvider({ children }) {
         }
       })
       .catch(() => setStatus('error'));
-  }, [enabled]);
+  }, [enabled, authRevision]);
 
   // ──────────────────────────────────────────────────────────────────
   // Auto-push debouncer
