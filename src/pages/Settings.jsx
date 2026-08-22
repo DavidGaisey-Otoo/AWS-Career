@@ -15,6 +15,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { AWS_LEVELS, GOALS, STORAGE_KEY } from '../lib/constants.js';
 import { cn, formatCurrency } from '../lib/utils.js';
 import { GoogleCalendarConnectCard } from '../components/integrations/GoogleCalendarConnectCard.jsx';
+import { GitHubAppConnectCard } from '../components/integrations/GitHubAppConnectCard.jsx';
 import { LocalAIPanel } from '../components/settings/LocalAIPanel.jsx';
 
 const SECTIONS = [
@@ -334,6 +335,8 @@ function IntegrationSection() {
       <div className="mt-3" />
       <GoogleCalendarConnectCard />
 
+      <GitHubAppConnectCard />
+
       <div className="grid sm:grid-cols-2 gap-3 mt-3">
         <Field label="GitHub URL"   icon={Github}   value={i.github}    onChange={(v) => updateIntegrations({ github: v })}
                placeholder="https://github.com/your-handle" wide />
@@ -345,11 +348,7 @@ function IntegrationSection() {
                placeholder="https://your-name.hashnode.dev" wide />
       </div>
 
-      {/* GitHub Personal Access Token — enables one-click "Push to GitHub" */}
-      <GitHubTokenPanel
-        currentToken={i.githubToken}
-        onSave={(v) => updateIntegrations({ githubToken: v })}
-      />
+      {/* Legacy PAT fallback, retained temporarily until the GitHub App connection is verified. */}
 
       <div className="mt-4 flex justify-end">
         <Button onClick={() => toast.success('Integration links saved')}>Save links</Button>

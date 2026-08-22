@@ -10,6 +10,7 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { getServiceMeta } from '../../data/projects.js';
 import { useEarn } from '../../context/EarnContext.jsx';
 import { dataUrlToBase64, pushPortfolioRepo, suggestRepoName } from '../../lib/githubPush.js';
+import { getGithubAccessToken, hasGithubAppSession } from '../../lib/githubAppAuth.js';
 import { cn } from '../../lib/utils.js';
 
 /**
@@ -152,7 +153,8 @@ export function GitHubExportPanel({ projectId, project, projectState, stats }) {
 function PushView({ project, projectState, readme, slug, profile, onSaved }) {
   const toast = useToast();
   const { stageInQueue } = useEarn();
-  const token = profile?.integrations?.githubToken || '';
+  const legacyToken = profile?.integrations?.githubToken || '';
+  const hasAuth = hasGithubAppSession() || Boolean(legacyToken);
   const [repoName, setRepoName] = useState(suggestRepoName(project.title));
   const [isPublic, setIsPublic] = useState(true);
   const [progress, setProgress] = useState(null);    // { stage, message }
@@ -193,8 +195,9 @@ function PushView({ project, projectState, readme, slug, profile, onSaved }) {
   }, [project]);
 
   const onPush = async () => {
+    const token = await getGithubAccessToken().catch(() => null) || legacyToken;
     if (!token) {
-      toast.error('Add your GitHub token in Settings → Integrations first.');
+      toast.error('Connect GitHub in Settings → Integrations first.');
       return;
     }
     setPushing(true);
@@ -224,7 +227,7 @@ function PushView({ project, projectState, readme, slug, profile, onSaved }) {
   };
 
   // No token → setup prompt
-  if (!token) {
+  if (!hasAuth) {
     return (
       <div className="space-y-3">
         <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 space-y-2">
@@ -232,8 +235,8 @@ function PushView({ project, projectState, readme, slug, profile, onSaved }) {
             <AlertCircle size={14} /> GitHub token not configured
           </div>
           <p className="text-[12px] leading-relaxed">
-            To push directly from this app, you need a GitHub Personal Access Token.
-            It's a 60-second setup: <a href="/settings" className="text-aws-orange font-bold hover:underline">open Settings → Integrations → GitHub push integration</a>.
+            To push directly from this app, connect the GitHub App once.
+            Open <a href="/settings?section=integrations" className="text-aws-orange font-bold hover:underline">Settings → Integrations → GitHub App connection</a>.
             Until then, use the <strong>README</strong> + <strong>Git commands</strong> tabs above for the manual flow.
           </p>
         </div>
