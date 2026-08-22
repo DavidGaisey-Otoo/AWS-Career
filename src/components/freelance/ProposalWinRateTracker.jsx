@@ -54,8 +54,8 @@ export function ProposalWinRateTracker() {
           My Proposals
         </h2>
         <p className="text-[12.5px] opacity-80 mt-1.5">
-          Every proposal you generate in the Smart Generator lands here automatically. Update each one's
-          status as you hear back — your win rate gets more meaningful with each outcome.
+          Generated proposals land here as drafts. Review each one and mark it Sent only after you personally
+          submit it on the marketplace; drafts never inflate your win rate.
         </p>
       </div>
 
@@ -82,7 +82,8 @@ export function ProposalWinRateTracker() {
             <Filter size={13} className="text-aws-orange" /> All proposals ({filtered.length})
           </h3>
           <div className="flex flex-wrap gap-1">
-            <FilterChip label="All"       active={filter === 'all'}     onClick={() => setFilter('all')} count={stats.total} />
+            <FilterChip label="All"       active={filter === 'all'}     onClick={() => setFilter('all')} count={list.length} />
+            <FilterChip label="Drafts"    active={filter === 'draft'}   onClick={() => setFilter('draft')} count={stats.drafts} />
             <FilterChip label="Sent"      active={filter === 'sent'}    onClick={() => setFilter('sent')} count={list.filter((e) => e.status === 'sent').length} />
             <FilterChip label="Replied"   active={filter === 'replied'} onClick={() => setFilter('replied')} count={list.filter((e) => e.status === 'replied').length} />
             <FilterChip label="Won"       active={filter === 'won'}     onClick={() => setFilter('won')} count={stats.won} />
@@ -293,7 +294,7 @@ function FilterChip({ label, active, onClick, count }) {
 // Proposal row
 // ════════════════════════════════════════════════════════════════════
 function ProposalRow({ entry, onOpen }) {
-  const st = STATUS[entry.status] || STATUS.sent;
+  const st = STATUS[entry.status] || STATUS.draft;
   const toneBadge = {
     slate:   'bg-slate-500/15 text-slate-300',
     amber:   'bg-amber-500/15 text-amber-300',
@@ -353,7 +354,7 @@ function ProposalModal({ entry, onClose, onStatusChange, onDuplicate, onDelete }
             </div>
             <h3 className="text-lg font-extrabold">{entry.gigTitle || 'Untitled'}</h3>
             <div className="text-[11px] opacity-65 mt-0.5">
-              Sent {new Date(entry.createdAt).toLocaleString('en-GB')}
+              {entry.status === 'draft' ? 'Generated' : 'Submitted'} {new Date(entry.submittedAt || entry.createdAt).toLocaleString('en-GB')}
               {entry.updatedAt && entry.updatedAt !== entry.createdAt && (
                 <> · last regenerated {new Date(entry.updatedAt).toLocaleString('en-GB')}</>
               )}
@@ -393,6 +394,11 @@ function ProposalModal({ entry, onClose, onStatusChange, onDuplicate, onDelete }
               );
             })}
           </div>
+          {entry.status === 'draft' && (
+            <p className="text-[10.5px] text-warning mt-2">
+              Human approval required: selecting Sent records that you reviewed and submitted this proposal yourself. The app does not submit to marketplaces.
+            </p>
+          )}
         </div>
 
         {/* Body */}

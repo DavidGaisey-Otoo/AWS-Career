@@ -10,14 +10,9 @@ const AWSContext = createContext(null);
  *   - 'free'   : MY FREE TIER ACCOUNT — auto-scales everything to free tier.
  *   - 'client' : CLIENT ACCOUNT       — uses production specs as-is.
  *
- * Credentials live in localStorage but ONLY when the user explicitly saves
- * them. They are never sent anywhere by this app — the SDK clients run
- * client-side only (which is risky for write operations against a real
- * production account, so the UI warns prominently before any deploy).
- *
- * Real STS GetCallerIdentity is wired for connection testing. Other
- * deploy actions go through a `simulate` flag that is on by default —
- * users must turn it OFF explicitly per session before any write hits AWS.
+ * Profiles contain metadata only. Credentials entered for an STS identity
+ * check remain in component memory for that request and are never persisted.
+ * Real writes are owned by DeployContext and require its encrypted vault.
  */
 
 // Eight nice palette options for profile colour-coding
@@ -34,12 +29,8 @@ export const PROFILE_COLORS = [
 
 const DEFAULT_PROFILE = {
   name: '',
-  accessKeyId: '',     // stored in localStorage when "Save" is checked
-  secretAccessKey: '', // stored in localStorage when "Save" is checked
-  sessionToken: '',
   region: 'us-east-1',
-  saved: false,
-  connected: false,    // last STS test succeeded
+  connected: false,    // a previous ephemeral STS identity check succeeded
   identity: null,      // { account, arn, userId } from last successful test
   lastTestedAt: null,
   // Auto-detected tier metadata (filled by testConnection)
@@ -53,6 +44,23 @@ const DEFAULT_PROFILE = {
   gmailAddress: '',    // optional — display only / for authuser hint
 };
 
+const LEGACY_CREDENTIAL_FIELDS = ['accessKeyId', 'secretAccessKey', 'sessionToken', 'saved'];
+
+/** Remove plaintext credentials left by releases that stored keys in profiles. */
+export function sanitizeAWSState(input) {
+  if (!input || typeof input !== 'object') return input;
+  if (!input.profiles || typeof input.profiles !== 'object') {
+    return { ...input, simulateMode: true };
+  }
+  const profiles = {};
+  for (const [id, original] of Object.entries(input.profiles || {})) {
+    const profile = { ...(original || {}) };
+    for (const field of LEGACY_CREDENTIAL_FIELDS) delete profile[field];
+    profiles[id] = profile;
+  }
+  return { ...input, profiles, simulateMode: true };
+}
+
 const DEFAULT_STATE = {
   activeProfile: 'free',
   profiles: {
@@ -63,7 +71,7 @@ const DEFAULT_STATE = {
   simulateMode: true,        // when ON, no real AWS write calls are made
   deployments: [],           // [{ id, at, profileId, region, plan, log, completedAt, autoDestroyAt, destroyedAt, status }]
   pendingApproval: null,     // a plan awaiting user click
-  // Resource ledger (resources we've "provisioned" in this session)
+  // Legacy ledger retained for migration/display only; entries are unverified.
   resources: [],             // [{ id, type, label, region, profileId, createdAt, hourly, deploymentId }]
 };
 
@@ -267,11 +275,21 @@ export function estimateMonthlyCost(plan, profileId) {
 export function AWSProvider({ children }) {
   const [rawState, setRawState] = useLocalStorage(`${STORAGE_KEY}::aws`, DEFAULT_STATE);
 
+  // One-way migration: rewrite legacy localStorage immediately without secrets.
+  useEffect(() => {
+    const containsLegacySecret = Object.values(rawState?.profiles || {}).some((p) =>
+      LEGACY_CREDENTIAL_FIELDS.some((field) => Object.prototype.hasOwnProperty.call(p || {}, field))
+    );
+    if (containsLegacySecret || rawState?.simulateMode === false) {
+      setRawState(sanitizeAWSState(rawState));
+    }
+  }, [rawState, setRawState]);
+
   // Defensive merge — ensures every state key has its default value when an
   // existing localStorage entry predates a schema addition. Also derives
   // `profileOrder` from `profiles` if it's missing.
   const state = useMemo(() => {
-    const merged = { ...DEFAULT_STATE, ...(rawState || {}) };
+    const merged = { ...DEFAULT_STATE, ...sanitizeAWSState(rawState || {}) };
     // Backfill new per-profile fields so old profiles get color/locked/gmail defaults.
     const profiles = {};
     for (const [id, p] of Object.entries(merged.profiles || {})) {
@@ -299,8 +317,9 @@ export function AWSProvider({ children }) {
   // setState wrapper that always operates on the defaults-merged state.
   const setState = useCallback((updater) => {
     setRawState((s) => {
-      const merged = { ...DEFAULT_STATE, ...(s || {}) };
-      return typeof updater === 'function' ? updater(merged) : updater;
+      const merged = { ...DEFAULT_STATE, ...sanitizeAWSState(s || {}) };
+      const next = typeof updater === 'function' ? updater(merged) : updater;
+      return sanitizeAWSState(next);
     });
   }, [setRawState]);
 
@@ -382,17 +401,17 @@ export function AWSProvider({ children }) {
   }, [setState]);
 
   // Real STS GetCallerIdentity + IAM probe for tier info. Returns { ok, identity, tierInfo, message }.
-  const testConnection = useCallback(async (profileId) => {
+  const testConnection = useCallback(async (profileId, ephemeralCredentials) => {
     const p = state.profiles[profileId];
-    if (!p?.accessKeyId || !p?.secretAccessKey) {
-      return { ok: false, message: 'Provide both Access Key ID and Secret Access Key first.' };
+    if (!ephemeralCredentials?.accessKeyId || !ephemeralCredentials?.secretAccessKey) {
+      return { ok: false, message: 'Provide temporary AWS credentials for this identity check.' };
     }
     const creds = {
-      accessKeyId: p.accessKeyId,
-      secretAccessKey: p.secretAccessKey,
-      ...(p.sessionToken ? { sessionToken: p.sessionToken } : {}),
+      accessKeyId: ephemeralCredentials.accessKeyId,
+      secretAccessKey: ephemeralCredentials.secretAccessKey,
+      ...(ephemeralCredentials.sessionToken ? { sessionToken: ephemeralCredentials.sessionToken } : {}),
     };
-    const region = p.region || 'us-east-1';
+    const region = ephemeralCredentials.region || p.region || 'us-east-1';
     try {
       // Step 1 — STS GetCallerIdentity (auth check)
       const { STSClient, GetCallerIdentityCommand } = await import('@aws-sdk/client-sts');
@@ -422,8 +441,11 @@ export function AWSProvider({ children }) {
     updateProfile(profileId, { tierOverride: value });
   }, [updateProfile]);
 
-  const setSimulateMode = useCallback((on) => {
-    setState((s) => ({ ...s, simulateMode: !!on }));
+  // This legacy context is a planning/demo surface only. Real mutations belong
+  // to DeployContext, whose executors return AWS API evidence. Keep this flag
+  // pinned on so an old persisted preference cannot make the demo look live.
+  const setSimulateMode = useCallback(() => {
+    setState((s) => ({ ...s, simulateMode: true }));
   }, [setState]);
 
   // ---------------- approval + deployment ----------------
@@ -436,7 +458,8 @@ export function AWSProvider({ children }) {
     setState((s) => ({ ...s, pendingApproval: null }));
   }, [setState]);
 
-  // Approved → simulate or run the deploy, appending log lines as they happen.
+  // Approved → record a plan walkthrough. This function deliberately performs
+  // no AWS writes and must never report resources as created or tests as passed.
   const approveDeployment = useCallback(async () => {
     const plan = state.pendingApproval;
     if (!plan) return null;
@@ -448,8 +471,8 @@ export function AWSProvider({ children }) {
       id, at: new Date().toISOString(),
       profileId, region: activeProfile.region,
       plan: { ...plan, resources: scaled.resources, downsizes: scaled.downsizes },
-      log: [{ id: uid(), at: Date.now(), level: 'info', msg: `🚀 Starting deployment in ${activeProfile.region} (${profileId === 'free' ? 'FREE TIER' : 'CLIENT'}) — ${state.simulateMode ? 'SIMULATION' : 'LIVE'}` }],
-      status: 'running',
+      log: [{ id: uid(), at: Date.now(), level: 'info', msg: `🧭 Planning walkthrough for ${activeProfile.region} (${profileId === 'free' ? 'FREE TIER' : 'CLIENT'}) — NO AWS CHANGES` }],
+      status: 'planning',
       completedAt: null,
       autoDestroyAt: null,
       destroyedAt: null,
@@ -457,43 +480,24 @@ export function AWSProvider({ children }) {
     };
     setState((s) => ({ ...s, pendingApproval: null, deployments: [initial, ...s.deployments].slice(0, 50) }));
 
-    // Stream log lines.
+    // Walk through planned resources without adding them to the live ledger.
     const ms = (n) => new Promise((r) => setTimeout(r, n));
     for (let i = 0; i < scaled.resources.length; i++) {
       await ms(400 + Math.random() * 250);
       const r = scaled.resources[i];
-      appendLog(id, 'success', `✅ ${r.type} created — ${r.label}${r.instanceType ? ' · ' + r.instanceType : ''}`);
-      // Also add to resource ledger
-      setState((s) => ({
-        ...s,
-        resources: [...s.resources, {
-          id: uid(),
-          type: r.type, label: r.label, region: r.region || activeProfile.region,
-          instanceType: r.instanceType,
-          profileId, createdAt: new Date().toISOString(),
-          hourly: HOURLY_USD[r.instanceType || r.type] || 0,
-          deploymentId: id,
-        }],
-      }));
+      appendLog(id, 'info', `○ Planned ${r.type} — ${r.label}${r.instanceType ? ' · ' + r.instanceType : ''} (not created)`);
     }
     await ms(300);
-    appendLog(id, 'success', `🎉 Complete — ${scaled.resources.length} resources provisioned in ${(scaled.resources.length * 0.6 + 0.5).toFixed(1)}s`);
+    appendLog(id, 'warning', `Plan walkthrough complete — ${scaled.resources.length} resources described; 0 resources provisioned. Use Deploy Console for an evidence-backed AWS deployment.`);
     setState((s) => ({
       ...s,
-      deployments: s.deployments.map((d) => d.id === id ? { ...d, status: 'complete', completedAt: new Date().toISOString() } : d),
+      deployments: s.deployments.map((d) => d.id === id ? { ...d, status: 'planned', completedAt: new Date().toISOString() } : d),
     }));
 
-    // Run automated tests
-    await ms(400);
-    appendLog(id, 'info', '🧪 Running automated tests…');
-    const tests = await runAutomatedTests(plan, scaled.resources, (line) => appendLog(id, line.level, line.msg));
-    setState((s) => ({
-      ...s,
-      deployments: s.deployments.map((d) => d.id === id ? { ...d, tests } : d),
-    }));
+    appendLog(id, 'info', 'Verification not run: validation requires AWS API outputs from the real deployment engine.');
 
     return id;
-  }, [state.pendingApproval, state.activeProfile, state.simulateMode, activeProfile, setState]);
+  }, [state.pendingApproval, state.activeProfile, activeProfile, setState]);
 
   const appendLog = useCallback((deploymentId, level, msg) => {
     setState((s) => ({
@@ -504,7 +508,7 @@ export function AWSProvider({ children }) {
     }));
   }, [setState]);
 
-  // ---------------- auto-destroy ----------------
+  // ---------------- simulation-record cleanup ----------------
 
   const setAutoDestroy = useCallback((deploymentId, hours) => {
     const at = Date.now() + hours * 3600 * 1000;
@@ -520,14 +524,14 @@ export function AWSProvider({ children }) {
       deployments: s.deployments.map((d) => d.id === deploymentId
         ? {
             ...d,
-            status: 'destroyed',
+            status: 'cleared',
             destroyedAt: new Date().toISOString(),
             log: [...d.log, {
               id: uid(), at: Date.now(), level: reason === 'auto' ? 'warning' : 'info',
-              msg: reason === 'auto' ? '🤖 Auto-destroy fired' : '🗑 Manual destroy requested',
+              msg: reason === 'auto' ? 'Simulation record expiry fired' : 'Simulation record cleanup requested',
             }, {
-              id: uid(), at: Date.now(), level: 'success',
-              msg: '✅ All resources terminated',
+              id: uid(), at: Date.now(), level: 'info',
+              msg: 'Local planning record cleared. No AWS deletion was attempted or claimed.',
             }],
           }
         : d),
@@ -538,19 +542,19 @@ export function AWSProvider({ children }) {
   const destroyAll = useCallback(() => {
     setState((s) => ({
       ...s,
-      deployments: s.deployments.map((d) => d.status === 'complete'
-        ? { ...d, status: 'destroyed', destroyedAt: new Date().toISOString() }
+      deployments: s.deployments.map((d) => ['planning', 'planned', 'complete'].includes(d.status)
+        ? { ...d, status: 'cleared', destroyedAt: new Date().toISOString(), log: [...(d.log || []), { id: uid(), at: Date.now(), level: 'info', msg: 'Local planning record cleared. No AWS deletion was attempted or claimed.' }] }
         : d),
       resources: [],
     }));
   }, [setState]);
 
-  // Watchdog: every 30s, check for deployments past auto-destroy.
+  // Watchdog only expires local simulation records. It never deletes AWS resources.
   useEffect(() => {
     const id = setInterval(() => {
       const now = Date.now();
       for (const d of state.deployments) {
-        if (d.status === 'complete' && d.autoDestroyAt && now >= d.autoDestroyAt) {
+        if (d.status === 'planned' && d.autoDestroyAt && now >= d.autoDestroyAt) {
           destroyDeployment(d.id, 'auto');
         }
       }
@@ -638,37 +642,4 @@ export function useAWS() {
   const ctx = useContext(AWSContext);
   if (!ctx) throw new Error('useAWS must be used within AWSProvider');
   return ctx;
-}
-
-// ---------------- automated tests ----------------
-
-async function runAutomatedTests(plan, resources, onLog) {
-  const ms = (n) => new Promise((r) => setTimeout(r, n));
-  const checks = [
-    { name: 'VPC configured correctly', ok: resources.some((r) => r.type === 'VPC') || !plan.requireVPC },
-    { name: 'Subnets in correct AZs',  ok: resources.filter((r) => r.type === 'Subnet').length >= 1 || !plan.requireSubnets },
-    { name: 'EC2 running and healthy',  ok: resources.some((r) => r.type === 'EC2') || !plan.requireEC2 },
-    { name: 'Port 80 accessible',       ok: !plan.requireHTTP || plan.requireHTTP === 'simulated-ok' },
-    { name: 'HTTPS working',            ok: !plan.requireHTTPS || plan.requireHTTPS === 'simulated-ok' },
-    { name: 'Database connection successful', ok: !plan.requireDB || plan.requireDB === 'simulated-ok' },
-  ];
-  const result = { passed: 0, failed: 0, items: [] };
-  for (const c of checks) {
-    await ms(220);
-    if (c.ok) {
-      onLog?.({ level: 'success', msg: `✅ ${c.name}` });
-      result.passed++;
-    } else {
-      onLog?.({ level: 'warning', msg: `❌ ${c.name}` });
-      result.failed++;
-    }
-    result.items.push(c);
-  }
-  await ms(150);
-  if (result.failed === 0) {
-    onLog?.({ level: 'success', msg: 'ALL TESTS PASSED ✅' });
-  } else {
-    onLog?.({ level: 'warning', msg: `${result.failed} test${result.failed === 1 ? '' : 's'} failed — see [Auto Fix]` });
-  }
-  return result;
 }

@@ -639,6 +639,20 @@ function UnderstandingPanel({ solution }) {
           </ul>
         </div>
       )}
+
+      {solution.review.readiness?.assumptions?.length > 0 && (
+        <div className="rounded-lg border border-warning/40 bg-warning/5 p-2.5">
+          <div className="flex items-center gap-1.5 text-warning font-extrabold text-[11.5px] mb-1">
+            <AlertTriangle size={13} /> Assumptions requiring client confirmation
+          </div>
+          <p className="text-[11px] opacity-75 mb-1.5">
+            These are unknowns, not facts. The solution is not client-ready until they are answered.
+          </p>
+          <ul className="space-y-1 pl-4 list-disc text-[11.5px] opacity-90 leading-relaxed">
+            {solution.review.readiness.assumptions.slice(0, 5).map((a) => <li key={a.id}>{a.statement}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -965,6 +979,8 @@ function BuildPanel({ solution, onDeploy }) {
   const blocked = solution.review.verdict === 'blocked';
   const needsFix = solution.review.verdict === 'fix-first';
   const cov = solution.deploy.coverage;
+  const readiness = solution.review.readiness;
+  const canDeploy = !!solution.deploy.canOneClick;
 
   function download(artifact) {
     if (!artifact?.code) return;
@@ -1005,7 +1021,23 @@ function BuildPanel({ solution, onDeploy }) {
             <Row k="Region" v={solution.deploy.region} mono />
             <Row k="Resources" v={`${cov?.resourceCount ?? 0} AWS resources`} />
             <Row k="Mode" v={solution.mode === 'test' ? 'Test — Free Tier substitutions applied' : 'Client — exact specs'} />
+            <Row k="Support status" v={(readiness?.classification || 'planning-only').replace(/-/g, ' ')} />
+            <Row k="Client-ready" v={readiness?.clientReady ? 'Yes — pre-deploy gates passed' : 'No — review the open gates below'} />
           </div>
+
+          {readiness && (
+            <div className="rounded-xl border border-token bg-[var(--card-2)]/30 p-3 text-[11.5px]">
+              <div className="font-extrabold mb-2">Evidence gates</div>
+              <div className="space-y-1">
+                {readiness.evidenceGates.map((gate) => (
+                  <div key={gate.id} className="flex items-start gap-2">
+                    <span className={gate.passed ? 'text-success' : 'text-warning'}>{gate.passed ? '✓' : '○'}</span>
+                    <span>{gate.label}{gate.stage === 'post-deploy' ? ' (verified only after a real AWS deployment)' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Honest coverage — never let the button imply more than it builds */}
           {cov && cov.uncovered.length > 0 && (
@@ -1031,9 +1063,10 @@ function BuildPanel({ solution, onDeploy }) {
 
           <button
             onClick={onDeploy}
-            className="btn btn-primary w-full !text-[14px] !py-3.5 tap-44 gap-2"
+            disabled={!canDeploy}
+            className="btn btn-primary w-full !text-[14px] !py-3.5 tap-44 gap-2 disabled:opacity-45 disabled:cursor-not-allowed"
           >
-            <Rocket size={16} /> Build this on AWS
+            <Rocket size={16} /> {canDeploy ? 'Build verified coverage on AWS' : 'Deployment unavailable — resolve coverage/review gates'}
           </button>
           <p className="text-[10.5px] opacity-60 text-center leading-relaxed">
             Opens the deploy panel. You&apos;ll enter AWS keys there — they stay in memory, are never

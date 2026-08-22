@@ -676,7 +676,7 @@ function renderMarkdown(md) {
     if ((m = line.match(/^#\s+(.*)$/)))    { out.push(`<h1>${inline(m[1])}</h1>`); i++; continue; }
 
     // Tables: |a|b|c|  /  |---|---|---|  / data rows
-    if (line.startsWith('|') && lines[i + 1] && /^\|[-:\s|]+\|$/.test(lines[i + 1])) {
+    if (line.startsWith('|') && lines[i + 1] && isMarkdownTableSeparator(lines[i + 1])) {
       const header = splitTableRow(line);
       const rows = [];
       i += 2;
@@ -750,6 +750,14 @@ function renderMarkdown(md) {
     out.push(`<p>${inline(buf.join(' '))}</p>`);
   }
   return out.join('\n');
+}
+
+function isMarkdownTableSeparator(line) {
+  if (!line.startsWith('|') || !line.endsWith('|')) return false;
+  const inner = line.slice(1, -1);
+  return inner.length > 0 && [...inner].every(
+    (character) => character === '-' || character === ':' || character === '|' || character.trim() === '',
+  );
 }
 
 function splitTableRow(line) {

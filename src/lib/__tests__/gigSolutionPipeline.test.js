@@ -15,7 +15,7 @@
  * Pure functions only — no network, no AWS, no browser APIs.
  */
 
-import { runPipeline, matchBlueprints, deriveNames, gigToBrief } from '../gigSolutionPipeline.js';
+import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness } from '../gigSolutionPipeline.js';
 
 // ════════════════════════════════════════════════════════════════════
 // Fixtures
@@ -101,6 +101,50 @@ const CHECKS = [
       if (s.deploy.coverage?.resourceCount === 0) {
         assert(!s.deploy.canOneClick, 'offered one-click deploy for an empty template');
         assert(s.review.verdict === 'blocked', 'empty template should be blocked');
+      }
+    },
+  },
+  {
+    name: 'partial service coverage is never branded deploy-ready',
+    run: () => {
+      const readiness = assessDeliveryReadiness({
+        understanding: { confidence: 0.9, analysis: { missingQuestions: [] } },
+        services: [{ id: 'lambda' }, { id: 'eks' }],
+        coverage: { pct: 50, uncovered: ['eks'], resourceCount: 2 },
+        hasTemplate: true,
+        blockers: [],
+        highs: [],
+      });
+      assert(readiness.classification === 'partially-supported', `classified as ${readiness.classification}`);
+      assert(!readiness.sandboxDeployable, 'partial design was allowed through one-click deploy');
+      assert(!readiness.clientReady, 'partial design was branded client-ready');
+      assert(readiness.unsupported[0]?.serviceId === 'eks', 'unsupported service was not disclosed');
+    },
+  },
+  {
+    name: 'missing requirements become explicit assumptions and fail the client-ready gate',
+    run: () => {
+      const readiness = assessDeliveryReadiness({
+        understanding: { confidence: 0.9, analysis: { missingQuestions: ['What is the recovery objective?'] } },
+        services: [{ id: 's3' }],
+        coverage: { pct: 100, uncovered: [], resourceCount: 1 },
+        hasTemplate: true,
+        blockers: [],
+        highs: [],
+      });
+      assert(readiness.assumptions.length === 1, 'missing requirement was silently discarded');
+      assert(readiness.assumptions[0].status === 'needs-client-confirmation', 'assumption lacks confirmation status');
+      assert(!readiness.clientReady, 'unconfirmed assumption passed client-ready gate');
+    },
+  },
+  {
+    name: 'post-deploy evidence is never fabricated during generation',
+    run: () => {
+      const s = runPipeline(GIGS.serverless);
+      for (const id of ['aws-validation', 'health-checks']) {
+        const gate = s.review.readiness.evidenceGates.find((g) => g.id === id);
+        assert(gate && gate.stage === 'post-deploy', `${id} is not marked post-deploy`);
+        assert(gate.passed === false, `${id} was falsely marked as proven`);
       }
     },
   },
@@ -291,6 +335,10 @@ const CHECKS = [
         scalar(s.region.confidence, 'region.confidence');
         scalar(s.review.grade, 'review.grade');
         scalar(s.review.gradeLabel, 'review.gradeLabel');
+        scalar(s.review.readiness.classification, 'readiness.classification');
+        scalar(s.review.readiness.confidenceLabel, 'readiness.confidenceLabel');
+        for (const a of s.review.readiness.assumptions) scalar(a.statement, 'readiness.assumption.statement');
+        for (const u of s.review.readiness.unsupported) scalar(u.reason, 'readiness.unsupported.reason');
         if (s.review.expert) {
           for (const f of ['score', 'summary', 'criticalCount', 'highCount',
                            'mediumCount', 'lowCount', 'positiveCount', 'expertCount']) {

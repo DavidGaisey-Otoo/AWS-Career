@@ -23,8 +23,8 @@ export default function AWSAccounts() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="AWS Account Manager"
-        title="Real AWS, safely."
-        subtitle="Two profiles: your Free-Tier learning account and a Client account. Smart Size Manager scales test deploys to free tier automatically. Auto-destroy timers guarantee nothing\\'s left running."
+        title="AWS account planning and identity."
+        subtitle="Keep account metadata separate, verify identities with temporary credentials, and use the encrypted Deploy Console for approved AWS changes."
         icon={Cloud}
       />
 
@@ -38,7 +38,7 @@ export default function AWSAccounts() {
               ⚠ Working in client account
             </div>
             <p className="text-xs mt-1">
-              All actions are <strong>real and billable</strong>. Client:{' '}
+              Planning here makes no AWS changes; approved Deploy Console actions are real and billable. Client:{' '}
               <strong className="text-current">{activeProfile.name}</strong>
               {activeProfile.identity?.account && (
                 <> · Account <code className="text-aws-orange font-mono">{activeProfile.identity.account}</code></>
@@ -109,7 +109,7 @@ function ProfileSwitcher() {
     if (p.locked) {
       const ok = await dialog.confirm({
         title: `Switch to ${p.name}?`,
-        description: 'This profile is marked as production — any "live" actions you take will hit the real account. Continue?',
+        description: 'This profile represents production. Planning is read-only; approved Deploy Console operations can affect the real account. Continue?',
         danger: true,
         confirmLabel: 'Switch + acknowledge',
       });
@@ -137,7 +137,7 @@ function ProfileSwitcher() {
     }
     const ok = await dialog.confirm({
       title: `Delete "${p.name}"?`,
-      description: 'Credentials, identity, and tier info for this profile are removed. Deployments + resources stay in the history.',
+      description: 'Identity metadata and tier info are removed. Encrypted deployment-vault credentials are managed separately in Deploy Console.',
       danger: true,
     });
     if (ok) {
@@ -202,10 +202,8 @@ function ProfileSwitcher() {
                     <div className="text-[10px] text-muted flex items-center gap-1 flex-wrap mt-0.5">
                       <code className="font-mono">{p.region}</code>
                       {p.connected
-                        ? <span className="text-success">● Connected</span>
-                        : p.accessKeyId
-                          ? <span className="text-warning">⚠ Untested</span>
-                          : <span className="text-muted">No credentials</span>}
+                        ? <span className="text-success">● Identity verified</span>
+                        : <span className="text-muted">Not verified</span>}
                       {p.locked && (
                         <span className="chip border border-danger/40 bg-danger/10 text-danger text-[9px] font-bold ml-1">
                           🔒 Locked
@@ -300,40 +298,37 @@ function CredentialsCard({ profileId }) {
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState(null);
-  const [accessKey, setAccessKey] = useState(profile.accessKeyId);
-  const [secret, setSecret]   = useState(profile.secretAccessKey);
+  const [accessKey, setAccessKey] = useState('');
+  const [secret, setSecret]   = useState('');
+  const [sessionToken, setSessionToken] = useState('');
   const [region, setRegion]   = useState(profile.region);
-  const [save, setSave]       = useState(profile.saved);
 
   useEffect(() => {
-    setAccessKey(profile.accessKeyId);
-    setSecret(profile.secretAccessKey);
+    setAccessKey('');
+    setSecret('');
+    setSessionToken('');
     setRegion(profile.region);
-    setSave(profile.saved);
     setResult(null);
   }, [profileId]); // eslint-disable-line
 
   const onTest = async () => {
     setTesting(true);
-    // Stage values into context (so STS picks them up) then call test.
     updateProfile(profileId, {
+      region,
+    });
+    const out = await testConnection(profileId, {
       accessKeyId: accessKey.trim(),
       secretAccessKey: secret.trim(),
+      sessionToken: sessionToken.trim(),
       region,
-      saved: save,
     });
-    // Wait a tick for context to settle
-    setTimeout(async () => {
-      const out = await testConnection(profileId);
-      setResult(out);
-      setTesting(false);
-      if (out.ok) toast.success('Connection successful');
-      else        toast.error('Connection failed — check credentials');
-      // If user did NOT tick "save", clear creds back out (but keep `connected` + identity)
-      if (!save) {
-        updateProfile(profileId, { accessKeyId: '', secretAccessKey: '' });
-      }
-    }, 50);
+    setAccessKey('');
+    setSecret('');
+    setSessionToken('');
+    setResult(out);
+    setTesting(false);
+    if (out.ok) toast.success('Identity verified; entered credentials were discarded');
+    else toast.error('Identity check failed; entered credentials were discarded');
   };
 
   return (
@@ -343,7 +338,7 @@ function CredentialsCard({ profileId }) {
         <div className="flex items-center gap-2 mb-3">
           <Key size={14} className="text-aws-orange" />
           <h3 className="text-[11px] font-extrabold uppercase tracking-widest">
-            Credentials — {profile.name}
+            Ephemeral identity check — {profile.name}
           </h3>
         </div>
 
@@ -358,13 +353,10 @@ function CredentialsCard({ profileId }) {
                      {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
                    </button>
                  } />
+          <Field label="Session token (recommended)" value={sessionToken} onChange={setSessionToken}
+                 placeholder="Required for temporary STS credentials" mono type="password" />
           <Field label="Default region" as="select" value={region} onChange={setRegion}
                  options={AWS_REGIONS.map((r) => [r.id, `${r.id} — ${r.label}`])} />
-          <label className="flex items-center gap-2 text-xs font-semibold">
-            <input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)}
-                   className="w-4 h-4 accent-aws-orange" />
-            <span>Save credentials to browser storage</span>
-          </label>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -372,10 +364,10 @@ function CredentialsCard({ profileId }) {
                   className={cn('btn btn-primary', (testing || !accessKey || !secret) && 'opacity-50 cursor-not-allowed')}>
             <Play size={14} /> {testing ? 'Testing…' : 'Test connection'}
           </button>
-          {(profile.accessKeyId || profile.connected) && (
+          {profile.connected && (
             <button onClick={() => { clearProfile(profileId); toast.info('Cleared'); }}
                     className="btn btn-ghost !text-xs">
-              <Trash2 size={12} /> Clear credentials
+              <Trash2 size={12} /> Clear verified identity
             </button>
           )}
         </div>
@@ -397,30 +389,25 @@ function CredentialsCard({ profileId }) {
         {/* IAM setup guide */}
         <details className="mt-4 rounded-xl border border-token bg-[var(--card-2)]/40 p-3">
           <summary className="text-xs font-extrabold cursor-pointer">
-            ▸ How to create the right IAM user (step-by-step)
+            ▸ Secure credential guidance
           </summary>
           <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted">
-            <li>1. Sign in to AWS console <strong>as an IAM admin user</strong> (never root).</li>
-            <li>2. IAM → Users → Create user. Give it a name like <code className="font-mono text-aws-orange">launchpad-cli</code>.</li>
-            <li>3. Permissions: attach <strong>PowerUserAccess</strong> (or the narrower set below) — never <em>AdministratorAccess</em> for keys you save in a browser.</li>
-            <li>4. Create user → click into it → Security credentials → Create access key → choose <strong>Application running outside AWS</strong>.</li>
-            <li>5. Copy the Access Key ID + Secret. <strong>The secret is shown only once.</strong></li>
-            <li>6. Paste them above and click <em>Test connection</em>.</li>
+            <li>1. Prefer AWS IAM Identity Center, federation, or an assumed role that produces temporary STS credentials.</li>
+            <li>2. Paste the temporary access key, secret, and session token only for this identity check.</li>
+            <li>3. The fields are cleared immediately after the request and are never saved to browser storage.</li>
+            <li>4. Configure credentials for actual deployments only in <strong>Deploy Console → encrypted vault</strong>.</li>
           </ol>
           <div className="mt-2 text-[11px] text-muted">
             <strong>Required permissions (least-privilege):</strong> <code className="font-mono text-aws-orange">sts:GetCallerIdentity</code>,{' '}
-            plus the AWS-service-specific actions you intend to deploy
-            (e.g. <code className="font-mono text-aws-orange">ec2:*</code> /{' '}
-            <code className="font-mono text-aws-orange">s3:*</code> /{' '}
-            <code className="font-mono text-aws-orange">cloudformation:*</code>).
+            plus <code className="font-mono text-aws-orange">iam:ListUsers</code> only if you want the optional account-age heuristic.
           </div>
         </details>
 
         <div className="mt-3 rounded-xl border border-danger/30 bg-danger/[0.04] p-3 flex items-start gap-2">
           <AlertTriangle size={14} className="text-danger flex-shrink-0 mt-0.5" />
           <div className="text-xs text-danger">
-            <strong>Never use root account credentials.</strong> Browser-side AWS calls can be intercepted by malicious extensions
-            — create a dedicated, narrow IAM user, and rotate keys every 90 days.
+            <strong>Never use root or long-lived credentials here.</strong> This form is for a one-time read-only identity check.
+            Real AWS writes require the encrypted Deploy Console vault and explicit approval.
           </div>
         </div>
 
@@ -646,30 +633,13 @@ function OverrideButton({ active, onClick, children }) {
 // ============================ Simulate-mode banner ============================
 
 function SimulateModeBanner() {
-  const { state, setSimulateMode } = useAWS();
-  if (state.simulateMode) {
-    return (
-      <div className="rounded-2xl border border-success/30 bg-success/[0.04] p-3 flex items-center gap-3">
-        <Shield size={16} className="text-success" />
-        <div className="flex-1 text-xs">
-          <strong className="text-success">Simulation mode is ON.</strong>{' '}
-          Plans are walked through end-to-end without making real AWS write API calls. Perfect for learning and demos.
-        </div>
-        <button onClick={() => { if (confirm('Turn OFF simulation? Future approvals will hit real AWS APIs.')) setSimulateMode(false); }}
-                className="btn btn-ghost !text-xs !py-1.5">Turn off</button>
-      </div>
-    );
-  }
   return (
-    <div className="rounded-2xl border border-warning/30 bg-warning/[0.04] p-3 flex items-center gap-3">
-      <AlertCircle size={16} className="text-warning" />
+    <div className="rounded-2xl border border-electric/30 bg-electric/[0.04] p-3 flex items-center gap-3">
+      <Shield size={16} className="text-electric" />
       <div className="flex-1 text-xs">
-        <strong className="text-warning">Live mode.</strong>{' '}
-        Approving a deployment will issue real AWS API calls and may incur charges.
+        <strong className="text-electric">Planning sandbox — no AWS writes.</strong>{' '}
+        This page only previews a resource plan. For real deployment, verification, and deletion, use Deploy Console; it records AWS API evidence.
       </div>
-      <button onClick={() => setSimulateMode(true)} className="btn btn-primary !text-xs !py-1.5">
-        Switch back to simulation
-      </button>
     </div>
   );
 }
@@ -728,11 +698,11 @@ function ApprovalModal() {
                   className="relative surface rounded-3xl gradient-border w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center gap-2 mb-3">
           <ListChecks size={18} className="text-aws-orange" />
-          <h2 className="text-lg font-extrabold tracking-tight flex-1">Ready to deploy</h2>
+          <h2 className="text-lg font-extrabold tracking-tight flex-1">Review planning walkthrough</h2>
           <button onClick={cancelApproval} className="p-1.5 rounded-md hover:bg-[var(--card-2)]"><X size={16} /></button>
         </div>
 
-        <div className="text-[11px] text-muted mb-2">Creating:</div>
+        <div className="text-[11px] text-muted mb-2">Proposed resources (nothing will be created here):</div>
         <ul className="space-y-1 text-sm">
           {scaled.resources.map((r, i) => (
             <li key={i} className="flex items-start gap-2">
@@ -770,7 +740,7 @@ function ApprovalModal() {
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
           <Stat label="Account"  value={profileLabel} />
           <Stat label="Cost"     value={state.activeProfile === 'free' ? '$0.00 free tier' : `${formatCurrency(cost)}/mo`} />
-          <Stat label="Time"     value="~45 seconds" />
+          <Stat label="Action"   value="Plan preview only" />
           <Stat label="Region"   value={plan.region || state.profiles[state.activeProfile].region} />
         </div>
 
@@ -787,7 +757,7 @@ function ApprovalModal() {
             </button>
           )}
           <button onClick={approveDeployment} className="btn btn-primary">
-            ✅ Approve and deploy
+            Preview plan (no AWS changes)
           </button>
           <button onClick={cancelApproval} className="btn btn-ghost">Cancel</button>
         </div>
@@ -807,7 +777,7 @@ function DeploymentsTable() {
     return (
       <section className="surface rounded-2xl p-8 text-center text-muted">
         <Cloud size={28} className="mx-auto mb-2 text-aws-orange" />
-        <p className="text-sm">No deployments yet. Try a deployment from the demo button below.</p>
+        <p className="text-sm">No planning walkthroughs yet. Preview the demo plan below.</p>
         <DemoDeployButton />
       </section>
     );
@@ -816,15 +786,15 @@ function DeploymentsTable() {
   return (
     <section className="surface rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Deployments</h3>
+        <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Planning walkthroughs</h3>
         <div className="flex items-center gap-2">
           <DemoDeployButton small />
           <button onClick={() => {
-            if (confirm('Destroy ALL resources across every deployment? This cannot be undone.')) {
-              destroyAll(); toast.warning('All deployments destroyed');
+            if (confirm('Clear all local planning records? This does not modify AWS.')) {
+              destroyAll(); toast.info('Local planning records cleared');
             }
           }} className="btn btn-ghost !text-xs text-danger">
-            <Trash2 size={11} /> Destroy all resources
+            <Trash2 size={11} /> Clear planning records
           </button>
         </div>
       </div>
@@ -849,9 +819,12 @@ function DeploymentCard({ d, onSetTimer, onDestroy }) {
     ? Math.max(0, Math.round((d.autoDestroyAt - Date.now()) / 60000))
     : null;
   const statusMeta = {
-    running:    { color: 'bg-electric/15 text-electric border-electric/30', label: 'Running' },
-    complete:   { color: 'bg-success/15 text-success border-success/30',   label: 'Complete' },
-    destroyed:  { color: 'bg-[var(--card-2)] text-muted border-token',     label: 'Destroyed' },
+    planning:   { color: 'bg-electric/15 text-electric border-electric/30', label: 'Planning' },
+    planned:    { color: 'bg-success/15 text-success border-success/30',   label: 'Plan ready · not deployed' },
+    cleared:    { color: 'bg-[var(--card-2)] text-muted border-token',     label: 'Record cleared' },
+    running:    { color: 'bg-warning/15 text-warning border-warning/30', label: 'Legacy record · unverified' },
+    complete:   { color: 'bg-warning/15 text-warning border-warning/30', label: 'Legacy record · unverified' },
+    destroyed:  { color: 'bg-warning/15 text-warning border-warning/30', label: 'Legacy deletion · unverified' },
   }[d.status] || { color: 'bg-[var(--card-2)] text-muted border-token', label: d.status };
 
   return (
@@ -863,17 +836,17 @@ function DeploymentCard({ d, onSetTimer, onDestroy }) {
           <span className="text-[10px] text-muted">{d.region}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          {d.status === 'complete' && timeLeft !== null && (
+          {d.status === 'planned' && timeLeft !== null && (
             <span className="chip border border-warning/30 bg-warning/10 text-warning text-[10px] font-bold">
-              Auto-destroy in {timeLeft}m
+              Clear record in {timeLeft}m
             </span>
           )}
-          {d.status === 'complete' && !d.autoDestroyAt && (
+          {d.status === 'planned' && !d.autoDestroyAt && (
             <AutoDestroyPicker onSet={(h) => onSetTimer(d.id, h)} />
           )}
-          {d.status !== 'destroyed' && (
+          {d.status !== 'cleared' && (
             <button onClick={onDestroy} className="btn btn-ghost !text-[11px] !py-1.5 text-danger">
-              <Trash2 size={10} /> Destroy
+              <Trash2 size={10} /> Clear record
             </button>
           )}
         </div>
@@ -915,12 +888,12 @@ function AutoDestroyPicker({ onSet }) {
   return (
     <div className="relative">
       <button onClick={() => setOpen((v) => !v)} className="btn btn-ghost !text-[11px] !py-1.5">
-        ⏰ Set auto-destroy
+        Set record expiry
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-10 surface rounded-xl p-3 w-56 shadow-soft-xl gradient-border">
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2">
-            Auto-destroy timer
+            Clear local record after
           </div>
           <div className="grid grid-cols-2 gap-1">
             {[2, 4, 8, 24].map((h) => (
@@ -952,8 +925,8 @@ function ResourceLedger() {
   return (
     <section className="surface rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Running resources</h3>
-        <span className="text-[10px] text-muted">{state.resources.length} active</span>
+        <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Legacy unverified resource records</h3>
+        <span className="text-[10px] text-warning">Not evidence of live AWS resources</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
@@ -962,8 +935,8 @@ function ResourceLedger() {
               <th className="p-2 text-left">Service</th>
               <th className="p-2 text-left">Type</th>
               <th className="p-2 text-left">Region</th>
-              <th className="p-2 text-right">Running</th>
-              <th className="p-2 text-right">Est cost/hr</th>
+              <th className="p-2 text-right">Record age</th>
+              <th className="p-2 text-right">Modeled cost/hr</th>
             </tr>
           </thead>
           <tbody>
@@ -1030,7 +1003,7 @@ resource "aws_instance" "web" {
   return (
     <button onClick={trigger}
             className={cn('btn btn-primary', small && '!text-xs !py-1.5')}>
-      <Plus size={12} /> Demo deploy
+      <Plus size={12} /> Preview demo plan
     </button>
   );
 }

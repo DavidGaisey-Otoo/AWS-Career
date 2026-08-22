@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { getServiceDef } from '../../../data/archStudio.js';
+import { DRAWIO_ORIGIN, normalizeArchitecture, validateDrawioXml } from '../../../lib/drawioBridge.js';
 
 // Build the embed URL — we want the AWS shape library auto-loaded
 // and the "save" button to post back to us instead of saving to disk.
@@ -25,6 +26,9 @@ const EMBED_URL = 'https://embed.diagrams.net/?embed=1&ui=dark&spin=1&modified=u
 // Convert our internal {nodes, edges} → minimal draw.io XML
 // ════════════════════════════════════════════════════════════════════
 function nodesToDrawioXml(nodes, edges, name = 'AWS architecture') {
+  // The app's graph is canonical: do not export dangling or duplicated
+  // relationships that cannot correspond to deployable infrastructure.
+  ({ nodes, edges } = normalizeArchitecture(nodes, edges));
   // Tile each node into a default grid if positions aren't sensible
   const xmlNodes = nodes.map((n, i) => {
     const def = getServiceDef(n.serviceId);
@@ -75,6 +79,9 @@ export function DrawioEmbed({
   useEffect(() => {
     if (!open) return;
     const handler = (event) => {
+      // Messages are commands. Accept them only from this exact editor frame,
+      // never from another tab, extension, or unrelated iframe.
+      if (event.origin !== DRAWIO_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
       if (typeof event.data !== 'string') return;
       let msg;
       try { msg = JSON.parse(event.data); } catch { return; }
@@ -83,24 +90,37 @@ export function DrawioEmbed({
         case 'init':
           // Send the current XML to draw.io to load
           setStatus('ready');
+          {
+            const saved = initialXml ? validateDrawioXml(initialXml) : null;
           iframeRef.current?.contentWindow?.postMessage(
             JSON.stringify({
               action: 'load',
-              xml: initialXml || nodesToDrawioXml(nodes, edges, diagramName),
+              // Invalid legacy content is never sent across the trust boundary;
+              // reconstruct the diagram from the app's canonical node graph.
+              xml: saved?.valid ? saved.xml : nodesToDrawioXml(nodes, edges, diagramName),
               autosave: 0,
             }),
-            '*'
+            DRAWIO_ORIGIN
           );
+          }
           break;
 
         case 'save':
           // User hit Save in draw.io — capture XML, keep editor open
-          onSaveXml?.(msg.xml);
+          {
+            const saved = validateDrawioXml(msg.xml);
+            if (saved.valid) onSaveXml?.(saved.xml);
+            else setStatus('error');
+          }
           break;
 
         case 'exit':
           // User hit Save & Exit — capture + close
-          if (msg.xml) onSaveXml?.(msg.xml);
+          if (msg.xml) {
+            const saved = validateDrawioXml(msg.xml);
+            if (!saved.valid) { setStatus('error'); break; }
+            onSaveXml?.(saved.xml);
+          }
           onClose?.();
           break;
 
@@ -126,6 +146,7 @@ export function DrawioEmbed({
           <span className="text-[11px] opacity-60 ml-2">
             {status === 'loading' && '(loading editor…)'}
             {status === 'ready'   && '(use draw.io\'s Save → returns here)'}
+            {status === 'error'   && '(invalid diagram blocked — your previous version is unchanged)'}
           </span>
         </div>
         <button

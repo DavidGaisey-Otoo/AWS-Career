@@ -4,7 +4,9 @@ const KEY = `${STORAGE_KEY}::github-app`;
 const DEFAULT_API_BASE = typeof window !== 'undefined' && window.location.hostname.endsWith('github.io')
   ? 'https://aws-career.vercel.app'
   : '';
-const API_BASE = (import.meta.env.VITE_GITHUB_AUTH_API || DEFAULT_API_BASE).replace(/\/$/, '');
+// `import.meta.env` is injected by Vite in the browser, but is absent when
+// the pure modules are imported by the Node test runner.
+const API_BASE = (import.meta.env?.VITE_GITHUB_AUTH_API || DEFAULT_API_BASE).replace(/\/$/, '');
 const REFRESH_EARLY_MS = 5 * 60 * 1000;
 
 export function readGithubAppSession() {

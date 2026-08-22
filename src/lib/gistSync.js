@@ -1,37 +1,38 @@
 /**
- * gistSync.js — cross-device sync via a private GitHub Gist.
+ * gistSync.js — cross-device sync via an access-controlled private repository.
  *
  * Why this exists:
  *   The app stores everything in localStorage (per-device, no backend).
  *   The user wants to start on laptop and continue on phone. Spinning up
  *   a real backend is a week of work; using the GitHub PAT they already
- *   have to sync via a *private* Gist solves the same problem in hours.
+ *   the user's existing GitHub connection provides a small private store.
  *
  * How it works:
  *   - A snapshot = JSON of every localStorage key under `awscl-pro::v1::*`
  *     (excluding sensitive blobs and ephemeral state).
- *   - On every change (debounced 4s), we PATCH the Gist with the latest
+ *   - On every change (debounced 4s), we update one file with the latest
  *     snapshot.
- *   - On app open (or manual pull), we GET the Gist and restore the
+ *   - On app open (or manual pull), we read that file and restore the
  *     snapshot if it's newer than what's in this browser.
- *   - The Gist ID is stored in localStorage so subsequent runs reuse it.
+ *   - The private repository name is stored locally and is deterministic.
  *
  * Privacy + safety:
- *   - The Gist is created as PRIVATE (secret) — only the PAT owner can
- *     read it. The URL is unguessable but is not access-controlled by
- *     anything except being unlisted, so DON'T use this for true secrets.
+ *   - GitHub enforces repository access; this is not an unlisted Gist.
  *   - We DELIBERATELY skip the encrypted vault blob (cryptoVault) and
  *     raw AWS access keys. Those should never leave the source device
  *     unencrypted.
- *   - Sync can be disabled at any time; the Gist can be deleted from
- *     github.com/settings/gists.
+ *   - Sync can be disabled or the private repository deleted at any time.
  */
 
 import { STORAGE_KEY } from './constants.js';
 import { readToken } from './githubToken.js';
 import { getGithubAccessToken } from './githubAppAuth.js';
 
-const GIST_DESCRIPTION = 'AWS Career Launchpad Pro — sync snapshot (do not edit by hand)';
+const SYNC_REPO_NAME   = 'aws-career-launchpad-sync';
+const SYNC_REPO_DESC   = 'Private cross-device state for AWS Career Launchpad Pro';
+const SYNC_FILE_PATH   = 'awscl-pro-state.json';
+const SYNC_REPO_KEY    = `${STORAGE_KEY}::sync::repo`;
+// Legacy identifiers are retained only for a one-time safe migration.
 const GIST_FILENAME    = 'awscl-pro-state.json';
 const GIST_ID_KEY      = `${STORAGE_KEY}::sync::gistId`;
 const SYNC_META_KEY    = `${STORAGE_KEY}::sync::meta`;
@@ -46,6 +47,7 @@ const SYNC_BLOCKLIST = [
   `${STORAGE_KEY}::github`,                   // GitHub PAT (plaintext — must never reach the gist)
   `${STORAGE_KEY}::google`,                   // Google OAuth tokens + clientSecret + PKCE state
   `${STORAGE_KEY}::sync::gistId`,             // sync infrastructure itself
+  `${STORAGE_KEY}::sync::repo`,
   `${STORAGE_KEY}::sync::meta`,
   `${STORAGE_KEY}::sync::enabled`,
   `${STORAGE_KEY}::sync::deviceId`,
@@ -194,7 +196,7 @@ export function setStoredGistId(id) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// GitHub Gist API — bare-fetch, no octokit
+// GitHub repository API — bare-fetch, no octokit
 // ════════════════════════════════════════════════════════════════════
 
 const GITHUB_API = 'https://api.github.com';
@@ -221,11 +223,9 @@ async function ghFetch(path, options = {}) {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    // Surface the specific "missing gist scope" case so the UI can render
-    // a one-click fix instead of a wall of JSON.
-    if (res.status === 403 && /Resource not accessible by personal access token|gist/i.test(text)) {
-      const err = new Error('GITHUB_APP_MISSING_GIST_PERMISSION');
-      err.code = 'GITHUB_APP_MISSING_GIST_PERMISSION';
+    if (res.status === 403 && /Resource not accessible|permission|repository/i.test(text)) {
+      const err = new Error('GITHUB_APP_MISSING_REPOSITORY_PERMISSION');
+      err.code = 'GITHUB_APP_MISSING_REPOSITORY_PERMISSION';
       err.status = 403;
       throw err;
     }
@@ -240,65 +240,105 @@ async function ghFetch(path, options = {}) {
   return res.json();
 }
 
-/**
- * Find an existing sync gist OR create a new one.
- * We identify it by description prefix so we don't need to remember the ID
- * if the user clears storage.
- */
-export async function getOrCreateSyncGist() {
-  const stored = getStoredGistId();
-  if (stored) {
-    try {
-      const g = await ghFetch(`/gists/${stored}`);
-      return g;
-    } catch (err) {
-      // Stored ID is dead — fall through to re-find/create
-      if (!String(err.message || '').includes('404')) throw err;
-    }
-  }
+export function getStoredSyncRepo() {
+  return localStorage.getItem(SYNC_REPO_KEY) || null;
+}
 
-  // Search the user's gists for one with our description
-  const gists = await ghFetch('/gists?per_page=100');
-  const found = (gists || []).find((g) => g?.description === GIST_DESCRIPTION);
-  if (found) {
-    setStoredGistId(found.id);
-    return found;
-  }
+function setStoredSyncRepo(fullName) {
+  if (fullName) localStorage.setItem(SYNC_REPO_KEY, fullName);
+  else localStorage.removeItem(SYNC_REPO_KEY);
+}
 
-  // Create a new one
-  const created = await ghFetch('/gists', {
+async function getOrCreateSyncRepo() {
+  let fullName = getStoredSyncRepo();
+  if (!fullName) {
+    const me = await ghFetch('/user');
+    fullName = `${me.login}/${SYNC_REPO_NAME}`;
+  }
+  try {
+    const repo = await ghFetch(`/repos/${fullName}`);
+    if (!repo.private) throw new Error('SYNC_REPOSITORY_NOT_PRIVATE');
+    setStoredSyncRepo(repo.full_name);
+    return repo;
+  } catch (error) {
+    if (!/GitHub 404/.test(String(error.message || ''))) throw error;
+  }
+  const created = await ghFetch('/user/repos', {
     method: 'POST',
-    body: JSON.stringify({
-      description: GIST_DESCRIPTION,
-      public: false, // SECRET / private
-      files: {
-        [GIST_FILENAME]: { content: JSON.stringify(snapshotLocalStorage(), null, 2) },
-      },
-    }),
+    body: JSON.stringify({ name: SYNC_REPO_NAME, description: SYNC_REPO_DESC, private: true, auto_init: true }),
   });
-  setStoredGistId(created.id);
+  if (!created.private) throw new Error('SYNC_REPOSITORY_NOT_PRIVATE');
+  setStoredSyncRepo(created.full_name);
   return created;
 }
 
-/**
- * Pull the latest snapshot from the gist and parse it.
- * Returns { snapshot, remoteTimestamp } or null if no remote data yet.
- */
-export async function pullSnapshot() {
-  const gist = await getOrCreateSyncGist();
-  const file = gist?.files?.[GIST_FILENAME];
-  if (!file) return null;
-  const content = file.truncated ? await fetch(file.raw_url).then((r) => r.text()) : file.content;
+async function readRepoSnapshot(repo) {
   try {
-    const snapshot = JSON.parse(content);
-    // Pre-v2 snapshots were captured before the secret sanitizer existed —
-    // the gist (and its revision history) may contain the GitHub PAT or
-    // OAuth secrets. Flag it so the UI can walk the user through fixing it.
-    if ((snapshot.version || 1) < 2) raiseSecurityAdvisory('legacy-snapshot');
-    return { snapshot, remoteTimestamp: snapshot.timestamp, gistUrl: gist.html_url };
-  } catch {
-    return null;
+    const file = await ghFetch(`/repos/${repo.full_name}/contents/${SYNC_FILE_PATH}`);
+    const binary = atob(String(file.content || '').replace(/\s/g, ''));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const content = new TextDecoder().decode(bytes);
+    return { snapshot: JSON.parse(content), sha: file.sha, repoUrl: repo.html_url };
+  } catch (error) {
+    if (/GitHub 404/.test(String(error.message || ''))) return null;
+    throw error;
   }
+}
+
+async function readLegacyGist() {
+  const id = getStoredGistId();
+  if (!id) return null;
+  try {
+    const gist = await ghFetch(`/gists/${id}`);
+    const file = gist?.files?.[GIST_FILENAME];
+    if (!file) return null;
+    const content = file.truncated ? await fetch(file.raw_url).then((response) => response.text()) : file.content;
+    return { id, snapshot: JSON.parse(content) };
+  } catch { return null; }
+}
+
+async function writeRepoSnapshot(repo, snapshot, sha = null) {
+  const bytes = new TextEncoder().encode(JSON.stringify(snapshot, null, 2));
+  let binary = '';
+  // Incremental conversion avoids overflowing the argument stack for larger
+  // study histories while preserving every UTF-8 character.
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  const content = btoa(binary);
+  const result = await ghFetch(`/repos/${repo.full_name}/contents/${SYNC_FILE_PATH}`, {
+    method: 'PUT',
+    body: JSON.stringify({ message: 'Update sanitized app state', content, ...(sha ? { sha } : {}) }),
+  });
+  return { snapshot, repoUrl: repo.html_url, sha: result.content?.sha };
+}
+
+async function migrateLegacyGist(repo) {
+  const legacy = await readLegacyGist();
+  if (!legacy) return null;
+  const safeSnapshot = { ...legacy.snapshot, version: 2, data: {} };
+  for (const [key, value] of Object.entries(legacy.snapshot?.data || {})) {
+    if (SYNC_BLOCKLIST.some((blocked) => key === blocked || key.startsWith(`${blocked}::`))) continue;
+    const safe = sanitizeValue(value);
+    if (safe !== null) safeSnapshot.data[key] = safe;
+  }
+  safeSnapshot.keyCount = Object.keys(safeSnapshot.data).length;
+  const written = await writeRepoSnapshot(repo, safeSnapshot);
+  // Verify the private copy before deleting the unlisted legacy copy.
+  const verified = await readRepoSnapshot(repo);
+  if (verified?.snapshot?.timestamp === safeSnapshot.timestamp) {
+    await ghFetch(`/gists/${legacy.id}`, { method: 'DELETE' }).catch(() => null);
+    setStoredGistId(null);
+  }
+  return written;
+}
+
+export async function pullSnapshot() {
+  const repo = await getOrCreateSyncRepo();
+  let remote = await readRepoSnapshot(repo);
+  if (!remote) remote = await migrateLegacyGist(repo);
+  if (!remote) return null;
+  return { snapshot: remote.snapshot, remoteTimestamp: remote.snapshot.timestamp, repoUrl: remote.repoUrl };
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -335,6 +375,9 @@ export function dismissSecurityAdvisory() {
  */
 export async function recreateSyncGist() {
   const oldId = getStoredGistId();
+  // Establish the sanitized private copy first. Never delete the only remote
+  // copy before GitHub confirms the replacement was written.
+  const res = await pushSnapshot();
   if (oldId) {
     try {
       await ghFetch(`/gists/${oldId}`, { method: 'DELETE' });
@@ -343,27 +386,20 @@ export async function recreateSyncGist() {
     }
     setStoredGistId(null);
   }
-  const res = await pushSnapshot();   // creates a fresh gist from sanitized state
   dismissSecurityAdvisory();
-  return { ok: true, gistUrl: res.gistUrl };
+  return { ok: true, repoUrl: res.repoUrl };
 }
 
 /**
- * Push a fresh snapshot of localStorage to the gist.
+ * Push a fresh sanitized snapshot to the private repository.
  */
 export async function pushSnapshot() {
-  const gist = await getOrCreateSyncGist();
+  const repo = await getOrCreateSyncRepo();
   const snapshot = snapshotLocalStorage();
-  const updated = await ghFetch(`/gists/${gist.id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      files: {
-        [GIST_FILENAME]: { content: JSON.stringify(snapshot, null, 2) },
-      },
-    }),
-  });
+  const existing = await readRepoSnapshot(repo);
+  const updated = await writeRepoSnapshot(repo, snapshot, existing?.sha);
   writeSyncMeta({ lastPushAt: new Date().toISOString(), remoteTimestamp: snapshot.timestamp, lastError: null });
-  return { snapshot, gistUrl: updated.html_url };
+  return { snapshot, repoUrl: updated.repoUrl };
 }
 
 /**
@@ -373,7 +409,7 @@ export async function pushSnapshot() {
  */
 export async function syncOnOpen() {
   if (!isSyncEnabled()) return { applied: false, reason: 'disabled' };
-  if (!getToken())       return { applied: false, reason: 'no-token' };
+  if (!await getToken()) return { applied: false, reason: 'no-token' };
 
   try {
     const pulled = await pullSnapshot();
@@ -396,7 +432,7 @@ export async function syncOnOpen() {
 
     restoreLocalStorage(pulled.snapshot, { mergeStrategy: 'replace' });
     writeSyncMeta({ lastPullAt: new Date().toISOString(), remoteTimestamp: remoteTs, lastError: null });
-    return { applied: true, remoteTimestamp: remoteTs, gistUrl: pulled.gistUrl };
+    return { applied: true, remoteTimestamp: remoteTs, repoUrl: pulled.repoUrl };
   } catch (err) {
     writeSyncMeta({ lastError: String(err.message || err) });
     return { applied: false, reason: 'error', error: String(err.message || err) };
@@ -404,22 +440,25 @@ export async function syncOnOpen() {
 }
 
 /**
- * Delete the sync gist + reset local sync state. Use this on
+ * Delete the private sync repository and any legacy Gist, then reset state.
  * "Stop syncing + delete cloud data".
  */
 export async function deleteSyncGist() {
-  const id = getStoredGistId();
-  if (!id) {
+  const repoName = getStoredSyncRepo();
+  const legacyId = getStoredGistId();
+  if (!repoName && !legacyId) {
     setSyncEnabled(false);
     return { ok: true, deleted: false };
   }
   try {
-    await ghFetch(`/gists/${id}`, { method: 'DELETE' });
+    if (repoName) await ghFetch(`/repos/${repoName}`, { method: 'DELETE' });
+    if (legacyId) await ghFetch(`/gists/${legacyId}`, { method: 'DELETE' });
   } catch (err) {
     // Treat 404 as "already gone"
     if (!String(err.message || '').includes('404')) throw err;
   }
   setStoredGistId(null);
+  setStoredSyncRepo(null);
   setSyncEnabled(false);
   localStorage.removeItem(SYNC_META_KEY);
   return { ok: true, deleted: true };

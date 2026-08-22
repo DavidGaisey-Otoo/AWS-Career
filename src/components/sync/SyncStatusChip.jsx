@@ -25,14 +25,14 @@ export function SyncStatusChip() {
   async function handleClick() {
     // If sync is OFF: try to flip it on directly. The modal is the
     // fallback when there's no token (it explains how to get one) or
-    // when the PAT lacks gist scope (it shows the fix card).
+    // when GitHub repository permissions are missing (it shows the fix card).
     if (!enabled) {
       if (!hasToken) { setOpenModal(true); return; }
       setBusy(true);
       try {
         const r = await enable();
         if (r?.ok) {
-          toast.success('Sync on — your data is now in your private Gist.');
+          toast.success('Sync on — your data is now in an access-controlled private repository.');
         } else {
           // Surface the failure via the modal so the user sees the fix card
           setOpenModal(true);

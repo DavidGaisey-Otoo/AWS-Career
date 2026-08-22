@@ -1,10 +1,9 @@
 /**
- * gistSync.test.js — the sync snapshot must never carry a secret.
+ * gistSync.test.js — private-repository sync must never carry a secret.
  *
  * Why this suite exists: an earlier version uploaded the GitHub PAT and
- * the Google OAuth client secret into the sync gist. GitHub "secret"
- * gists are readable by anyone holding the URL, so that was a real
- * credential leak. These tests are the guard against it coming back.
+ * the Google OAuth client secret into remote sync state. These tests are
+ * the guard against that credential leak coming back.
  *
  * Runs in Node, so localStorage is shimmed below.
  */

@@ -20,7 +20,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useSync } from '../../context/SyncContext.jsx';
 import {
-  getStoredGistId, readSecurityAdvisory, dismissSecurityAdvisory, recreateSyncGist,
+  getStoredSyncRepo, readSecurityAdvisory, dismissSecurityAdvisory, recreateSyncGist,
 } from '../../lib/gistSync.js';
 import { readToken } from '../../lib/githubToken.js';
 import { hasGithubAppSession } from '../../lib/githubAppAuth.js';
@@ -33,13 +33,13 @@ export function SyncModal() {
   } = useSync();
   const [busy, setBusy] = useState(false);
   const [lastResult, setLastResult] = useState(null);
-  const [gistId, setGistId] = useState(() => getStoredGistId());
+  const [repoName, setRepoName] = useState(() => getStoredSyncRepo());
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advisory, setAdvisory] = useState(() => readSecurityAdvisory());
 
   useEffect(() => {
     if (openModal) {
-      setGistId(getStoredGistId());
+      setRepoName(getStoredSyncRepo());
       setLastResult(null);
       setShowAdvanced(false);
       setAdvisory(readSecurityAdvisory());
@@ -50,9 +50,9 @@ export function SyncModal() {
 
   const hasToken = hasGithubAppSession() || !!readToken()?.token;
   const hasScopeError =
-    lastResult?.error === 'GITHUB_APP_MISSING_GIST_PERMISSION' ||
-    /GITHUB_APP_MISSING_GIST_PERMISSION|Resource not accessible/i.test(meta.lastError || '');
-  const gistUrl = gistId ? `https://gist.github.com/${gistId}` : null;
+    lastResult?.error === 'GITHUB_APP_MISSING_REPOSITORY_PERMISSION' ||
+    /GITHUB_APP_MISSING_REPOSITORY_PERMISSION|Resource not accessible/i.test(meta.lastError || '');
+  const repoUrl = repoName ? `https://github.com/${repoName}` : null;
 
   async function withBusy(label, fn) {
     setBusy(true);
@@ -61,7 +61,7 @@ export function SyncModal() {
       setLastResult({ label, ...result });
     } finally {
       setBusy(false);
-      setGistId(getStoredGistId());
+      setRepoName(getStoredSyncRepo());
     }
   }
 
@@ -133,7 +133,7 @@ export function SyncModal() {
               <div className="flex-1">
                 <div className="font-extrabold text-success text-[13.5px]">Sync is on.</div>
                 <div className="text-[11.5px] opacity-80 mt-0.5">
-                  Every change auto-pushes to your private Gist. {meta.lastPushAt && `Last push ${timeAgo(meta.lastPushAt)}.`}
+                  Every change auto-pushes to your access-controlled private repository. {meta.lastPushAt && `Last push ${timeAgo(meta.lastPushAt)}.`}
                 </div>
               </div>
             </div>
@@ -146,7 +146,7 @@ export function SyncModal() {
         {!enabled && !hasScopeError && (
           <div className="space-y-3">
             <p className="text-[12.5px] opacity-80 leading-relaxed">
-              Sync your data to a <strong>private GitHub Gist</strong> so you can keep working from your phone, tablet, or another laptop.
+              Sync your data to an <strong>access-controlled private GitHub repository</strong> so you can keep working from your phone, tablet, or another laptop.
             </p>
 
             <SetupSteps hasToken={hasToken} />
@@ -209,12 +209,12 @@ export function SyncModal() {
                   </button>
                 </div>
 
-                {gistUrl && (
+                {repoUrl && (
                   <a
-                    href={gistUrl} target="_blank" rel="noopener noreferrer"
+                    href={repoUrl} target="_blank" rel="noopener noreferrer"
                     className="text-[11px] inline-flex items-center gap-1 text-aws-orange font-bold hover:underline"
                   >
-                    View your Gist on GitHub <ExternalLink size={10} />
+                    View your private sync repository <ExternalLink size={10} />
                   </a>
                 )}
 
@@ -239,7 +239,7 @@ export function SyncModal() {
                     disabled={busy}
                     className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-danger/40 text-danger text-[11px] font-bold hover:bg-danger/10 tap-44"
                   >
-                    <Trash2 size={12} /> Delete my cloud Gist permanently
+                    <Trash2 size={12} /> Delete my private sync repository permanently
                   </button>
                 </details>
               </div>
@@ -249,7 +249,7 @@ export function SyncModal() {
 
         {/* Privacy footer */}
         <div className="text-[10.5px] opacity-60 italic leading-relaxed pt-2 border-t border-token">
-          <strong>Privacy:</strong> The Gist is secret/unlisted — only your authorized GitHub account can read it. We skip the
+          <strong>Privacy:</strong> GitHub enforces access to the private repository; it is not an unlisted Gist. We skip the
           encrypted AWS credential vault, raw AWS keys, and other per-device secrets. Not a primary backup.
         </div>
       </div>
@@ -287,7 +287,7 @@ function SetupSteps({ hasToken }) {
     {
       done: false,
       title: 'Tap "Turn on sync" below',
-      body: <span className="opacity-70 text-[11px]">First push creates your Gist. ~3 seconds.</span>,
+      body: <span className="opacity-70 text-[11px]">First push creates a private sync repository. ~3 seconds.</span>,
     },
   ];
   return (
@@ -371,9 +371,9 @@ function ScopeErrorCard() {
       <div className="flex items-start gap-2">
         <AlertTriangle size={16} className="text-warning shrink-0 mt-0.5" />
         <div>
-          <strong className="text-warning text-[13px] block">The GitHub App needs Gist permission.</strong>
+          <strong className="text-warning text-[13px] block">The GitHub App needs repository permission.</strong>
           <p className="text-[11.5px] opacity-90 mt-0.5">
-            Cross-device sync requires read/write access to your private Gists.
+            Cross-device sync requires Contents and Administration access to its private sync repository.
           </p>
         </div>
       </div>
@@ -385,7 +385,7 @@ function ScopeErrorCard() {
             className="text-aws-orange font-bold underline"
           >
             Open GitHub App settings
-          </a> and enable <code className="text-aws-orange">Gists: Read and write</code>.
+          </a> and enable <code className="text-aws-orange">Contents + Administration: Read and write</code>.
         </li>
         <li>2. Approve the updated permission on the app installation page.</li>
         <li>3. Return here and tap <strong>Turn on sync</strong> again.</li>

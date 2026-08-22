@@ -101,6 +101,52 @@ function understand(brief, options) {
   };
 }
 
+/** Turn detector uncertainty into explicit, reviewable facts. */
+export function assessDeliveryReadiness({ understanding, services, coverage, hasTemplate, blockers, highs }) {
+  const confidence = Number(understanding?.confidence || 0);
+  const questions = (understanding?.analysis?.missingQuestions || []).filter(Boolean);
+  const uncovered = coverage?.uncovered || [];
+  const fullCoverage = !!hasTemplate && coverage?.pct === 100 && uncovered.length === 0;
+  const assumptions = questions.map((question, index) => ({
+    id: `assumption-${index + 1}`,
+    statement: `No confirmed answer was provided for: ${question}`,
+    status: 'needs-client-confirmation',
+    source: 'missing requirement',
+  }));
+  const unsupported = uncovered.map((serviceId) => ({
+    serviceId,
+    reason: 'The one-click CloudFormation generator has no verified implementation for this service.',
+    action: 'Use reviewed IaC or a qualified engineer; do not represent this design as one-click deployable.',
+  }));
+
+  let classification = 'verified-deployable';
+  if (!hasTemplate || services.length === 0) classification = 'planning-only';
+  else if (!fullCoverage) classification = 'partially-supported';
+  else if (blockers.length || confidence < 0.65) classification = 'review-required';
+
+  const evidenceGates = [
+    { id: 'requirements', label: 'Client requirements confirmed', passed: assumptions.length === 0 },
+    { id: 'coverage', label: 'Every requested service has generated CloudFormation', passed: fullCoverage },
+    { id: 'review', label: 'No critical expert-review findings', passed: blockers.length === 0 },
+    { id: 'confidence', label: 'Requirement detection confidence is at least 65%', passed: confidence >= 0.65 },
+    { id: 'aws-validation', label: 'AWS accepted and created the stack', passed: false, stage: 'post-deploy' },
+    { id: 'health-checks', label: 'Workload health checks produced evidence', passed: false, stage: 'post-deploy' },
+  ];
+
+  return {
+    classification,
+    confidence,
+    confidenceLabel: confidence >= 0.8 ? 'high' : confidence >= 0.65 ? 'medium' : 'low',
+    assumptions,
+    unsupported,
+    evidenceGates,
+    fullCoverage,
+    clientReady: classification === 'verified-deployable'
+      && assumptions.length === 0 && blockers.length === 0 && highs.length === 0,
+    sandboxDeployable: classification === 'verified-deployable' && blockers.length === 0,
+  };
+}
+
 // ════════════════════════════════════════════════════════════════════
 // STAGE 2 — BLUEPRINT MATCH
 // ════════════════════════════════════════════════════════════════════
@@ -440,9 +486,14 @@ export function runPipeline(gig, options = {}) {
     && services.length > 0
     && (coverage?.resourceCount || 0) > 0;
 
+  const readiness = assessDeliveryReadiness({
+    understanding, services, coverage, hasTemplate, blockers, highs,
+  });
+
   // Four tiers, so an otherwise-excellent design isn't branded broken by
   // a single "high". Only criticals actually stop you.
-  const verdict = !hasTemplate ? 'blocked'
+  const verdict = !hasTemplate || readiness.classification === 'planning-only' ? 'blocked'
+                : readiness.classification === 'partially-supported' ? 'fix-first'
                 : blockers.length ? 'fix-first'
                 : highs.length ? 'caution'
                 : 'ready';
@@ -482,9 +533,12 @@ export function runPipeline(gig, options = {}) {
       grade: expert?.grade?.letter || null,
       gradeLabel: expert?.grade?.label || null,
       gradeTone: expert?.grade?.tone || null,
+      readiness,
     },
     deploy: {
-      canOneClick: hasTemplate,
+      canOneClick: readiness.sandboxDeployable,
+      clientReady: readiness.clientReady,
+      classification: readiness.classification,
       coverage,
       format: 'cfn',
       stackName: names.stackName,
@@ -526,6 +580,12 @@ export function saveSolution(solution) {
       serviceIds: solution.services.map((s) => s.id),
       serviceLabels: solution.services.map((s) => s.label),
       verdict: solution.review.verdict,
+      readiness: {
+        classification: solution.review.readiness?.classification || 'planning-only',
+        clientReady: !!solution.review.readiness?.clientReady,
+        assumptions: solution.review.readiness?.assumptions || [],
+        unsupported: solution.review.readiness?.unsupported || [],
+      },
       score: solution.review.expert?.score ?? null,
       grade: solution.review.grade ?? null,
       brief: solution.input.brief.slice(0, 2000),

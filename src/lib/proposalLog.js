@@ -24,7 +24,7 @@
  *     text:      string,            // the final proposal text shown to user
  *     approach:  string,            // FR-04 picked approach
  *     services:  string[],
- *     status:    'sent' | 'replied' | 'won' | 'lost',
+ *     status:    'draft' | 'sent' | 'replied' | 'won' | 'lost',
  *     statusUpdatedAt: ISO | null,
  *   }
  */
@@ -39,6 +39,7 @@ const EVT = 'proposal-log:change';
 // Status catalogue
 // ════════════════════════════════════════════════════════════════════
 export const STATUS = {
+  draft:   { id: 'draft',   label: 'Draft',   tone: 'slate',   tip: 'Generated locally; not submitted' },
   sent:    { id: 'sent',    label: 'Sent',    tone: 'slate',   tip: 'Awaiting reply' },
   replied: { id: 'replied', label: 'Replied', tone: 'amber',   tip: 'They got back to you' },
   won:     { id: 'won',     label: 'Won',     tone: 'success', tip: 'You landed the gig' },
@@ -129,7 +130,10 @@ export function logProposal({ jd, gigTitle = '', platform = 'manual', text = '',
     text,
     approach,
     services,
-    status: 'sent',
+    // Generation is not submission. Only a human may advance this to sent.
+    status: 'draft',
+    approvedByHumanAt: null,
+    submittedAt: null,
     statusUpdatedAt: null,
   };
   list.unshift(entry);  // newest first
@@ -142,7 +146,15 @@ export function updateProposalStatus(id, status) {
   const list = read();
   const idx = list.findIndex((e) => e.id === id);
   if (idx < 0) return null;
-  list[idx] = { ...list[idx], status, statusUpdatedAt: new Date().toISOString() };
+  const now = new Date().toISOString();
+  list[idx] = {
+    ...list[idx],
+    status,
+    statusUpdatedAt: now,
+    ...(status === 'sent' && list[idx].status === 'draft'
+      ? { approvedByHumanAt: now, submittedAt: now }
+      : {}),
+  };
   write(list);
   return list[idx];
 }
@@ -157,8 +169,10 @@ export function duplicateProposal(id) {
     id: 'prp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
     createdAt: now,
     updatedAt: now,
-    status: 'sent',
+    status: 'draft',
     statusUpdatedAt: null,
+    approvedByHumanAt: null,
+    submittedAt: null,
     gigTitle: src.gigTitle ? `${src.gigTitle} (copy)` : 'Untitled (copy)',
   };
   list.unshift(copy);
@@ -180,8 +194,10 @@ export function clearAll() { write([]); }
 // ════════════════════════════════════════════════════════════════════
 export function getStats(list) {
   list = list || read();
-  const total = list.length;
-  const replied = list.filter((e) => e.status === 'replied' || e.status === 'won' || e.status === 'lost').length;
+  const submitted = list.filter((e) => e.status !== 'draft');
+  const drafts = list.length - submitted.length;
+  const total = submitted.length;
+  const replied = submitted.filter((e) => e.status === 'replied' || e.status === 'won' || e.status === 'lost').length;
   const won = list.filter((e) => e.status === 'won').length;
   const lost = list.filter((e) => e.status === 'lost').length;
   const closed = won + lost;
@@ -191,7 +207,7 @@ export function getStats(list) {
   const winRate = closed > 0 ? Math.round((won / closed) * 100) : 0;
   // Reply rate is against total sends — that one IS a "did anyone bother".
   const replyRate = total > 0 ? Math.round((replied / total) * 100) : 0;
-  return { total, replied, won, lost, closed, winRate, replyRate };
+  return { total, drafts, replied, won, lost, closed, winRate, replyRate };
 }
 
 /**
@@ -211,6 +227,7 @@ export function getWeeklySeries(list, weeks = 8) {
     buckets.push({ start, end, sent: 0, won: 0, replied: 0 });
   }
   for (const e of list) {
+    if (e.status === 'draft') continue;
     const t = new Date(e.createdAt).getTime();
     const b = buckets.find((b) => t >= b.start.getTime() && t < b.end.getTime());
     if (!b) continue;
@@ -237,8 +254,10 @@ export function getInsightTip(stats) {
   if (total === 0) {
     return {
       tone: 'neutral',
-      title: 'No proposals yet',
-      body: 'Generate a proposal in the Smart Generator tab — every one you make lands here automatically.',
+      title: stats.drafts ? `${stats.drafts} draft${stats.drafts === 1 ? '' : 's'} awaiting your review` : 'No proposals yet',
+      body: stats.drafts
+        ? 'Review each draft, submit it yourself on the marketplace, then mark it Sent. Drafts are excluded from performance statistics.'
+        : 'Generate a proposal in the Smart Generator tab — every one you make lands here as a draft.',
     };
   }
   if (closed === 0) {

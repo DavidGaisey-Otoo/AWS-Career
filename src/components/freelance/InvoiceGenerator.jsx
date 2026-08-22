@@ -7,11 +7,12 @@ import { useApp } from '../../context/AppContext.jsx';
 import { useFreelance } from '../../context/FreelanceContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { cn, formatDate, uid } from '../../lib/utils.js';
+import { createManualPaymentRecord, assessMilestoneAcceptance } from '../../lib/businessWorkflow.js';
 
 const STATUS_META = {
   draft:    { label: 'Draft',    color: 'bg-[var(--card-2)] text-muted border border-token' },
   sent:     { label: 'Sent',     color: 'bg-electric/10 text-electric border border-electric/30' },
-  paid:     { label: 'Paid ✓',   color: 'bg-success/15 text-success border border-success/30' },
+  paid:     { label: 'Paid · manually verified', color: 'bg-success/15 text-success border border-success/30' },
   overdue:  { label: 'Overdue',  color: 'bg-danger/15 text-danger border border-danger/30' },
 };
 const STATUSES = ['draft', 'sent', 'paid', 'overdue'];
@@ -39,6 +40,10 @@ export function InvoiceGenerator() {
       taxPct: 0,
       lineItems: [{ id: uid(), desc: '', qty: 1, unit: 0 }],
       notes: 'Bank: Wise · Account name: ' + (profile?.name || 'Your Name'),
+      milestone: '',
+      acceptanceStatus: 'pending',
+      acceptanceEvidence: '',
+      acceptedBy: '',
       status: 'draft',
     });
     setDrawer(true);
@@ -61,8 +66,11 @@ export function InvoiceGenerator() {
   };
 
   const markPaid = (inv) => {
-    updateInvoice(inv.id, { status: 'paid', paidAt: new Date().toISOString() });
-    toast.success('Marked paid');
+    const reference = window.prompt('Enter the bank/platform transaction reference or receipt note. This app cannot verify payments automatically.');
+    if (!reference?.trim()) { toast.warning('Payment reference required'); return; }
+    if (!confirm('Confirm that you personally checked the money was received. This records payment only; it does not process or verify funds.')) return;
+    updateInvoice(inv.id, createManualPaymentRecord(reference));
+    toast.success('Payment recorded as manually verified');
   };
 
   const del = (inv) => {
@@ -92,6 +100,11 @@ export function InvoiceGenerator() {
         </button>
       </div>
 
+      <div className="rounded-xl border border-warning/35 bg-warning/5 p-3 text-[11.5px] leading-relaxed">
+        <strong>Recordkeeping only.</strong> This screen creates printable invoices and manual payment records.
+        It is not connected to Stripe, Wise, PayPal, a bank, or payment webhooks and cannot move or verify money.
+      </div>
+
       {state.invoices.length === 0 ? (
         <div className="surface rounded-2xl p-10 text-center text-sm text-muted">
           No invoices yet. Create your first one.
@@ -115,6 +128,8 @@ export function InvoiceGenerator() {
                     <div className="text-xs text-muted mt-0.5">
                       {inv.clientName} · Due {inv.dueAt} · {inv.currency} {total.toLocaleString()}
                     </div>
+                    {inv.milestone && <div className="text-[11px] mt-1">Milestone: {inv.milestone} · Acceptance: {assessMilestoneAcceptance(inv).clientAccepted ? 'evidenced' : (inv.acceptanceStatus || 'pending')}</div>}
+                    {inv.status === 'paid' && <div className="text-[10.5px] text-success mt-1">Evidence: {inv.paymentEvidence || 'legacy manual record (no reference)'}</div>}
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => { setEditing(inv); setDrawer(true); }}
@@ -168,6 +183,15 @@ export function InvoiceGenerator() {
                   options={['USD', 'GBP', 'EUR', 'GHS', 'AUD']} />
               <In label="Tax %" type="number" value={editing.taxPct}
                   onChange={(v) => setEditing({ ...editing, taxPct: Number(v) || 0 })} />
+              <In label="Milestone / deliverable" value={editing.milestone || ''}
+                  onChange={(v) => setEditing({ ...editing, milestone: v })} />
+              <In label="Client acceptance" as="select" value={editing.acceptanceStatus || 'pending'}
+                  onChange={(v) => setEditing({ ...editing, acceptanceStatus: v })}
+                  options={['pending', 'accepted', 'changes-requested', 'disputed']} />
+              <In label="Accepted by" value={editing.acceptedBy || ''}
+                  onChange={(v) => setEditing({ ...editing, acceptedBy: v })} />
+              <In label="Acceptance evidence URL / reference" value={editing.acceptanceEvidence || ''}
+                  onChange={(v) => setEditing({ ...editing, acceptanceEvidence: v })} />
             </div>
 
             <div className="mt-4">
@@ -339,6 +363,13 @@ function PrintableInvoice({ inv, profile }) {
         {inv.notes && (
           <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e2e8f0', fontSize: 11, color: '#475569' }}>
             <strong>Notes:</strong> {inv.notes}
+          </div>
+        )}
+        {inv.milestone && (
+          <div style={{ marginTop: 12, fontSize: 11, color: '#475569' }}>
+            <strong>Milestone:</strong> {inv.milestone} · <strong>Acceptance:</strong> {inv.acceptanceStatus || 'pending'}
+            {inv.acceptedBy ? ` · By: ${inv.acceptedBy}` : ''}
+            {inv.acceptanceEvidence ? ` · Evidence: ${inv.acceptanceEvidence}` : ''}
           </div>
         )}
       </div>

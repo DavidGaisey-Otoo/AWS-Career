@@ -308,7 +308,7 @@ function AccountCallout({ aws, isConnected, activeProfile }) {
             <span className="font-extrabold text-success">Ready to run against {activeProfile.name}.</span>
             {' '}Replace any placeholder values (e.g. <code className="text-aws-orange">acme-prod-eu-west-2</code>) with your own,
             then run the CLI commands in your terminal — they'll hit your linked account.{' '}
-            {aws.state.simulateMode && <span className="text-warning font-bold">Simulation mode is ON — turn it off in AWS Account Manager before real writes.</span>}
+            <span className="text-warning font-bold">AWS Account Manager previews plans only. Use Deploy Console for evidence-backed AWS writes.</span>
           </div>
           <Link to="/aws-accounts" className="shrink-0 text-[10px] font-bold text-success hover:underline whitespace-nowrap">
             Switch profile →
