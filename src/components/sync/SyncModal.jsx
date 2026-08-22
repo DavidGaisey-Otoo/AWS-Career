@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  Cloud, Upload, Download, X, CheckCircle2, ExternalLink, AlertTriangle,
+  Cloud, X, CheckCircle2, ExternalLink, AlertTriangle,
   Loader2, Trash2, KeyRound, Smartphone, ChevronRight,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -29,7 +29,7 @@ import { cn } from '../../lib/utils.js';
 export function SyncModal() {
   const {
     openModal, setOpenModal, status, meta, enabled, enable, disable,
-    pushNow, pullNow, stopAndDelete, appliedOnOpen,
+    stopAndDelete, appliedOnOpen,
   } = useSync();
   const [busy, setBusy] = useState(false);
   const [lastResult, setLastResult] = useState(null);
@@ -192,21 +192,8 @@ export function SyncModal() {
             </button>
             {showAdvanced && (
               <div className="space-y-2.5 pt-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => withBusy('push', pushNow)}
-                    disabled={busy}
-                    className="btn btn-ghost !text-[11px] !py-2 tap-44"
-                  >
-                    <Upload size={12} /> Push now
-                  </button>
-                  <button
-                    onClick={() => withBusy('pull', pullNow)}
-                    disabled={busy}
-                    className="btn btn-ghost !text-[11px] !py-2 tap-44"
-                  >
-                    <Download size={12} /> Pull now
-                  </button>
+                <div className="rounded-lg border border-success/30 bg-success/5 p-2.5 text-[10.5px] leading-relaxed">
+                  Sync is automatic in both directions. Manual Push/Pull controls were removed because choosing the wrong direction could replace newer data or confuse connection status.
                 </div>
 
                 {repoUrl && (

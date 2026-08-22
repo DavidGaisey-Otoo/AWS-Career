@@ -45,6 +45,7 @@ const SYNC_BLOCKLIST = [
   `${STORAGE_KEY}::deploy::vault`,            //
   `${STORAGE_KEY}::aws::credentials`,         // raw AWS keys (never sync)
   `${STORAGE_KEY}::github`,                   // GitHub PAT (plaintext — must never reach the gist)
+  `${STORAGE_KEY}::github-app`,               // GitHub App access + refresh session (per-device)
   `${STORAGE_KEY}::google`,                   // Google OAuth tokens + clientSecret + PKCE state
   `${STORAGE_KEY}::sync::gistId`,             // sync infrastructure itself
   `${STORAGE_KEY}::sync::repo`,

@@ -72,6 +72,30 @@ const CHECKS = [
     },
   },
   {
+    name: 'GitHub App sessions never sync or overwrite a connected device',
+    run: () => {
+      const key = `${K}::github-app`;
+      const localSession = JSON.stringify({
+        accessToken: 'github-app-access-token',
+        refreshToken: 'github-app-refresh-token',
+        expiresAt: Date.now() + 60_000,
+      });
+      seed({ [key]: localSession, [`${K}::notes`]: { a: 'safe' } });
+      const snap = snapshotLocalStorage();
+      assert(!(key in snap.data), 'the GitHub App session key was uploaded');
+
+      restoreLocalStorage({
+        version: 2,
+        data: {
+          [key]: JSON.stringify({ expiresAt: 0 }),
+          [`${K}::notes`]: JSON.stringify({ a: 'remote' }),
+        },
+      }, { mergeStrategy: 'replace' });
+      assert(localStorage.getItem(key) === localSession, 'pull overwrote the connected GitHub App session');
+      assert(localStorage.getItem(`${K}::notes`).includes('remote'), 'ordinary synced data was not restored');
+    },
+  },
+  {
     name: 'Google OAuth tokens and client secret are never included',
     run: () => {
       seed({
