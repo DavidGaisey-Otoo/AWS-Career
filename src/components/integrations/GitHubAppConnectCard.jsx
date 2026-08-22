@@ -33,7 +33,6 @@ export function GitHubAppConnectCard() {
       if (flow.user_code && navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(flow.user_code).then(() => setCopied(true)).catch(() => {});
       }
-      window.open(flow.verification_uri || 'https://github.com/login/device', '_blank', 'noopener,noreferrer');
       const interval = Math.max(Number(flow.interval || 5), 5) * 1000;
       const deadline = Date.now() + Number(flow.expires_in || 900) * 1000;
       while (Date.now() < deadline) {
@@ -103,14 +102,25 @@ export function GitHubAppConnectCard() {
       </div>
       {code && (
         <div className="mt-3 rounded-lg border border-aws-orange/30 bg-aws-orange/5 p-3 text-xs">
-          <div className="font-bold">Approve this browser once. Your data will restore automatically afterwards.</div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <code className="font-mono font-extrabold text-aws-orange text-sm">{code}</code>
-            <button type="button" onClick={copyCode} className="btn-secondary !px-2 !py-1 text-[10px] inline-flex items-center gap-1">
-              {copied ? <Check size={11} /> : <Copy size={11} />} {copied ? 'Copied' : 'Copy code'}
-            </button>
-            <a href={verifyUrl} target="_blank" rel="noreferrer" className="font-bold text-aws-orange inline-flex items-center gap-1">Open GitHub <ExternalLink size={11} /></a>
-          </div>
+          <div className="font-bold">Your GitHub code is ready. Keep this app tab open.</div>
+          <ol className="mt-2 space-y-2">
+            <li className="flex flex-wrap items-center gap-2">
+              <strong>1. Copy:</strong>
+              <code className="font-mono font-extrabold text-aws-orange text-base tracking-wider select-all">{code}</code>
+              <button type="button" onClick={copyCode} className="btn-secondary !px-3 !py-2 text-[11px] inline-flex items-center gap-1 tap-44">
+                {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Code copied' : 'Copy code'}
+              </button>
+            </li>
+            <li className="flex flex-wrap items-center gap-2">
+              <strong>2. Then:</strong>
+              <a href={verifyUrl} target="_blank" rel="noreferrer" className="btn-primary !px-3 !py-2 text-[11px] inline-flex items-center gap-1 tap-44">
+                Open GitHub and paste <ExternalLink size={12} />
+              </a>
+            </li>
+          </ol>
+          <p className="mt-2 text-[10.5px] text-muted leading-relaxed">
+            After GitHub says the device is connected, return to this app tab. It is already waiting and will restore your synced data automatically.
+          </p>
         </div>
       )}
     </div>
