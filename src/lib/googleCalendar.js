@@ -384,13 +384,31 @@ export async function createEvent({
   };
 }
 
-// Quick sanity ping — fetches the primary calendar metadata. Used by the
-// Settings card "Test connection" button.
+// Quick sanity ping using the same least-privilege calendar.events scope that
+// createEvent() requests. The calendars.get endpoint requires an additional
+// calendar metadata scope and otherwise returns 403 for a valid connection.
 export async function verifyConnection() {
   const accessToken = await getValidAccessToken();
-  const res = await fetch(`${API_BASE}/calendars/primary`, {
+  const params = new URLSearchParams({
+    maxResults: '1',
+    singleEvents: 'true',
+    timeMin: new Date().toISOString(),
+  });
+  const res = await fetch(`${API_BASE}/calendars/primary/events?${params}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error(`Verify failed (${res.status})`);
-  return res.json();
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const body = await res.json();
+      detail = body?.error?.message ? `: ${body.error.message}` : '';
+    } catch { /* response body is optional diagnostic context */ }
+    throw new Error(`Verify failed (${res.status})${detail}`);
+  }
+  const json = await res.json();
+  return {
+    ok: true,
+    calendarId: json.summary || 'primary',
+    checkedAt: new Date().toISOString(),
+  };
 }
