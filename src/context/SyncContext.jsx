@@ -23,9 +23,6 @@ const SyncContext = createContext(null);
 const PUSH_DEBOUNCE_MS = 4000;
 const LOCAL_CHANGE_SCAN_MS = 2000;
 const PULL_INTERVAL_MS = 30_000;
-// Leave enough time for the existing 4-second outbound debounce to finish
-// before reloading the receiving window.
-const CROSS_WINDOW_RELOAD_MS = PUSH_DEBOUNCE_MS + 750;
 const hasGithubAuth = () => hasGithubAppSession() || Boolean(readToken()?.token);
 
 export function SyncProvider({ children }) {
@@ -35,7 +32,6 @@ export function SyncProvider({ children }) {
   const [openModal, setOpenModal] = useState(false);
   const [appliedOnOpen, setAppliedOnOpen] = useState(null);
   const pushTimer = useRef(null);
-  const reloadTimer = useRef(null);
   const localDirty = useRef(false);
   const remoteCheckBusy = useRef(false);
   const localFingerprint = useRef(null);
@@ -100,11 +96,8 @@ export function SyncProvider({ children }) {
       if (!e?.key || !e.key.startsWith('awscl-pro::v1::')) return;
       // Ignore sync infrastructure keys to avoid feedback loops
       if (e.key.includes('::sync::')) return;
-      // Installed PWA + normal browser windows in the same profile already
-      // share localStorage. Reload once (debounced) so every React context
-      // rehydrates the value written by the other window immediately.
-      if (reloadTimer.current) clearTimeout(reloadTimer.current);
-      reloadTimer.current = setTimeout(() => window.location.reload(), CROSS_WINDOW_RELOAD_MS);
+      // A same-origin window already sees the new localStorage value. Never
+      // reload here: two open copies can otherwise trigger each other forever.
       schedulePush();
     }
     function onSyncPush() { schedulePush(); }
@@ -113,7 +106,6 @@ export function SyncProvider({ children }) {
     return () => {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('syncpush', onSyncPush);
-      if (reloadTimer.current) clearTimeout(reloadTimer.current);
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
   }, [schedulePush]);
