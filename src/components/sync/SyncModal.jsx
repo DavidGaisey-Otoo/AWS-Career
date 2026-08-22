@@ -126,7 +126,7 @@ export function SyncModal() {
         )}
 
         {/* ── STATE 1: SYNC ON ──────────────────────────────────────── */}
-        {enabled && !hasScopeError && (
+        {enabled && hasToken && status !== 'no-token' && !hasScopeError && (
           <div className="space-y-3">
             <div className="rounded-xl border border-success/40 bg-success/5 p-4 flex items-center gap-3">
               <CheckCircle2 size={20} className="text-success shrink-0" />
@@ -143,7 +143,7 @@ export function SyncModal() {
         )}
 
         {/* ── STATE 2: SYNC OFF — show the 3-step setup ─────────────── */}
-        {!enabled && !hasScopeError && (
+        {(!enabled || !hasToken || status === 'no-token') && !hasScopeError && (
           <div className="space-y-3">
             <p className="text-[12.5px] opacity-80 leading-relaxed">
               Sync your data to an <strong>access-controlled private GitHub repository</strong> so you can keep working from your phone, tablet, or another laptop.
@@ -181,7 +181,7 @@ export function SyncModal() {
         )}
 
         {/* ── ADVANCED disclosure ──────────────────────────────────── */}
-        {enabled && (
+        {enabled && hasToken && status !== 'no-token' && (
           <div className="pt-2 border-t border-token">
             <button
               onClick={() => setShowAdvanced((s) => !s)}
