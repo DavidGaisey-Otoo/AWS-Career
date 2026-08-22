@@ -13,7 +13,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   deleteSyncGist, isSyncEnabled, pullSnapshot, pushSnapshot, readSyncMeta,
-  restoreLocalStorage, setSyncEnabled as setEnabledRaw, syncOnOpen,
+  restoreLocalStorage, setSyncEnabled as setEnabledRaw, snapshotLocalStorage, syncOnOpen,
 } from '../lib/gistSync.js';
 import { readToken } from '../lib/githubToken.js';
 import { hasGithubAppSession } from '../lib/githubAppAuth.js';
@@ -21,6 +21,7 @@ import { hasGithubAppSession } from '../lib/githubAppAuth.js';
 const SyncContext = createContext(null);
 
 const PUSH_DEBOUNCE_MS = 4000;
+const LOCAL_CHANGE_SCAN_MS = 2000;
 const PULL_INTERVAL_MS = 30_000;
 // Leave enough time for the existing 4-second outbound debounce to finish
 // before reloading the receiving window.
@@ -37,6 +38,7 @@ export function SyncProvider({ children }) {
   const reloadTimer = useRef(null);
   const localDirty = useRef(false);
   const remoteCheckBusy = useRef(false);
+  const localFingerprint = useRef(null);
   const hasRunInitial = useRef(false);
 
   // ──────────────────────────────────────────────────────────────────
@@ -52,7 +54,7 @@ export function SyncProvider({ children }) {
     }
     setStatus('syncing');
     syncOnOpen()
-      .then((result) => {
+      .then(async (result) => {
         setMeta(readSyncMeta());
         if (result.applied) {
           setAppliedOnOpen(result);
@@ -61,6 +63,11 @@ export function SyncProvider({ children }) {
         } else if (result.reason === 'error') {
           setStatus('error');
         } else {
+          // Publish safe local changes that may have been written before this
+          // version loaded (older builds did not notify sync on every write).
+          await pushSnapshot();
+          localFingerprint.current = JSON.stringify(snapshotLocalStorage().data);
+          setMeta(readSyncMeta());
           setStatus('synced');
         }
       })
@@ -110,6 +117,21 @@ export function SyncProvider({ children }) {
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
   }, [schedulePush]);
+
+  // Some legacy contexts write localStorage directly and cannot emit the
+  // synthetic syncpush event. Detect changes to the sanitized, syncable data
+  // so the green badge always represents an actually uploaded snapshot.
+  useEffect(() => {
+    if (!enabled || !hasGithubAuth()) return undefined;
+    localFingerprint.current = JSON.stringify(snapshotLocalStorage().data);
+    const interval = setInterval(() => {
+      const next = JSON.stringify(snapshotLocalStorage().data);
+      if (next === localFingerprint.current) return;
+      localFingerprint.current = next;
+      schedulePush();
+    }, LOCAL_CHANGE_SCAN_MS);
+    return () => clearInterval(interval);
+  }, [enabled, schedulePush]);
 
   // Pull changes made on another browser/device while this copy remains open.
   // A pending local write always wins the race by being pushed first; remote
