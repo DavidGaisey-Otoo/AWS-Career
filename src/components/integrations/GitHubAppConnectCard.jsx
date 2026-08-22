@@ -1,4 +1,4 @@
-import { Check, CheckCircle2, Copy, ExternalLink, Github, Loader2, LogOut } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, Copy, ExternalLink, Github, Loader2, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
@@ -15,6 +15,7 @@ export function GitHubAppConnectCard() {
   const [connecting, setConnecting] = useState(false);
   const [code, setCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [connectionError, setConnectionError] = useState('');
   const [verifyUrl, setVerifyUrl] = useState('https://github.com/login/device');
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export function GitHubAppConnectCard() {
 
   const connect = async () => {
     setConnecting(true);
+    setConnectionError('');
     try {
       const flow = await startGithubDeviceFlow();
       setCode(flow.user_code || '');
@@ -43,14 +45,21 @@ export function GitHubAppConnectCard() {
           setCode('');
           // A newly approved browser should become useful immediately: locate the
           // deterministic private sync repository, restore it, and enable future sync.
-          const remote = await pullSnapshot();
-          if (remote?.snapshot) {
-            restoreLocalStorage(remote.snapshot, { mergeStrategy: 'replace' });
-            setSyncEnabled(true);
-            toast.success('GitHub connected. Your synced data is restored.');
-            setTimeout(() => window.location.reload(), 500);
-          } else {
-            toast.success('GitHub connected. Future access tokens renew automatically.');
+          try {
+            const remote = await pullSnapshot();
+            if (remote?.snapshot) {
+              restoreLocalStorage(remote.snapshot, { mergeStrategy: 'replace' });
+              setSyncEnabled(true);
+              toast.success('GitHub connected. Your synced data is restored.');
+              setTimeout(() => window.location.reload(), 500);
+            } else {
+              toast.success('GitHub connected. Future access tokens renew automatically.');
+            }
+          } catch (syncError) {
+            // Authentication succeeded and must stay connected even when repository
+            // discovery/restore needs separate attention.
+            setConnectionError(`GitHub connected, but sync restore needs attention: ${syncError.message || syncError}`);
+            toast.success('GitHub connected. Open the sync panel to finish restoring data.');
           }
           return;
         }
@@ -58,7 +67,9 @@ export function GitHubAppConnectCard() {
       }
       throw new Error('GitHub authorization expired. Please try again.');
     } catch (err) {
-      toast.error(err.message || 'Could not connect GitHub.');
+      const message = err.message || 'Could not connect GitHub.';
+      setConnectionError(message);
+      toast.error(message);
     } finally {
       setConnecting(false);
     }
@@ -121,6 +132,12 @@ export function GitHubAppConnectCard() {
           <p className="mt-2 text-[10.5px] text-muted leading-relaxed">
             After GitHub says the device is connected, return to this app tab. It is already waiting and will restore your synced data automatically.
           </p>
+        </div>
+      )}
+      {connectionError && (
+        <div className="mt-3 rounded-lg border border-danger/40 bg-danger/5 p-3 text-[11px] flex items-start gap-2" role="alert">
+          <AlertTriangle size={14} className="text-danger shrink-0 mt-0.5" />
+          <div><strong>Connection needs attention.</strong> {connectionError}</div>
         </div>
       )}
     </div>
