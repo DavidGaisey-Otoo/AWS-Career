@@ -29,6 +29,7 @@
 
 import { STORAGE_KEY } from './constants.js';
 import { readToken } from './githubToken.js';
+import { getGithubAccessToken } from './githubAppAuth.js';
 
 const GIST_DESCRIPTION = 'AWS Career Launchpad Pro — sync snapshot (do not edit by hand)';
 const GIST_FILENAME    = 'awscl-pro-state.json';
@@ -198,14 +199,16 @@ export function setStoredGistId(id) {
 
 const GITHUB_API = 'https://api.github.com';
 
-function getToken() {
+async function getToken() {
+  const appToken = await getGithubAccessToken().catch(() => null);
+  if (appToken) return appToken;
   const t = readToken();
   return t?.token || null;
 }
 
 async function ghFetch(path, options = {}) {
-  const token = getToken();
-  if (!token) throw new Error('No GitHub token configured');
+  const token = await getToken();
+  if (!token) throw new Error('No GitHub connection configured');
   const res = await fetch(`${GITHUB_API}${path}`, {
     ...options,
     headers: {
@@ -221,14 +224,14 @@ async function ghFetch(path, options = {}) {
     // Surface the specific "missing gist scope" case so the UI can render
     // a one-click fix instead of a wall of JSON.
     if (res.status === 403 && /Resource not accessible by personal access token|gist/i.test(text)) {
-      const err = new Error('PAT_MISSING_GIST_SCOPE');
-      err.code = 'PAT_MISSING_GIST_SCOPE';
+      const err = new Error('GITHUB_APP_MISSING_GIST_PERMISSION');
+      err.code = 'GITHUB_APP_MISSING_GIST_PERMISSION';
       err.status = 403;
       throw err;
     }
     if (res.status === 401) {
-      const err = new Error('PAT_INVALID');
-      err.code = 'PAT_INVALID';
+      const err = new Error('GITHUB_AUTH_INVALID');
+      err.code = 'GITHUB_AUTH_INVALID';
       err.status = 401;
       throw err;
     }

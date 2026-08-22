@@ -16,10 +16,12 @@ import {
   restoreLocalStorage, setSyncEnabled as setEnabledRaw, syncOnOpen,
 } from '../lib/gistSync.js';
 import { readToken } from '../lib/githubToken.js';
+import { hasGithubAppSession } from '../lib/githubAppAuth.js';
 
 const SyncContext = createContext(null);
 
 const PUSH_DEBOUNCE_MS = 4000;
+const hasGithubAuth = () => hasGithubAppSession() || Boolean(readToken()?.token);
 
 export function SyncProvider({ children }) {
   const [status, setStatus] = useState('idle');      // idle | syncing | synced | error | disabled | no-token
@@ -37,7 +39,7 @@ export function SyncProvider({ children }) {
     if (hasRunInitial.current) return;
     hasRunInitial.current = true;
     if (!enabled) return;
-    if (!readToken()?.token) {
+    if (!hasGithubAuth()) {
       setStatus('no-token');
       return;
     }
@@ -63,7 +65,7 @@ export function SyncProvider({ children }) {
   // ──────────────────────────────────────────────────────────────────
   const schedulePush = useCallback(() => {
     if (!enabled) return;
-    if (!readToken()?.token) return;
+    if (!hasGithubAuth()) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(async () => {
       setStatus('syncing');
@@ -97,7 +99,7 @@ export function SyncProvider({ children }) {
   // Public API
   // ──────────────────────────────────────────────────────────────────
   const pushNow = useCallback(async () => {
-    if (!readToken()?.token) { setStatus('no-token'); return { ok: false, reason: 'no-token' }; }
+    if (!hasGithubAuth()) { setStatus('no-token'); return { ok: false, reason: 'no-token' }; }
     setStatus('syncing');
     try {
       const result = await pushSnapshot();
@@ -111,7 +113,7 @@ export function SyncProvider({ children }) {
   }, []);
 
   const pullNow = useCallback(async () => {
-    if (!readToken()?.token) { setStatus('no-token'); return { ok: false, reason: 'no-token' }; }
+    if (!hasGithubAuth()) { setStatus('no-token'); return { ok: false, reason: 'no-token' }; }
     setStatus('syncing');
     try {
       const result = await pullSnapshot();

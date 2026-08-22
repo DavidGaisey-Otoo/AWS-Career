@@ -23,6 +23,7 @@ import {
   getStoredGistId, readSecurityAdvisory, dismissSecurityAdvisory, recreateSyncGist,
 } from '../../lib/gistSync.js';
 import { readToken } from '../../lib/githubToken.js';
+import { hasGithubAppSession } from '../../lib/githubAppAuth.js';
 import { cn } from '../../lib/utils.js';
 
 export function SyncModal() {
@@ -47,10 +48,10 @@ export function SyncModal() {
 
   if (!openModal) return null;
 
-  const hasToken = !!readToken()?.token;
+  const hasToken = hasGithubAppSession() || !!readToken()?.token;
   const hasScopeError =
-    lastResult?.error === 'PAT_MISSING_GIST_SCOPE' ||
-    /PAT_MISSING_GIST_SCOPE|Resource not accessible by personal access token/i.test(meta.lastError || '');
+    lastResult?.error === 'GITHUB_APP_MISSING_GIST_PERMISSION' ||
+    /GITHUB_APP_MISSING_GIST_PERMISSION|Resource not accessible/i.test(meta.lastError || '');
   const gistUrl = gistId ? `https://gist.github.com/${gistId}` : null;
 
   async function withBusy(label, fn) {
@@ -161,7 +162,7 @@ export function SyncModal() {
               {busy ? (
                 <><Loader2 size={14} className="animate-spin" /> Setting up…</>
               ) : !hasToken ? (
-                <>Add GitHub PAT first</>
+                <>Connect GitHub first</>
               ) : (
                 <><Cloud size={14} /> Turn on sync</>
               )}
@@ -248,7 +249,7 @@ export function SyncModal() {
 
         {/* Privacy footer */}
         <div className="text-[10.5px] opacity-60 italic leading-relaxed pt-2 border-t border-token">
-          <strong>Privacy:</strong> The Gist is secret/unlisted — only your PAT can read it. We skip the
+          <strong>Privacy:</strong> The Gist is secret/unlisted — only your authorized GitHub account can read it. We skip the
           encrypted AWS credential vault, raw AWS keys, and other per-device secrets. Not a primary backup.
         </div>
       </div>
@@ -264,23 +265,22 @@ function SetupSteps({ hasToken }) {
   const steps = [
     {
       done: hasToken,
-      title: 'Get a GitHub PAT (classic, with `gist` scope)',
+      title: 'Connect the GitHub App',
       body: (
         <a
-          href="https://github.com/settings/tokens/new?scopes=gist&description=AWS%20Launchpad%20sync"
-          target="_blank" rel="noopener noreferrer"
+          href="/settings?section=integrations"
           className="text-aws-orange font-bold inline-flex items-center gap-0.5 hover:underline"
         >
-          Open GitHub token page <ExternalLink size={10} />
+          Open Settings → Integrations <ExternalLink size={10} />
         </a>
       ),
     },
     {
       done: hasToken,
-      title: 'Paste it in the app',
+      title: 'Approve GitHub once',
       body: (
         <Link to="/settings" className="text-aws-orange font-bold inline-flex items-center gap-0.5 hover:underline">
-          Settings → Integrations → GitHub <ChevronRight size={12} />
+          No token copying or 90-day renewal <ChevronRight size={12} />
         </Link>
       ),
     },
@@ -319,7 +319,7 @@ function ContinueOnPhoneCard() {
       </div>
       <ol className="text-[11.5px] leading-relaxed space-y-1 pl-1">
         <li><strong>1.</strong> Open the app URL on your other device.</li>
-        <li><strong>2.</strong> Settings → Integrations → paste the <strong>same GitHub PAT</strong>.</li>
+        <li><strong>2.</strong> Settings → Integrations → <strong>Connect GitHub</strong>.</li>
         <li><strong>3.</strong> Tap the sync chip in the header → <strong>Turn on sync</strong>.</li>
         <li><strong>4.</strong> Your data restores in 3-5 seconds and the app reloads.</li>
       </ol>
@@ -371,24 +371,24 @@ function ScopeErrorCard() {
       <div className="flex items-start gap-2">
         <AlertTriangle size={16} className="text-warning shrink-0 mt-0.5" />
         <div>
-          <strong className="text-warning text-[13px] block">Your PAT can&apos;t create Gists.</strong>
+          <strong className="text-warning text-[13px] block">The GitHub App needs Gist permission.</strong>
           <p className="text-[11.5px] opacity-90 mt-0.5">
-            GitHub PATs don&apos;t have gist permission by default. 60-second fix:
+            Cross-device sync requires read/write access to your private Gists.
           </p>
         </div>
       </div>
       <ol className="text-[11.5px] pl-7 space-y-1 leading-relaxed">
         <li>
           1. <a
-            href="https://github.com/settings/tokens/new?scopes=gist&description=AWS%20Launchpad%20sync"
+            href="https://github.com/settings/apps/aws-career-launchpad-pro/permissions"
             target="_blank" rel="noopener noreferrer"
             className="text-aws-orange font-bold underline"
           >
-            Generate a new classic PAT
-          </a> with the <code className="text-aws-orange">gist</code> scope ticked.
+            Open GitHub App settings
+          </a> and enable <code className="text-aws-orange">Gists: Read and write</code>.
         </li>
-        <li>2. Paste it in <Link to="/settings" className="text-aws-orange font-bold underline">Settings → Integrations → GitHub</Link>.</li>
-        <li>3. Come back here and tap <strong>Turn on sync</strong> again.</li>
+        <li>2. Approve the updated permission on the app installation page.</li>
+        <li>3. Return here and tap <strong>Turn on sync</strong> again.</li>
       </ol>
     </div>
   );

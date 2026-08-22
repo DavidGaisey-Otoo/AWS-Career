@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { useSync } from '../../context/SyncContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { readToken } from '../../lib/githubToken.js';
+import { hasGithubAppSession } from '../../lib/githubAppAuth.js';
 import { cn } from '../../lib/utils.js';
 
 export function SyncStatusChip() {
@@ -19,7 +20,7 @@ export function SyncStatusChip() {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
 
-  const hasToken = !!readToken()?.token;
+  const hasToken = hasGithubAppSession() || !!readToken()?.token;
 
   async function handleClick() {
     // If sync is OFF: try to flip it on directly. The modal is the
@@ -69,7 +70,7 @@ export function SyncStatusChip() {
     synced:     { class: 'border-success/40 bg-success/10 text-success',          Icon: CheckCircle2, label: 'Synced' },
     idle:       { class: 'border-success/40 bg-success/10 text-success',          Icon: CheckCircle2, label: 'Synced' },
     error:      { class: 'border-danger/40 bg-danger/10 text-danger',             Icon: AlertCircle,  label: 'Sync issue' },
-    'no-token': { class: 'border-warning/40 bg-warning/10 text-warning',          Icon: KeyRound,     label: 'PAT needed' },
+    'no-token': { class: 'border-warning/40 bg-warning/10 text-warning',          Icon: KeyRound,     label: 'Connect GitHub' },
     disabled:   { class: 'border-token opacity-60',                                Icon: CloudOff,     label: 'Off' },
   };
   const t = tones[status] || tones.idle;
