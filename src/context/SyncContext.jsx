@@ -21,6 +21,10 @@ import { hasGithubAppSession } from '../lib/githubAppAuth.js';
 const SyncContext = createContext(null);
 
 const PUSH_DEBOUNCE_MS = 4000;
+const PULL_INTERVAL_MS = 30_000;
+// Leave enough time for the existing 4-second outbound debounce to finish
+// before reloading the receiving window.
+const CROSS_WINDOW_RELOAD_MS = PUSH_DEBOUNCE_MS + 750;
 const hasGithubAuth = () => hasGithubAppSession() || Boolean(readToken()?.token);
 
 export function SyncProvider({ children }) {
@@ -30,6 +34,9 @@ export function SyncProvider({ children }) {
   const [openModal, setOpenModal] = useState(false);
   const [appliedOnOpen, setAppliedOnOpen] = useState(null);
   const pushTimer = useRef(null);
+  const reloadTimer = useRef(null);
+  const localDirty = useRef(false);
+  const remoteCheckBusy = useRef(false);
   const hasRunInitial = useRef(false);
 
   // ──────────────────────────────────────────────────────────────────
@@ -66,11 +73,13 @@ export function SyncProvider({ children }) {
   const schedulePush = useCallback(() => {
     if (!enabled) return;
     if (!hasGithubAuth()) return;
+    localDirty.current = true;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(async () => {
       setStatus('syncing');
       try {
         await pushSnapshot();
+        localDirty.current = false;
         setMeta(readSyncMeta());
         setStatus('synced');
       } catch (err) {
@@ -84,6 +93,11 @@ export function SyncProvider({ children }) {
       if (!e?.key || !e.key.startsWith('awscl-pro::v1::')) return;
       // Ignore sync infrastructure keys to avoid feedback loops
       if (e.key.includes('::sync::')) return;
+      // Installed PWA + normal browser windows in the same profile already
+      // share localStorage. Reload once (debounced) so every React context
+      // rehydrates the value written by the other window immediately.
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+      reloadTimer.current = setTimeout(() => window.location.reload(), CROSS_WINDOW_RELOAD_MS);
       schedulePush();
     }
     function onSyncPush() { schedulePush(); }
@@ -92,8 +106,56 @@ export function SyncProvider({ children }) {
     return () => {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('syncpush', onSyncPush);
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+      if (pushTimer.current) clearTimeout(pushTimer.current);
     };
   }, [schedulePush]);
+
+  // Pull changes made on another browser/device while this copy remains open.
+  // A pending local write always wins the race by being pushed first; remote
+  // polling resumes after that push completes instead of overwriting it.
+  useEffect(() => {
+    if (!enabled || !hasGithubAuth()) return undefined;
+
+    let cancelled = false;
+    async function checkRemote() {
+      if (cancelled || remoteCheckBusy.current || localDirty.current) return;
+      remoteCheckBusy.current = true;
+      try {
+        const result = await syncOnOpen();
+        if (cancelled) return;
+        setMeta(readSyncMeta());
+        if (result.applied) {
+          setStatus('synced');
+          window.location.reload();
+        } else if (result.reason === 'error') {
+          setStatus('error');
+        }
+      } catch {
+        if (!cancelled) setStatus('error');
+      } finally {
+        remoteCheckBusy.current = false;
+      }
+    }
+
+    function onFocus() { checkRemote(); }
+    function onOnline() { checkRemote(); }
+    function onVisibility() {
+      if (document.visibilityState === 'visible') checkRemote();
+    }
+
+    const interval = setInterval(checkRemote, PULL_INTERVAL_MS);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onOnline);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [enabled]);
 
   // ──────────────────────────────────────────────────────────────────
   // Public API
@@ -103,6 +165,7 @@ export function SyncProvider({ children }) {
     setStatus('syncing');
     try {
       const result = await pushSnapshot();
+      localDirty.current = false;
       setMeta(readSyncMeta());
       setStatus('synced');
       return { ok: true, ...result };
