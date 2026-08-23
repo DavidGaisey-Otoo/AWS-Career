@@ -29,7 +29,7 @@ function installShim() {
 }
 installShim();
 
-const { snapshotLocalStorage, restoreLocalStorage } = await import('../gistSync.js');
+const { snapshotLocalStorage, restoreLocalStorage, mergeSnapshotData } = await import('../gistSync.js');
 
 const K = 'awscl-pro::v1';
 
@@ -192,6 +192,35 @@ const CHECKS = [
       );
       assert(localStorage.getItem(`${K}::notes`).includes('local'), 'fill-missing overwrote existing data');
       assert(localStorage.getItem(`${K}::new`) !== null, 'fill-missing skipped a genuinely new key');
+    },
+  },
+  {
+    name: 'unchanged local keys preserve newer values from another device',
+    run: () => {
+      const baseline = { profile: 'old', notes: 'same' };
+      const local = { profile: 'old', notes: 'same' };
+      const remote = { profile: 'new-from-phone', notes: 'same' };
+      const merged = mergeSnapshotData(local, baseline, remote);
+      assert(merged.profile === 'new-from-phone', 'unchanged local value overwrote newer remote data');
+    },
+  },
+  {
+    name: 'independent device changes merge without erasing each other',
+    run: () => {
+      const baseline = { profile: 'old', study: 'old' };
+      const local = { profile: 'linkedin-updated', study: 'old' };
+      const remote = { profile: 'old', study: 'phone-progress' };
+      const merged = mergeSnapshotData(local, baseline, remote);
+      assert(merged.profile === 'linkedin-updated', 'local profile change was lost');
+      assert(merged.study === 'phone-progress', 'remote study change was erased');
+    },
+  },
+  {
+    name: 'intentional local deletion is propagated from its baseline',
+    run: () => {
+      const merged = mergeSnapshotData({}, { obsolete: 'remove-me' }, { obsolete: 'remove-me', keep: 'yes' });
+      assert(!('obsolete' in merged), 'local deletion was not propagated');
+      assert(merged.keep === 'yes', 'unrelated remote key was deleted');
     },
   },
 ];

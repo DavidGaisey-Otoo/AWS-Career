@@ -38,6 +38,7 @@ const GIST_ID_KEY      = `${STORAGE_KEY}::sync::gistId`;
 const SYNC_META_KEY    = `${STORAGE_KEY}::sync::meta`;
 const SYNC_ENABLED_KEY = `${STORAGE_KEY}::sync::enabled`;
 const DEVICE_ID_KEY    = `${STORAGE_KEY}::sync::deviceId`;
+const SYNC_BASELINE_KEY = `${STORAGE_KEY}::sync::baseline`;
 
 // Keys we deliberately exclude from sync (sensitive + ephemeral)
 const SYNC_BLOCKLIST = [
@@ -52,6 +53,7 @@ const SYNC_BLOCKLIST = [
   `${STORAGE_KEY}::sync::meta`,
   `${STORAGE_KEY}::sync::enabled`,
   `${STORAGE_KEY}::sync::deviceId`,
+  `${STORAGE_KEY}::sync::baseline`,
 ];
 
 // Field names that must never appear inside a synced JSON blob, wherever
@@ -250,6 +252,36 @@ function setStoredSyncRepo(fullName) {
   else localStorage.removeItem(SYNC_REPO_KEY);
 }
 
+function readSyncBaseline() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SYNC_BASELINE_KEY) || 'null');
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch { return null; }
+}
+
+function writeSyncBaseline(data) {
+  try { localStorage.setItem(SYNC_BASELINE_KEY, JSON.stringify(data || {})); } catch { /* quota */ }
+}
+
+/**
+ * Preserve remote values for keys that this device has not changed since its
+ * last successful pull/push. Only genuine local edits override the remote.
+ * Missing locally-changed keys are tombstones, so deliberate deletions sync.
+ */
+export function mergeSnapshotData(localData = {}, baselineData = {}, remoteData = {}) {
+  const merged = { ...remoteData };
+  const keys = new Set([...Object.keys(localData), ...Object.keys(baselineData)]);
+  for (const key of keys) {
+    const localHas = Object.prototype.hasOwnProperty.call(localData, key);
+    const baselineHas = Object.prototype.hasOwnProperty.call(baselineData, key);
+    const changed = localHas !== baselineHas || (localHas && localData[key] !== baselineData[key]);
+    if (!changed) continue;
+    if (localHas) merged[key] = localData[key];
+    else delete merged[key];
+  }
+  return merged;
+}
+
 async function getOrCreateSyncRepo() {
   let fullName = getStoredSyncRepo();
   if (!fullName) {
@@ -396,11 +428,35 @@ export async function recreateSyncGist() {
  */
 export async function pushSnapshot() {
   const repo = await getOrCreateSyncRepo();
-  const snapshot = snapshotLocalStorage();
-  const existing = await readRepoSnapshot(repo);
-  const updated = await writeRepoSnapshot(repo, snapshot, existing?.sha);
-  writeSyncMeta({ lastPushAt: new Date().toISOString(), remoteTimestamp: snapshot.timestamp, lastError: null });
-  return { snapshot, repoUrl: updated.repoUrl };
+  const local = snapshotLocalStorage();
+  let baseline = readSyncBaseline();
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const existing = await readRepoSnapshot(repo);
+    // First run on an upgraded device: treat the last remote copy as the
+    // comparison baseline. Differences in this browser are then genuine local
+    // edits, while identical/absent data cannot erase newer remote fields.
+    if (!baseline) baseline = existing?.snapshot?.data || {};
+    const data = mergeSnapshotData(local.data, baseline, existing?.snapshot?.data || {});
+    const snapshot = {
+      ...local,
+      timestamp: new Date().toISOString(),
+      keyCount: Object.keys(data).length,
+      data,
+    };
+    try {
+      const updated = await writeRepoSnapshot(repo, snapshot, existing?.sha);
+      writeSyncBaseline(snapshot.data);
+      writeSyncMeta({ lastPushAt: new Date().toISOString(), remoteTimestamp: snapshot.timestamp, lastError: null });
+      return { snapshot, repoUrl: updated.repoUrl };
+    } catch (error) {
+      // Another device updated the file after our read. Re-read, re-merge only
+      // our actual local changes, and retry instead of showing a transient red
+      // sync error or overwriting the other device.
+      if (!/GitHub 409|sha|conflict/i.test(String(error.message || error)) || attempt === 3) throw error;
+    }
+  }
+  throw new Error('Sync conflict could not be resolved.');
 }
 
 /**
@@ -422,16 +478,19 @@ export async function syncOnOpen() {
 
     // Only apply if remote is strictly newer than what we last pushed/pulled
     if (localTs && remoteTs && new Date(remoteTs) <= new Date(localTs)) {
+      if (!readSyncBaseline()) writeSyncBaseline(pulled.snapshot.data);
       return { applied: false, reason: 'local-current', remoteTimestamp: remoteTs };
     }
 
     // Don't auto-overwrite if the remote is from THIS device (no-op)
     const myDevice = getDeviceId();
     if (pulled.snapshot.deviceId === myDevice) {
+      writeSyncBaseline(pulled.snapshot.data);
       return { applied: false, reason: 'same-device', remoteTimestamp: remoteTs };
     }
 
     restoreLocalStorage(pulled.snapshot, { mergeStrategy: 'replace' });
+    writeSyncBaseline(pulled.snapshot.data);
     writeSyncMeta({ lastPullAt: new Date().toISOString(), remoteTimestamp: remoteTs, lastError: null });
     return { applied: true, remoteTimestamp: remoteTs, repoUrl: pulled.repoUrl };
   } catch (err) {
@@ -462,5 +521,6 @@ export async function deleteSyncGist() {
   setStoredSyncRepo(null);
   setSyncEnabled(false);
   localStorage.removeItem(SYNC_META_KEY);
+  localStorage.removeItem(SYNC_BASELINE_KEY);
   return { ok: true, deleted: true };
 }

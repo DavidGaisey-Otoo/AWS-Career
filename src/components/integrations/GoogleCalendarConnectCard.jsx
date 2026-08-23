@@ -19,11 +19,13 @@ import {
   getClientSecret, setClientSecret, clearClientSecret,
   readTokens, isConnected, disconnect, startOAuth, verifyConnection,
   getGoogleRedirectUri,
+  readCalendarSyncStatus,
+  publishCalendarConnectionStatus,
 } from '../../lib/googleCalendar.js';
 import { cn } from '../../lib/utils.js';
 
 export function GoogleCalendarConnectCard() {
-  const [clientIdInput, setClientIdInput] = useState(() => getClientId());
+  const [clientIdInput, setClientIdInput] = useState(() => getClientId() || readCalendarSyncStatus()?.clientId || '');
   const [clientSecretInput, setClientSecretInput] = useState(() => getClientSecret());
   const [showSecret, setShowSecret] = useState(false);
   const [connected, setConnected] = useState(() => isConnected());
@@ -33,10 +35,12 @@ export function GoogleCalendarConnectCard() {
   const [error, setError] = useState('');
   const [verifyOk, setVerifyOk] = useState(null); // null | true | false
   const [copied, setCopied] = useState(false);
+  const syncedCalendar = readCalendarSyncStatus();
 
   // Re-read state when the page navigates back from the callback page
   useEffect(() => {
     const url = new URL(window.location.href);
+    if (isConnected()) publishCalendarConnectionStatus();
     if (url.searchParams.get('connected') === 'google') {
       setConnected(isConnected());
       setTokens(readTokens());
@@ -181,6 +185,17 @@ export function GoogleCalendarConnectCard() {
       {/* ──────── NOT CONNECTED STATE ──────── */}
       {!connected && (
         <div className="space-y-3">
+          {syncedCalendar?.configured && (
+            <div className="rounded-xl bg-aws-orange/5 border border-aws-orange/25 p-3 flex items-start gap-2">
+              <Info size={13} className="text-aws-orange mt-0.5 flex-shrink-0" />
+              <div className="text-[12px] leading-relaxed">
+                <div className="font-bold">Calendar is configured on another device</div>
+                <div className="opacity-75 mt-0.5">
+                  This browser still needs one Google approval. For your safety, Calendar access and refresh tokens are never copied through GitHub sync.
+                </div>
+              </div>
+            </div>
+          )}
           <label className="block">
             <span className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange mb-1.5 block">
               OAuth Client ID

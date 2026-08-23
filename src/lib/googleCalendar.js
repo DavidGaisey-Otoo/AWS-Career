@@ -30,6 +30,10 @@ const TOKEN_KEY  = `${STORAGE_KEY}::google`;
 const CLIENT_ID_KEY = `${STORAGE_KEY}::google::clientId`;
 const CLIENT_SECRET_KEY = `${STORAGE_KEY}::google::clientSecret`;
 const PKCE_KEY   = `${STORAGE_KEY}::google::pkce`;
+// Safe, non-token metadata intentionally lives outside the ::google prefix so
+// cross-device sync can show that Calendar was configured elsewhere. OAuth
+// tokens, PKCE verifier and client secret remain blocklisted and per-device.
+const SYNC_STATUS_KEY = `${STORAGE_KEY}::integrations::googleCalendar`;
 
 export const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 export const AUTH_URL  = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -54,6 +58,32 @@ export function setClientId(id) {
 }
 export function clearClientId() {
   try { localStorage.removeItem(CLIENT_ID_KEY); } catch {}
+}
+
+export function readCalendarSyncStatus() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SYNC_STATUS_KEY) || 'null');
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch { return null; }
+}
+
+function writeCalendarSyncStatus(patch) {
+  try {
+    const current = readCalendarSyncStatus() || {};
+    const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
+    localStorage.setItem(SYNC_STATUS_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event('syncpush'));
+    return next;
+  } catch { return null; }
+}
+
+export function publishCalendarConnectionStatus() {
+  if (!isConnected()) return null;
+  return writeCalendarSyncStatus({
+    configured: true,
+    clientId: getClientId(),
+    connectedAt: readTokens()?.savedAt || new Date().toISOString(),
+  });
 }
 
 // Google quirk: their "Web application" OAuth clients require a
@@ -240,6 +270,11 @@ export async function exchangeCodeForTokens({ code, state, clientId, redirectUri
     savedAt: new Date().toISOString(),
   };
   writeTokens(tokens);
+  writeCalendarSyncStatus({
+    configured: true,
+    clientId,
+    connectedAt: new Date().toISOString(),
+  });
   return tokens;
 }
 
@@ -309,6 +344,7 @@ export async function disconnect() {
     } catch { /* best effort */ }
   }
   clearTokens();
+  writeCalendarSyncStatus({ configured: false, disconnectedAt: new Date().toISOString() });
 }
 
 // ════════════════════════════════════════════════════════════════════
