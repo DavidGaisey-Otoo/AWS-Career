@@ -216,6 +216,38 @@ const CHECKS = [
     },
   },
   {
+    name: 'profile integration links sync without overwriting other devices',
+    run: () => {
+      const key = `${K}::profile`;
+      const baselineProfile = { name: 'David', integrations: { github: 'https://github.com/DavidGaisey-Otoo', linkedin: '', upwork: '', hashnode: '' } };
+      const localProfile = { ...baselineProfile, integrations: { ...baselineProfile.integrations, hashnode: 'https://david-aws-builds.hashnode.dev' } };
+      const remoteProfile = { ...baselineProfile, integrations: { ...baselineProfile.integrations, linkedin: 'https://linkedin.com/in/david', upwork: 'https://upwork.com/freelancers/example' } };
+      const merged = mergeSnapshotData(
+        { [key]: JSON.stringify(localProfile) },
+        { [key]: JSON.stringify(baselineProfile) },
+        { [key]: JSON.stringify(remoteProfile) }
+      );
+      const profile = JSON.parse(merged[key]);
+      assert(profile.integrations.hashnode === localProfile.integrations.hashnode, 'Hashnode link was lost');
+      assert(profile.integrations.linkedin === remoteProfile.integrations.linkedin, 'LinkedIn link was overwritten');
+      assert(profile.integrations.upwork === remoteProfile.integrations.upwork, 'Upwork link was overwritten');
+      assert(profile.integrations.github === baselineProfile.integrations.github, 'GitHub link was lost');
+    },
+  },
+  {
+    name: 'Hashnode and Upwork links survive snapshot and restore',
+    run: () => {
+      const key = `${K}::profile`;
+      seed({ [key]: { integrations: { hashnode: 'https://david-aws-builds.hashnode.dev', upwork: 'https://www.upwork.com/freelancers/example' } } });
+      const snap = snapshotLocalStorage();
+      store.clear();
+      restoreLocalStorage(snap, { mergeStrategy: 'replace' });
+      const restored = JSON.parse(localStorage.getItem(key));
+      assert(restored.integrations.hashnode.includes('hashnode.dev'), 'Hashnode link did not round-trip');
+      assert(restored.integrations.upwork.includes('upwork.com'), 'Upwork link did not round-trip');
+    },
+  },
+  {
     name: 'intentional local deletion is propagated from its baseline',
     run: () => {
       const merged = mergeSnapshotData({}, { obsolete: 'remove-me' }, { obsolete: 'remove-me', keep: 'yes' });

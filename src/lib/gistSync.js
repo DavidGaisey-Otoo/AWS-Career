@@ -276,10 +276,60 @@ export function mergeSnapshotData(localData = {}, baselineData = {}, remoteData 
     const baselineHas = Object.prototype.hasOwnProperty.call(baselineData, key);
     const changed = localHas !== baselineHas || (localHas && localData[key] !== baselineData[key]);
     if (!changed) continue;
-    if (localHas) merged[key] = localData[key];
+    if (localHas) {
+      const nested = mergeJsonStorageValue(localData[key], baselineData[key], remoteData[key]);
+      merged[key] = nested ?? localData[key];
+    }
     else delete merged[key];
   }
   return merged;
+}
+
+function parseObjectJson(value) {
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch { return null; }
+}
+
+/**
+ * Merge independently edited fields inside JSON-backed localStorage records.
+ * This prevents a LinkedIn edit on one device from erasing a Hashnode or
+ * Upwork edit made on another device. For a true same-field conflict, the
+ * current device wins, matching the existing top-level sync policy.
+ */
+function mergeJsonStorageValue(localRaw, baselineRaw, remoteRaw) {
+  const local = parseObjectJson(localRaw);
+  const baseline = parseObjectJson(baselineRaw);
+  const remote = parseObjectJson(remoteRaw);
+  if (!local || !baseline || !remote) return null;
+  return JSON.stringify(mergeObjectFields(local, baseline, remote));
+}
+
+function mergeObjectFields(local, baseline, remote) {
+  const result = { ...remote };
+  const keys = new Set([...Object.keys(local), ...Object.keys(baseline)]);
+  for (const key of keys) {
+    const localHas = Object.prototype.hasOwnProperty.call(local, key);
+    const baseHas = Object.prototype.hasOwnProperty.call(baseline, key);
+    const localValue = local[key];
+    const baseValue = baseline[key];
+    const changed = localHas !== baseHas || (localHas && JSON.stringify(localValue) !== JSON.stringify(baseValue));
+    if (!changed) continue;
+    if (!localHas) { delete result[key]; continue; }
+    const remoteValue = remote[key];
+    if (isPlainObject(localValue) && isPlainObject(baseValue) && isPlainObject(remoteValue)) {
+      result[key] = mergeObjectFields(localValue, baseValue, remoteValue);
+    } else {
+      result[key] = localValue;
+    }
+  }
+  return result;
+}
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 async function getOrCreateSyncRepo() {
