@@ -5,6 +5,10 @@ import { uid } from '../lib/utils.js';
 
 const AppContext = createContext(null);
 
+const VERIFIED_PROFILE_LINKS = {
+  upwork: 'https://www.upwork.com/freelancers/~01860d713afb1c357b',
+};
+
 const DEFAULT_PROFILE = {
   onboarded: false,
   name: '',
@@ -22,7 +26,7 @@ const DEFAULT_PROFILE = {
   integrations: {
     github: '',
     linkedin: '',
-    upwork: '',
+    upwork: VERIFIED_PROFILE_LINKS.upwork,
     hashnode: '',
   },
 };
@@ -76,6 +80,21 @@ export function AppProvider({ children }) {
   const [prefs, setPrefs] = useLocalStorage(`${STORAGE_KEY}::prefs`, DEFAULT_PREFS);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  // Add verified public profile links to older saved profiles without
+  // overwriting anything the user has already entered. SyncContext then
+  // carries the normal profile state to the private cross-device repository.
+  useEffect(() => {
+    if (!profile?.integrations?.upwork) {
+      setProfile((current) => ({
+        ...current,
+        integrations: {
+          ...(current.integrations || {}),
+          upwork: VERIFIED_PROFILE_LINKS.upwork,
+        },
+      }));
+    }
+  }, [profile?.integrations?.upwork, setProfile]);
 
   // Apply display preferences globally (CSS vars + html class)
   useEffect(() => {
