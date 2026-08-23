@@ -453,7 +453,7 @@ export async function pushSnapshot() {
       // Another device updated the file after our read. Re-read, re-merge only
       // our actual local changes, and retry instead of showing a transient red
       // sync error or overwriting the other device.
-      if (!/GitHub 409|sha|conflict/i.test(String(error.message || error)) || attempt === 3) throw error;
+      if (!/GitHub (409|422)|sha|conflict|does not match/i.test(String(error.message || error)) || attempt === 3) throw error;
     }
   }
   throw new Error('Sync conflict could not be resolved.');

@@ -180,6 +180,15 @@ export function SyncModal() {
           </div>
         )}
 
+        {status === 'error' && meta.lastError && !hasScopeError && (
+          <div className="rounded-lg border border-danger/40 bg-danger/5 p-3 text-[12px] flex items-start gap-2">
+            <AlertTriangle size={14} className="text-danger shrink-0 mt-0.5" />
+            <div className="break-words">
+              <strong>Temporary sync problem.</strong> The app will retry automatically. {meta.lastError}
+            </div>
+          </div>
+        )}
+
         {/* ── ADVANCED disclosure ──────────────────────────────────── */}
         {enabled && hasToken && status !== 'no-token' && (
           <div className="pt-2 border-t border-token">

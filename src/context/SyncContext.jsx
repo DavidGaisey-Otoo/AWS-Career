@@ -13,7 +13,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   deleteSyncGist, isSyncEnabled, pullSnapshot, pushSnapshot, readSyncMeta,
-  restoreLocalStorage, setSyncEnabled as setEnabledRaw, snapshotLocalStorage, syncOnOpen,
+  restoreLocalStorage, setSyncEnabled as setEnabledRaw, snapshotLocalStorage, syncOnOpen, writeSyncMeta,
 } from '../lib/gistSync.js';
 import { readToken } from '../lib/githubToken.js';
 import { hasGithubAppSession } from '../lib/githubAppAuth.js';
@@ -36,6 +36,7 @@ export function SyncProvider({ children }) {
   const localDirty = useRef(false);
   const remoteCheckBusy = useRef(false);
   const localFingerprint = useRef(null);
+  const pushRetryCount = useRef(0);
 
   // GitHubAppConnectCard saves the session independently. Re-evaluate sync
   // immediately when that session is created, refreshed, or cleared so the
@@ -90,10 +91,23 @@ export function SyncProvider({ children }) {
       try {
         await pushSnapshot();
         localDirty.current = false;
+        pushRetryCount.current = 0;
         setMeta(readSyncMeta());
         setStatus('synced');
       } catch (err) {
+        const message = String(err.message || err);
+        writeSyncMeta({ lastError: message });
+        setMeta(readSyncMeta());
         setStatus('error');
+        // Transient GitHub conflicts/network interruptions must heal without
+        // making the user reconnect or press buttons. Keep the edit dirty and
+        // retry with a bounded backoff until GitHub accepts it.
+        const delay = Math.min(60_000, 5_000 * (2 ** Math.min(pushRetryCount.current, 4)));
+        pushRetryCount.current += 1;
+        pushTimer.current = setTimeout(() => {
+          pushTimer.current = null;
+          schedulePush();
+        }, delay);
       }
     }, PUSH_DEBOUNCE_MS);
   }, [enabled]);
@@ -151,6 +165,10 @@ export function SyncProvider({ children }) {
           window.location.reload();
         } else if (result.reason === 'error') {
           setStatus('error');
+        } else {
+          // A previous transient failure must not leave a permanently red
+          // badge after a later read succeeds.
+          setStatus('synced');
         }
       } catch {
         if (!cancelled) setStatus('error');
