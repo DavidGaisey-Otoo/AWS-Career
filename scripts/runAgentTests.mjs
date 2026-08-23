@@ -9,6 +9,8 @@ import { runDrawioBridgeTests } from '../src/lib/__tests__/drawioBridge.test.js'
 import { runDeploySafetyTests } from '../src/lib/__tests__/deploySafety.test.js';
 import { runBusinessWorkflowTests } from '../src/lib/__tests__/businessWorkflow.test.js';
 import { runGeneratedArtifactSafetyTests } from '../src/lib/__tests__/generatedArtifactSafety.test.js';
+import { runEntryLevelGigMatcherTests } from '../src/lib/__tests__/entryLevelGigMatcher.test.js';
+import { runCareerProgressionTests } from '../src/lib/__tests__/careerProgression.test.js';
 
 const agents = runAllTests();
 console.log(printReport(agents));
@@ -65,6 +67,22 @@ for (const result of artifacts.results) {
   console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 }
 
+const entryLevel = runEntryLevelGigMatcherTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  ENTRY-LEVEL GIG MATCHER TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of entryLevel.results) {
+  console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+}
+
+const career = runCareerProgressionTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  CAREER PROGRESSION TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of career.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
 const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
 const syncOk = sync.allPassed;
@@ -74,7 +92,9 @@ const drawioOk = drawio.allPassed;
 const deploySafetyOk = deploySafety.allPassed;
 const businessOk = business.allPassed;
 const artifactsOk = artifacts.allPassed;
-const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk;
+const entryLevelOk = entryLevel.allPassed;
+const careerOk = career.allPassed;
+const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk;
 
 console.log('');
 console.log(allOk
@@ -82,6 +102,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

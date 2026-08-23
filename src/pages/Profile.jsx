@@ -8,26 +8,39 @@ import { PageHeader } from '../components/common/PageHeader.jsx';
 import { ProgressRing } from '../components/roadmap/ProgressRing.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { useGamification } from '../context/GamificationContext.jsx';
+import { usePortfolio } from '../context/PortfolioContext.jsx';
+import { useFreelance } from '../context/FreelanceContext.jsx';
+import { assessCareerProgression } from '../lib/careerProgression.js';
 import { CATEGORY_META, LEVELS, RARITY_META } from '../data/gamification.js';
 import { cn, formatDate } from '../lib/utils.js';
 
 export default function Profile() {
   const { profile } = useApp();
+  const portfolio = usePortfolio();
+  const freelance = useFreelance();
   const {
     totalXp, level, next, xpBreakdown, badgeView, unlockedCount,
     leaderboards, streak, shieldUsedThisWeek, useStreakShield, resetGamification,
   } = useGamification();
 
   const firstName = (profile?.name || 'Cloud Builder').split(' ')[0];
+  const career = useMemo(() => assessCareerProgression({
+    portfolioIntelligence: portfolio.intelligence,
+    projectStats: portfolio.projectStats,
+    projects: portfolio.projects,
+    proposals: freelance.state.proposals,
+  }), [portfolio.intelligence, portfolio.projectStats, portfolio.projects, freelance.state.proposals]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Profile + Gamification"
-        title={`Level ${level.n} · ${level.name}`}
-        subtitle={`${firstName} — every tick, lab, quiz, project, and proposal adds up here.`}
+        title={career.current.headline}
+        subtitle={`${firstName} — career level is based on portfolio and client evidence, while XP tracks learning activity.`}
         icon={Trophy}
       />
+
+      <CareerProgressCard career={career} />
 
       {/* Hero */}
       <HeroCard
@@ -64,6 +77,41 @@ export default function Profile() {
         </button>
       </div>
     </div>
+  );
+}
+
+function CareerProgressCard({ career }) {
+  return (
+    <section className="surface rounded-2xl p-5 border border-aws-orange/30">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange">Evidence-based career level</div>
+          <h2 className="text-xl font-black mt-1">{career.current.label}</h2>
+          <p className="text-sm text-muted mt-1 max-w-3xl">{career.current.scope}</p>
+        </div>
+        <div className="rounded-xl bg-aws-orange/10 border border-aws-orange/30 px-4 py-2 text-center">
+          <div className="text-2xl font-black text-aws-orange">{career.score}/100</div>
+          <div className="text-[9px] uppercase font-bold text-muted">Evidence score</div>
+        </div>
+      </div>
+      {career.next ? (
+        <div className="mt-4">
+          <div className="text-xs font-extrabold mb-2">Progress to {career.next.label}</div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {career.requirements.map((r) => {
+              const done = r.current >= r.target;
+              return (
+                <div key={r.label} className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3">
+                  <div className="flex justify-between gap-2 text-xs font-bold"><span>{done ? '✓' : '○'} {r.label}</span><span>{Math.min(r.current, r.target)}/{r.target}</span></div>
+                  <div className="h-1.5 rounded-full bg-[var(--card)] mt-2 overflow-hidden"><div className="h-full bg-aws-orange" style={{ width: `${Math.min(100, (r.current / r.target) * 100)}%` }} /></div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : <p className="text-sm text-success mt-4">Senior evidence gates completed.</p>}
+      <p className="text-[10px] text-muted mt-3 italic">{career.disclaimer}</p>
+    </section>
   );
 }
 

@@ -19,10 +19,22 @@ import { fetchAllGigs, clearCache, getCacheAge, GIG_SOURCES } from '../../lib/gi
 import { recommendApproach, getApproachById } from '../../lib/approachRecommender.js';
 import { RateBenchmarkCard } from './RateBenchmarkCard.jsx';
 import { cn } from '../../lib/utils.js';
+import { assessEntryLevelGig, buildEntryLevelApplicationBrief } from '../../lib/entryLevelGigMatcher.js';
+import { assessCareerProgression } from '../../lib/careerProgression.js';
+import { usePortfolio } from '../../context/PortfolioContext.jsx';
+import { useFreelance } from '../../context/FreelanceContext.jsx';
 
 const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 
 export function GigFeed() {
+  const portfolio = usePortfolio();
+  const freelance = useFreelance();
+  const career = useMemo(() => assessCareerProgression({
+    portfolioIntelligence: portfolio.intelligence,
+    projectStats: portfolio.projectStats,
+    projects: portfolio.projects,
+    proposals: freelance.state.proposals,
+  }), [portfolio.intelligence, portfolio.projectStats, portfolio.projects, freelance.state.proposals]);
   const [data, setData] = useState({ gigs: [], sources: {}, fetchedAt: null, fromCache: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,6 +44,7 @@ export function GigFeed() {
   const [platforms, setPlatforms] = useState([]);
   const [minBudget, setMinBudget] = useState(0);
   const [datePosted, setDatePosted] = useState('all'); // all | 1d | 7d | 30d
+  const [experienceFit, setExperienceFit] = useState('entry'); // entry | stretch | all
 
   const load = useCallback(async ({ force = false } = {}) => {
     setLoading(true);
@@ -71,6 +84,9 @@ export function GigFeed() {
                        : datePosted === '30d' ? 30 * 24 * 60 * 60 * 1000
                        : null;
     return data.gigs.filter((g) => {
+      const fit = assessEntryLevelGig(g, { careerLevel: career.current.id });
+      if (experienceFit === 'entry' && fit.classification !== 'good-fit') return false;
+      if (experienceFit === 'stretch' && fit.classification === 'not-recommended') return false;
       if (platforms.length > 0 && !platforms.includes(g.source)) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -89,7 +105,7 @@ export function GigFeed() {
       }
       return true;
     });
-  }, [data.gigs, platforms, search, datePosted, minBudget]);
+  }, [data.gigs, platforms, search, datePosted, minBudget, experienceFit, career.current.id]);
 
   const cacheAgeMin = useMemo(() => {
     const age = getCacheAge();
@@ -107,7 +123,7 @@ export function GigFeed() {
             </div>
             <h2 className="text-xl font-extrabold flex items-center gap-2">
               <Briefcase size={18} className="text-aws-orange" />
-              AWS Freelance Gigs
+              Entry-Level AWS Gig Finder
               {!loading && (
                 <span className="text-xs font-bold opacity-70 px-2 py-0.5 rounded-full bg-[var(--card-2)]">
                   {filtered.length} of {data.gigs.length}
@@ -115,7 +131,8 @@ export function GigFeed() {
               )}
             </h2>
             <p className="text-[12px] opacity-80 mt-1">
-              Live from RemoteOK, Remotive, Jobicy, Arbeitnow, Himalayas + We Work Remotely. Auto-refreshes every 30 minutes.
+              Prioritizes junior AWS, networking, support, documentation, and low-risk planning work. Every match is scored conservatively before you apply.
+              <span className="block mt-1 text-aws-orange font-bold">Current evidence-based level: {career.current.label} · {career.score}/100</span>
               {data.fetchedAt && (
                 <span className="opacity-60"> · Last refresh {cacheAgeMin != null ? `${cacheAgeMin} min ago` : 'just now'}</span>
               )}
@@ -156,6 +173,16 @@ export function GigFeed() {
 
         {/* Filter row */}
         <div className="mt-4 flex flex-wrap gap-2 items-center">
+          <select
+            value={experienceFit}
+            onChange={(e) => setExperienceFit(e.target.value)}
+            className="rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-1.5 text-[12px] font-bold cursor-pointer"
+            title="Filter by experience fit"
+          >
+            <option value="entry">Entry-level matches</option>
+            <option value="stretch">Entry + stretch gigs</option>
+            <option value="all">All AWS gigs</option>
+          </select>
           <div className="relative flex-1 min-w-[200px]">
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
             <input
@@ -236,7 +263,7 @@ export function GigFeed() {
       {/* Cards grid */}
       {filtered.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {filtered.slice(0, 60).map((g) => <GigCard key={g.id} gig={g} />)}
+          {filtered.slice(0, 60).map((g) => <GigCard key={g.id} gig={g} career={career} />)}
         </div>
       )}
 
@@ -252,9 +279,11 @@ export function GigFeed() {
 // ════════════════════════════════════════════════════════════════════
 // Single gig card
 // ════════════════════════════════════════════════════════════════════
-function GigCard({ gig }) {
+function GigCard({ gig, career }) {
   // Generate links for the action buttons
-  const briefForActions = encodeURIComponent(`${gig.title}\n\n${gig.description}\n\nSkills: ${(gig.skills || []).join(', ')}`);
+  const fit = assessEntryLevelGig(gig, { careerLevel: career.current.id });
+  const applicationBrief = buildEntryLevelApplicationBrief(gig, { careerLevel: career.current.id, headline: career.current.headline });
+  const briefForActions = encodeURIComponent(applicationBrief);
   const proposalHref = `/freelance?tab=proposals&sub=smart&prefill=${briefForActions}`;
   const analyzeHref = `/job-analyzer?prefill=${briefForActions}`;
   const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(gig.title)}&brief=${briefForActions.slice(0, 600)}&source=freelance`;
@@ -283,6 +312,17 @@ function GigCard({ gig }) {
       {gig.description && (
         <p className="text-[12px] opacity-80 leading-snug line-clamp-2">{gig.description}</p>
       )}
+
+      <div className={cn(
+        'rounded-lg border px-2.5 py-2 text-[11px]',
+        fit.classification === 'good-fit' ? 'border-success/40 bg-success/10'
+          : fit.classification === 'stretch' ? 'border-amber-400/40 bg-amber-400/10'
+          : 'border-danger/40 bg-danger/10'
+      )}>
+        <div className="font-extrabold">{fit.label} · {fit.score}/100</div>
+        <div className="opacity-80 mt-0.5">{fit.reasons[0]}</div>
+        {fit.cautions[0] && <div className="text-amber-300 mt-0.5">Review: {fit.cautions[0]}</div>}
+      </div>
 
       {/* Meta line */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] opacity-75">
@@ -327,9 +367,9 @@ function GigCard({ gig }) {
       <Link
         to={solutionHref}
         className="mt-1 inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-[12px] font-extrabold bg-gradient-aws text-ink-950 hover:brightness-110 transition tap-44"
-        title="Architecture, plan, code, expert review + a build button"
+        title="Create a scoped plan and evidence-gated draft solution"
       >
-        <Wand2 size={13} /> Plan and validate this solution
+        <Wand2 size={13} /> Create application + delivery plan
       </Link>
 
       {/* Secondary actions */}
