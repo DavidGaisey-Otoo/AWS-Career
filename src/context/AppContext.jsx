@@ -7,6 +7,7 @@ const AppContext = createContext(null);
 
 const VERIFIED_PROFILE_LINKS = {
   upwork: 'https://www.upwork.com/freelancers/~01860d713afb1c357b',
+  hashnode: 'https://david-aws-builds.hashnode.dev',
 };
 
 const DEFAULT_PROFILE = {
@@ -27,7 +28,7 @@ const DEFAULT_PROFILE = {
     github: '',
     linkedin: '',
     upwork: VERIFIED_PROFILE_LINKS.upwork,
-    hashnode: '',
+    hashnode: VERIFIED_PROFILE_LINKS.hashnode,
   },
 };
 
@@ -85,16 +86,19 @@ export function AppProvider({ children }) {
   // overwriting anything the user has already entered. SyncContext then
   // carries the normal profile state to the private cross-device repository.
   useEffect(() => {
-    if (!profile?.integrations?.upwork) {
+    const missing = {};
+    if (!profile?.integrations?.upwork) missing.upwork = VERIFIED_PROFILE_LINKS.upwork;
+    if (!profile?.integrations?.hashnode) missing.hashnode = VERIFIED_PROFILE_LINKS.hashnode;
+    if (Object.keys(missing).length) {
       setProfile((current) => ({
         ...current,
         integrations: {
           ...(current.integrations || {}),
-          upwork: VERIFIED_PROFILE_LINKS.upwork,
+          ...missing,
         },
       }));
     }
-  }, [profile?.integrations?.upwork, setProfile]);
+  }, [profile?.integrations?.upwork, profile?.integrations?.hashnode, setProfile]);
 
   // Apply display preferences globally (CSS vars + html class)
   useEffect(() => {
