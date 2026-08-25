@@ -22,7 +22,6 @@ import { useSync } from '../../context/SyncContext.jsx';
 import {
   getStoredSyncRepo, readSecurityAdvisory, dismissSecurityAdvisory, recreateSyncGist,
 } from '../../lib/gistSync.js';
-import { readToken } from '../../lib/githubToken.js';
 import { hasGithubAppSession } from '../../lib/githubAppAuth.js';
 import { cn } from '../../lib/utils.js';
 
@@ -48,7 +47,7 @@ export function SyncModal() {
 
   if (!openModal) return null;
 
-  const hasToken = hasGithubAppSession() || !!readToken()?.token;
+  const hasToken = hasGithubAppSession();
   const hasScopeError =
     lastResult?.error === 'GITHUB_APP_MISSING_REPOSITORY_PERMISSION' ||
     /GITHUB_APP_MISSING_REPOSITORY_PERMISSION|Resource not accessible/i.test(meta.lastError || '');
@@ -126,7 +125,7 @@ export function SyncModal() {
         )}
 
         {/* ── STATE 1: SYNC ON ──────────────────────────────────────── */}
-        {enabled && hasToken && status !== 'no-token' && !hasScopeError && (
+        {enabled && hasToken && status !== 'no-token' && status !== 'error' && !hasScopeError && (
           <div className="space-y-3">
             <div className="rounded-xl border border-success/40 bg-success/5 p-4 flex items-center gap-3">
               <CheckCircle2 size={20} className="text-success shrink-0" />
@@ -187,6 +186,16 @@ export function SyncModal() {
               <strong>Temporary sync problem.</strong> The app will retry automatically. {meta.lastError}
             </div>
           </div>
+        )}
+
+        {status === 'error' && hasToken && !hasScopeError && (
+          <button
+            onClick={() => withBusy('retry sync', enable)}
+            disabled={busy}
+            className={cn('w-full btn btn-primary !text-[12px] !py-2.5 tap-44 gap-2', busy && 'opacity-50')}
+          >
+            {busy ? <><Loader2 size={13} className="animate-spin" /> Retrying…</> : <><Cloud size={13} /> Retry sync now</>}
+          </button>
         )}
 
         {/* ── ADVANCED disclosure ──────────────────────────────────── */}

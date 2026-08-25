@@ -25,8 +25,9 @@
  */
 
 import { STORAGE_KEY } from './constants.js';
-import { readToken } from './githubToken.js';
-import { getGithubAccessToken } from './githubAppAuth.js';
+import {
+  clearGithubAppSession, getGithubAccessToken, readGithubAppSession,
+} from './githubAppAuth.js';
 
 const SYNC_REPO_NAME   = 'aws-career-launchpad-sync';
 const SYNC_REPO_DESC   = 'Private cross-device state for AWS Career Launchpad Pro';
@@ -205,10 +206,18 @@ export function setStoredGistId(id) {
 const GITHUB_API = 'https://api.github.com';
 
 async function getToken() {
-  const appToken = await getGithubAccessToken().catch(() => null);
-  if (appToken) return appToken;
-  const t = readToken();
-  return t?.token || null;
+  // Never silently fall back to an old PAT when a GitHub App session exists.
+  // A failed refresh must be surfaced as a reconnect state; otherwise an
+  // expired legacy PAT can leave every device stuck on a permanent red badge.
+  const hadAppSession = Boolean(readGithubAppSession()?.accessToken);
+  if (hadAppSession) {
+    const appToken = await getGithubAccessToken().catch(() => null);
+    return appToken || null;
+  }
+  // Sync now uses only the renewable GitHub App connection. Legacy PATs are
+  // deliberately ignored: they expire independently and were the source of
+  // contradictory green/yellow/red states across browsers.
+  return null;
 }
 
 async function ghFetch(path, options = {}) {
@@ -233,6 +242,10 @@ async function ghFetch(path, options = {}) {
       throw err;
     }
     if (res.status === 401) {
+      // Tokens may be revoked before their advertised expiry. Clear the bad
+      // app session immediately so the UI offers one clean reconnection
+      // instead of retrying an invalid credential forever.
+      if (readGithubAppSession()?.accessToken) clearGithubAppSession();
       const err = new Error('GITHUB_AUTH_INVALID');
       err.code = 'GITHUB_AUTH_INVALID';
       err.status = 401;

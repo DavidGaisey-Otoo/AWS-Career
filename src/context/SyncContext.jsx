@@ -15,7 +15,6 @@ import {
   deleteSyncGist, isSyncEnabled, pullSnapshot, pushSnapshot, readSyncMeta,
   restoreLocalStorage, setSyncEnabled as setEnabledRaw, snapshotLocalStorage, syncOnOpen, writeSyncMeta,
 } from '../lib/gistSync.js';
-import { readToken } from '../lib/githubToken.js';
 import { hasGithubAppSession } from '../lib/githubAppAuth.js';
 
 const SyncContext = createContext(null);
@@ -23,7 +22,8 @@ const SyncContext = createContext(null);
 const PUSH_DEBOUNCE_MS = 4000;
 const LOCAL_CHANGE_SCAN_MS = 2000;
 const PULL_INTERVAL_MS = 30_000;
-const hasGithubAuth = () => hasGithubAppSession() || Boolean(readToken()?.token);
+const hasGithubAuth = () => hasGithubAppSession();
+const isAuthError = (value) => /GITHUB_AUTH_INVALID|No GitHub connection configured|no-token/i.test(String(value || ''));
 
 export function SyncProvider({ children }) {
   const [status, setStatus] = useState('idle');      // idle | syncing | synced | error | disabled | no-token
@@ -64,6 +64,8 @@ export function SyncProvider({ children }) {
           setAppliedOnOpen(result);
           // Force reload so context providers re-read the restored state
           setTimeout(() => window.location.reload(), 400);
+        } else if (result.reason === 'no-token' || isAuthError(result.error)) {
+          setStatus('no-token');
         } else if (result.reason === 'error') {
           setStatus('error');
         } else {
@@ -98,6 +100,11 @@ export function SyncProvider({ children }) {
         const message = String(err.message || err);
         writeSyncMeta({ lastError: message });
         setMeta(readSyncMeta());
+        if (isAuthError(message) || !hasGithubAuth()) {
+          setStatus('no-token');
+          localDirty.current = false;
+          return;
+        }
         setStatus('error');
         // Transient GitHub conflicts/network interruptions must heal without
         // making the user reconnect or press buttons. Keep the edit dirty and
@@ -163,6 +170,8 @@ export function SyncProvider({ children }) {
         if (result.applied) {
           setStatus('synced');
           window.location.reload();
+        } else if (result.reason === 'no-token' || isAuthError(result.error)) {
+          setStatus('no-token');
         } else if (result.reason === 'error') {
           setStatus('error');
         } else {
@@ -209,8 +218,11 @@ export function SyncProvider({ children }) {
       setStatus('synced');
       return { ok: true, ...result };
     } catch (err) {
-      setStatus('error');
-      return { ok: false, error: String(err.message || err) };
+      const message = String(err.message || err);
+      writeSyncMeta({ lastError: message });
+      setMeta(readSyncMeta());
+      setStatus(isAuthError(message) || !hasGithubAuth() ? 'no-token' : 'error');
+      return { ok: false, error: message };
     }
   }, []);
 
@@ -227,8 +239,11 @@ export function SyncProvider({ children }) {
       setTimeout(() => window.location.reload(), 400);
       return { ok: true, applied: true, ...result };
     } catch (err) {
-      setStatus('error');
-      return { ok: false, error: String(err.message || err) };
+      const message = String(err.message || err);
+      writeSyncMeta({ lastError: message });
+      setMeta(readSyncMeta());
+      setStatus(isAuthError(message) || !hasGithubAuth() ? 'no-token' : 'error');
+      return { ok: false, error: message };
     }
   }, []);
 

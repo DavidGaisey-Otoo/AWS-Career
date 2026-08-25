@@ -11,7 +11,6 @@ import { CheckCircle2, CloudOff, Loader2, AlertCircle, KeyRound, Cloud } from 'l
 import { useState } from 'react';
 import { useSync } from '../../context/SyncContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
-import { readToken } from '../../lib/githubToken.js';
 import { hasGithubAppSession } from '../../lib/githubAppAuth.js';
 import { cn } from '../../lib/utils.js';
 
@@ -20,7 +19,7 @@ export function SyncStatusChip() {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
 
-  const hasToken = hasGithubAppSession() || !!readToken()?.token;
+  const hasToken = hasGithubAppSession();
 
   async function handleClick() {
     // If sync is OFF: try to flip it on directly. The modal is the
