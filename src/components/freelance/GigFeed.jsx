@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   RefreshCw, ExternalLink, Wand2, FileText, AlertTriangle, Briefcase,
-  Calendar, DollarSign, Filter, Search, MapPin, CheckCircle2,
+  Calendar, DollarSign, Filter, Search, MapPin, CheckCircle2, PlusCircle, Trash2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchAllGigs, clearCache, getCacheAge, GIG_SOURCES } from '../../lib/gigFeed.js';
@@ -38,6 +38,10 @@ export function GigFeed() {
   const [data, setData] = useState({ gigs: [], sources: {}, fetchedAt: null, fromCache: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [marketplaceGigs, setMarketplaceGigs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('awscl-pro::v1::marketplace-gigs') || '[]'); }
+    catch { return []; }
+  });
 
   // Filters
   const [search, setSearch] = useState('');
@@ -75,6 +79,10 @@ export function GigFeed() {
   function togglePlatform(id) {
     setPlatforms((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   }
+
+  useEffect(() => {
+    localStorage.setItem('awscl-pro::v1::marketplace-gigs', JSON.stringify(marketplaceGigs.slice(0, 20)));
+  }, [marketplaceGigs]);
 
   // Apply filters
   const filtered = useMemo(() => {
@@ -244,6 +252,13 @@ export function GigFeed() {
         </div>
       </div>
 
+      <MarketplaceGigImport
+        gigs={marketplaceGigs}
+        career={career}
+        onAdd={(gig) => setMarketplaceGigs((current) => [gig, ...current].slice(0, 20))}
+        onRemove={(id) => setMarketplaceGigs((current) => current.filter((gig) => gig.id !== id))}
+      />
+
       {/* Error banner */}
       {error && (
         <div className="surface rounded-2xl border border-danger/40 bg-danger/5 p-4 flex items-start gap-2.5">
@@ -308,6 +323,90 @@ export function GigFeed() {
 // ════════════════════════════════════════════════════════════════════
 // Single gig card
 // ════════════════════════════════════════════════════════════════════
+function MarketplaceGigImport({ gigs, career, onAdd, onRemove }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ platform: 'Upwork', title: '', budget: '', url: '', description: '' });
+  const [formError, setFormError] = useState('');
+
+  function update(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function addGig(event) {
+    event.preventDefault();
+    const title = form.title.trim();
+    const description = form.description.trim();
+    if (!title || description.length < 30) {
+      setFormError('Add the gig title and at least 30 characters from the job description.');
+      return;
+    }
+    const url = form.url.trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      setFormError('The listing link must begin with https:// (or leave it blank).');
+      return;
+    }
+    setFormError('');
+    onAdd({
+      id: `marketplace-${Date.now()}`,
+      title,
+      description,
+      budget: form.budget.trim() || null,
+      url: url || null,
+      source: `marketplace-${form.platform.toLowerCase().replace(/\s+/g, '-')}`,
+      sourceLabel: form.platform,
+      postedAt: new Date().toISOString(),
+      location: 'Remote',
+      company: null,
+      skills: [],
+      importedByUser: true,
+    });
+    setForm((current) => ({ ...current, title: '', budget: '', url: '', description: '' }));
+  }
+
+  return (
+    <section className="surface rounded-2xl p-5 border border-aws-orange/30">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange">Marketplace Gig Import & Match</div>
+          <h3 className="text-lg font-extrabold mt-1">Found a priced gig on Upwork or another marketplace?</h3>
+          <p className="text-[12px] opacity-75 mt-1 max-w-3xl">Paste the listing once. The app scores it against your current level and carries the exact requirements and amount into your proposal and delivery workflow. It never signs in, scrapes, submits, or accepts work for you.</p>
+        </div>
+        <button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-aws-orange text-ink-950 text-xs font-extrabold">
+          <PlusCircle size={14} /> {open ? 'Close importer' : 'Import marketplace gig'}
+        </button>
+      </div>
+
+      {open && (
+        <form onSubmit={addGig} className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 rounded-xl bg-[var(--card-2)] border border-token p-4">
+          <select value={form.platform} onChange={(e) => update('platform', e.target.value)} className="rounded-lg bg-[var(--surface)] border border-token px-3 py-2 text-sm">
+            {['Upwork', 'Fiverr', 'Freelancer', 'PeoplePerHour', 'Direct client', 'Other'].map((name) => <option key={name}>{name}</option>)}
+          </select>
+          <input value={form.budget} onChange={(e) => update('budget', e.target.value)} placeholder="Amount, e.g. $200 fixed or $20/hour" className="rounded-lg bg-[var(--surface)] border border-token px-3 py-2 text-sm" />
+          <input value={form.title} onChange={(e) => update('title', e.target.value)} placeholder="Gig title" className="md:col-span-2 rounded-lg bg-[var(--surface)] border border-token px-3 py-2 text-sm" />
+          <input value={form.url} onChange={(e) => update('url', e.target.value)} placeholder="Listing URL (optional)" className="md:col-span-2 rounded-lg bg-[var(--surface)] border border-token px-3 py-2 text-sm" />
+          <textarea value={form.description} onChange={(e) => update('description', e.target.value)} rows={6} placeholder="Paste the full job description, deliverables, required services and client constraints" className="md:col-span-2 rounded-lg bg-[var(--surface)] border border-token px-3 py-2 text-sm resize-y" />
+          {formError && <div className="md:col-span-2 text-xs font-bold text-danger">{formError}</div>}
+          <button type="submit" className="md:col-span-2 inline-flex justify-center items-center gap-2 rounded-lg bg-gradient-aws text-ink-950 px-4 py-2.5 text-sm font-extrabold"><Wand2 size={15} /> Match and prepare this gig</button>
+        </form>
+      )}
+
+      {gigs.length > 0 && (
+        <div className="mt-4">
+          <div className="text-xs font-extrabold mb-2">Your imported marketplace gigs ({gigs.length})</div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {gigs.map((gig) => (
+              <div key={gig.id} className="relative">
+                <button type="button" onClick={() => onRemove(gig.id)} className="absolute right-3 bottom-3 z-10 p-1.5 rounded-md border border-danger/40 text-danger bg-[var(--surface)]" title="Remove imported gig"><Trash2 size={12} /></button>
+                <GigCard gig={gig} career={career} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function GigCard({ gig, career }) {
   // Generate links for the action buttons
   const fit = assessEntryLevelGig(gig, { careerLevel: career.current.id });
@@ -403,14 +502,16 @@ function GigCard({ gig, career }) {
 
       {/* Secondary actions */}
       <div className="flex flex-wrap gap-1.5 pt-2 border-t border-token">
-        <a
-          href={gig.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
-        >
-          <ExternalLink size={10} /> View
-        </a>
+        {gig.url && (
+          <a
+            href={gig.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
+          >
+            <ExternalLink size={10} /> View
+          </a>
+        )}
         <Link
           to={analyzeHref}
           className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
