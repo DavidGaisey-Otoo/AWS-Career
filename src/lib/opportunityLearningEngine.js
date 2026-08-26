@@ -63,8 +63,16 @@ export function scoreOpportunity(opportunity, profile) {
   });
   score = Math.max(0, Math.min(100, Math.round(score)));
   const recommendation = score >= 70 ? 'Strong practice match' : score >= 48 ? 'Stretch — review gaps' : 'Study first';
+  const stars = score >= 85 ? 5 : score >= 70 ? 4 : score >= 52 ? 3 : score >= 35 ? 2 : 1;
+  const action = score >= 70
+    ? 'Good candidate — verify the real listing, scope and client before applying.'
+    : score >= 48
+      ? 'Build the missing skills first, then reconsider with evidence.'
+      : 'Avoid for now — the delivery risk is above your current evidence level.';
   return {
     score,
+    stars,
+    action,
     recommendation,
     reasons: reasons.slice(0, 3),
     gaps: gaps.slice(0, 5),

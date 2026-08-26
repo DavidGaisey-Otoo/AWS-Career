@@ -27,7 +27,14 @@ export function runOpportunityLearningTests() {
 
   test('senior opportunities remain conservative for a new profile', () => {
     const result = scoreOpportunity({ level: 'Senior', skills: ['vpc', 'iam', 'cloudformation'] }, buildOpportunityLearningProfile());
-    assert(result.score < 48 && result.confidence === 'low', 'senior work was over-recommended');
+    assert(result.score < 48 && result.stars <= 2 && result.confidence === 'low', 'senior work was over-recommended');
+  });
+
+  test('every recommendation has stars, action advice and a study next step', () => {
+    const result = scoreOpportunity({ level: 'Mid', skills: ['lambda', 'dynamodb'] }, buildOpportunityLearningProfile());
+    assert(result.stars >= 1 && result.stars <= 5, 'invalid stars');
+    assert(Boolean(result.action), 'missing action advice');
+    assert(result.study.length > 0, 'missing study advice');
   });
 
   return { results, allPassed: results.every((result) => result.pass) };

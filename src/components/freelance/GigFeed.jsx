@@ -467,7 +467,12 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
       </div>
 
       {learnedMatch && (
-        <div className="text-[10.5px] opacity-75">Personal learning rank: <strong>{learnedMatch.score}/100</strong> · {learnedMatch.confidence} confidence</div>
+        <div className="rounded-lg border border-token bg-[var(--card-2)] px-2.5 py-2 text-[10.5px]">
+          <div className="text-aws-orange tracking-wider text-sm" aria-label={`${learnedMatch.stars} out of 5 stars`}>{'★'.repeat(learnedMatch.stars)}<span className="opacity-25">{'★'.repeat(5 - learnedMatch.stars)}</span></div>
+          <div className="font-extrabold">App advice: {learnedMatch.action}</div>
+          <div className="opacity-70 mt-0.5">Personal rank {learnedMatch.score}/100 · {learnedMatch.confidence} confidence</div>
+          {learnedMatch.study[0] && <div className="text-electric mt-0.5">Study next: {learnedMatch.study[0]}</div>}
+        </div>
       )}
 
       {/* Meta line */}

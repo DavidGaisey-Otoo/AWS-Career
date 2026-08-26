@@ -298,11 +298,14 @@ export default function Market() {
                     ? `${j.rate.currency} ${j.rate.min}-${j.rate.max}/hr`
                     : `${j.rate.currency} ${j.rate.min.toLocaleString()}-${j.rate.max.toLocaleString()}`}
                 </span>
-                <span className="text-muted">{j.proposals} proposals · {j.level}</span>
+                <span className="text-muted">Example: {j.proposals} competing proposals · {j.level} · not live-verified</span>
               </div>
               <div className="mt-3 rounded-lg border border-token bg-[var(--card)] p-2 text-[11px]">
-                <div className="font-extrabold">{match.recommendation} · {match.score}/100 · {match.confidence} confidence</div>
+                <div className="text-aws-orange tracking-wider text-sm" aria-label={`${match.stars} out of 5 stars`}>{'★'.repeat(match.stars)}<span className="opacity-25">{'★'.repeat(5 - match.stars)}</span></div>
+                <div className="font-extrabold mt-1">{match.recommendation} · {match.score}/100 · {match.confidence} confidence</div>
                 <div className="text-muted mt-1">{match.reasons[0] || (match.gaps.length ? `Study gaps: ${match.gaps.join(', ')}` : 'Review the full scope before deciding.')}</div>
+                <div className="font-bold mt-1">Advice: {match.action}</div>
+                {match.study[0] && <div className="text-electric mt-1">Study next: {match.study[0]}</div>}
               </div>
               <div className="flex gap-2 mt-2">
                 <button onClick={() => recordPreference(j, 'interested')} className={cn('flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-bold', lastPreference === 'interested' ? 'border-success text-success bg-success/10' : 'border-token')}>Interested</button>
