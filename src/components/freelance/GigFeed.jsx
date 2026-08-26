@@ -112,6 +112,14 @@ export function GigFeed() {
     return age ? Math.floor(age / 60000) : null;
   }, [data.fetchedAt]);
 
+  const fitSummary = useMemo(() => data.gigs.reduce((counts, gig) => {
+    const classification = assessEntryLevelGig(gig, { careerLevel: career.current.id }).classification;
+    if (classification === 'good-fit') counts.entry += 1;
+    else if (classification === 'stretch') counts.stretch += 1;
+    else counts.notRecommended += 1;
+    return counts;
+  }, { entry: 0, stretch: 0, notRecommended: 0 }), [data.gigs, career.current.id]);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -133,6 +141,7 @@ export function GigFeed() {
             <p className="text-[12px] opacity-80 mt-1">
               Prioritizes junior AWS, networking, support, documentation, and low-risk planning work. Every match is scored conservatively before you apply.
               <span className="block mt-1 text-aws-orange font-bold">Current evidence-based level: {career.current.label} · {career.score}/100</span>
+              <span className="block mt-1 opacity-70">Live remote job boards only. Upwork does not provide this app a public job-feed API, so Upwork posts must be opened there or pasted into Job Analyzer.</span>
               {data.fetchedAt && (
                 <span className="opacity-60"> · Last refresh {cacheAgeMin != null ? `${cacheAgeMin} min ago` : 'just now'}</span>
               )}
@@ -253,10 +262,30 @@ export function GigFeed() {
 
       {/* Empty state */}
       {!loading && filtered.length === 0 && !error && (
-        <div className="surface rounded-2xl p-12 text-center opacity-70">
+        <div className="surface rounded-2xl p-8 text-center">
           <Briefcase size={28} className="mx-auto mb-3 opacity-50" />
-          <div className="text-sm font-bold mb-1">No gigs match your filters</div>
-          <div className="text-[12px]">Try widening the filters above, or wait for the next auto-refresh.</div>
+          {experienceFit === 'entry' && data.gigs.length > 0 ? (
+            <>
+              <div className="text-sm font-bold mb-1">{data.gigs.length} live opportunities scanned — no safe entry-level match today</div>
+              <div className="text-[12px] opacity-75 max-w-xl mx-auto">
+                The scanner did not lose the results: it screened out {fitSummary.notRecommended} unsuitable roles and found {fitSummary.stretch} that may be possible with careful review.
+              </div>
+              {fitSummary.stretch > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setExperienceFit('stretch')}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-aws-orange px-4 py-2 text-xs font-extrabold text-black hover:brightness-110"
+                >
+                  Review {fitSummary.stretch} stretch {fitSummary.stretch === 1 ? 'gig' : 'gigs'} safely
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="text-sm font-bold mb-1">No gigs match the selected filters</div>
+              <div className="text-[12px] opacity-75">Clear the search, platform, date, or budget filters—or refresh the live sources.</div>
+            </>
+          )}
         </div>
       )}
 
