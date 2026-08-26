@@ -15,7 +15,7 @@
  * Pure functions only — no network, no AWS, no browser APIs.
  */
 
-import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness } from '../gigSolutionPipeline.js';
+import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness, extractBudgetFromBrief } from '../gigSolutionPipeline.js';
 
 // ════════════════════════════════════════════════════════════════════
 // Fixtures
@@ -430,6 +430,14 @@ const CHECKS = [
       assert(brief.includes('8,000'), 'budget lost');
       assert(brief.includes('United Kingdom'), 'location lost');
       assert(brief.includes('terraform'), 'skills lost');
+    },
+  },
+  {
+    name: 'a pasted fixed budget stays attached to the generated solution',
+    run: () => {
+      const brief = 'Deploy an S3 and CloudFront website. Fixed budget $200. Client approval is required.';
+      assert(extractBudgetFromBrief(brief) === '$200', 'budget parser lost the stated fixed price');
+      assert(runPipeline(brief).input.budget === '$200', 'pipeline did not carry the budget into downstream actions');
     },
   },
   {

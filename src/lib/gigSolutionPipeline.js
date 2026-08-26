@@ -74,6 +74,17 @@ export function gigToBrief(gig) {
   ].filter(Boolean).join('\n');
 }
 
+/** Keep a plainly stated client budget attached to manual/pasted briefs. */
+export function extractBudgetFromBrief(brief) {
+  const text = String(brief || '');
+  const labelled = text.match(/\b(?:fixed\s+)?budget\s*(?:is|of|:)?\s*([$£€])\s*([\d,]+(?:\.\d{1,2})?)(?:\s*(?:-|to)\s*\1?\s*([\d,]+(?:\.\d{1,2})?))?/i);
+  const fallback = text.match(/([$£€])\s*([\d,]+(?:\.\d{1,2})?)\s*(?:fixed|budget|project)/i);
+  const match = labelled || fallback;
+  if (!match) return null;
+  const high = match[3] ? `-${match[1]}${match[3]}` : '';
+  return `${match[1]}${match[2]}${high}`;
+}
+
 function understand(brief, options) {
   const analysis  = analyseProject(brief, { knownRegions: options.knownRegions || [] });
   const extracted = extractFromBrief(brief);
@@ -506,7 +517,7 @@ export function runPipeline(gig, options = {}) {
       source: typeof gig === 'string' ? 'manual' : (gig?.source || 'manual'),
       sourceLabel: typeof gig === 'string' ? 'Pasted brief' : (gig?.sourceLabel || 'Manual'),
       url: typeof gig === 'string' ? null : (gig?.url || null),
-      budget: typeof gig === 'string' ? null : (gig?.budget || null),
+      budget: typeof gig === 'string' ? extractBudgetFromBrief(brief) : (gig?.budget || extractBudgetFromBrief(brief)),
     },
     understanding,
     analysis,
