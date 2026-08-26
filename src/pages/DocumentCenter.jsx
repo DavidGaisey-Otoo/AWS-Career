@@ -4,7 +4,7 @@ import {
   Send, Trash2, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useAI } from '../context/AIContext.jsx';
 import { useApp } from '../context/AppContext.jsx';
@@ -22,6 +22,7 @@ import { cn } from '../lib/utils.js';
 import { ContractReviewPanel } from '../components/contract-review/ContractReviewPanel.jsx';
 import { InvoiceReviewPanel } from '../components/invoice-review/InvoiceReviewPanel.jsx';
 import { DocReviewPanel } from '../components/doc-review/DocReviewPanel.jsx';
+import { analyzeJob } from '../data/jobAnalyzer.js';
 
 const TABS = [
   { id: 'overview',   label: 'Overview',   icon: FileText },
@@ -32,7 +33,16 @@ const TABS = [
 ];
 
 export default function DocumentCenter() {
-  const [tab, setTab] = useState('overview');
+  const [params] = useSearchParams();
+  const requestedTab = params.get('tab');
+  const [tab, setTab] = useState(() => TABS.some((item) => item.id === requestedTab) ? requestedTab : 'overview');
+  const linkedBrief = params.get('prefill') || '';
+  const linkedContext = useMemo(() => ({
+    sourceBrief: linkedBrief,
+    title: params.get('title') || '',
+    budget: Number(String(params.get('budget') || '').replace(/[^0-9.]/g, '')) || null,
+    analysis: linkedBrief ? analyzeJob(linkedBrief) : null,
+  }), [linkedBrief, params]);
 
   return (
     <div className="space-y-4">
@@ -66,7 +76,7 @@ export default function DocumentCenter() {
       </div>
 
       {tab === 'overview'   && <OverviewTab setTab={setTab} />}
-      {tab === 'contracts'  && <ContractsTab />}
+      {tab === 'contracts'  && <ContractsTab linkedContext={linkedContext} />}
       {tab === 'invoices'   && <InvoicesTab />}
       {tab === 'deliveries' && <DeliveriesTab />}
       {tab === 'library'    && <LibraryTab />}
@@ -135,7 +145,7 @@ function OverviewTab({ setTab }) {
 // CONTRACTS
 // =================================================================
 
-function ContractsTab() {
+function ContractsTab({ linkedContext }) {
   const toast = useToast();
   const dialog = useDialog();
   const { profile } = useApp();
@@ -153,6 +163,14 @@ function ContractsTab() {
 
   const startNew = () => {
     const c = buildContract({
+      analysis: linkedContext?.analysis || null,
+      brief: {
+        projectTitle: linkedContext?.title || '',
+        budget: linkedContext?.budget,
+        scope: linkedContext?.sourceBrief
+          ? `Work is limited to the requirements confirmed for "${linkedContext.title || 'this engagement'}". The source brief remains the scope reference; missing or ambiguous requirements must be confirmed with the client in writing before implementation.\n\nSource brief:\n${linkedContext.sourceBrief}`
+          : undefined,
+      },
       author: { name: profile.name || '', email: profile.integrations?.upwork || '' },
       client: {},
     });

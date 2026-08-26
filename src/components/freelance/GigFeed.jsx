@@ -315,7 +315,7 @@ function GigCard({ gig, career }) {
   const briefForActions = encodeURIComponent(applicationBrief);
   const proposalHref = `/freelance?tab=proposals&sub=smart&prefill=${briefForActions}`;
   const analyzeHref = `/job-analyzer?prefill=${briefForActions}`;
-  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(gig.title)}&brief=${briefForActions.slice(0, 600)}&source=freelance`;
+  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(gig.title)}&brief=${briefForActions}&source=freelance`;
   // GIG-01: carry the whole gig (not just text) into Solution Studio so it
   // keeps the budget, company, skills + source link for the solution header.
   const solutionHref = `/solution?gig=${encodeGig(gig)}`;

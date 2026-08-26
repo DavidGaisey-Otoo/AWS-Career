@@ -5,7 +5,7 @@ import {
   Loader2, Plus, Printer, Save, Sparkles, Target, Trash2, Wand2, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useDialog } from '../context/DialogContext.jsx';
 import { useEarn } from '../context/EarnContext.jsx';
@@ -17,6 +17,7 @@ import { openPrintable } from '../lib/printableHtml.js';
 import { cn } from '../lib/utils.js';
 import { useApp } from '../context/AppContext.jsx';
 import { ProjectPlanReviewPanel } from '../components/project-plan-review/ProjectPlanReviewPanel.jsx';
+import { analyzeJob } from '../data/jobAnalyzer.js';
 
 const PHASE_COLOR_TOKEN = {
   orange:  { bg: 'bg-aws-orange/15', text: 'text-aws-orange', border: 'border-aws-orange/40', bar: '#FF9900' },
@@ -27,12 +28,23 @@ const PHASE_COLOR_TOKEN = {
 };
 
 export default function ProjectPlan() {
+  const [params] = useSearchParams();
   const toast = useToast();
   const dialog = useDialog();
   const { profile } = useApp();
   const { state: fre } = useFreelance();
   const { state: earn, savePlan, deletePlan } = useEarn();
-  const lastAnalysis = earn.lastAnalysis;
+  const linkedBrief = params.get('prefill') || '';
+  const linkedTitle = params.get('title') || 'Client AWS engagement';
+  const linkedBudgetText = params.get('budget') || '';
+  const linkedAnalysis = useMemo(() => linkedBrief ? {
+    at: `linked:${linkedBrief.length}`,
+    jdText: linkedBrief,
+    suggestedName: linkedTitle,
+    suggestedClient: '',
+    analysis: analyzeJob(linkedBrief),
+  } : null, [linkedBrief, linkedTitle]);
+  const lastAnalysis = linkedAnalysis || earn.lastAnalysis;
 
   // ----- state -----
   const [activeId, setActiveId] = useState(null);
@@ -54,6 +66,16 @@ export default function ProjectPlan() {
     setForm(seedForm(lastAnalysis));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastAnalysis?.at]);
+
+  useEffect(() => {
+    if (!linkedBrief) return;
+    const linkedBudget = Number(String(linkedBudgetText).replace(/[^0-9.]/g, '')) || '';
+    setForm((current) => ({
+      ...seedForm(linkedAnalysis),
+      clientId: current.clientId,
+      budget: linkedBudget || seedForm(linkedAnalysis).budget,
+    }));
+  }, [linkedBrief, linkedAnalysis, linkedBudgetText]);
 
   const client = fre.clients.find((c) => c.id === form.clientId);
 
@@ -722,4 +744,3 @@ function seedForm(lastAnalysis) {
     budget:        a?.budget?.kind === 'fixed' ? a.budget.amount : '',
   };
 }
-

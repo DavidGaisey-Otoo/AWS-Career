@@ -246,7 +246,7 @@ function Analysis({ result }) {
 
   const pickedServices = autoFill.services || [];
   const inferredTitle = autoFill.name || (briefText.split(/\n/)[0] || 'Freelance job walkthrough').slice(0, 80);
-  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(inferredTitle)}&brief=${encodeURIComponent((autoFill.brief || briefText).slice(0, 600))}&services=${pickedServices.join(',')}&source=freelance`;
+  const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(inferredTitle)}&brief=${encodeURIComponent((autoFill.brief || briefText).slice(0, 2000))}&services=${pickedServices.join(',')}&source=freelance`;
 
   return (
     <div className="space-y-3">

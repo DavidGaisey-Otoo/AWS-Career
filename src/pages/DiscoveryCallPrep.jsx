@@ -4,7 +4,7 @@ import {
   PhoneIncoming, Save, Send, Shield, Sparkles, Target, Trophy, User,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { useAWS } from '../context/AWSContext.jsx';
@@ -23,6 +23,7 @@ import { AddToCalendarButton } from '../components/calendar/AddToCalendarButton.
 import { cn } from '../lib/utils.js';
 
 export default function DiscoveryCallPrep() {
+  const [params] = useSearchParams();
   const toast = useToast();
   const { profile } = useApp();
   const { state: fre, logCommunication } = useFreelance();
@@ -33,15 +34,28 @@ export default function DiscoveryCallPrep() {
   const gmailUser = { userIndex: awsProfile?.gmailUserIndex ?? 0, authAddress: awsProfile?.gmailAddress || '' };
 
   // ----- Pre-call inputs -----
-  const [jdText, setJdText] = useState('');
+  const linkedBrief = params.get('prefill') || '';
+  const linkedTitle = params.get('title') || '';
+  const linkedBudgetText = params.get('budget') || '';
+  const [jdText, setJdText] = useState(() => linkedBrief);
   const [typeOverride, setTypeOverride] = useState('');
   const [clientId, setClientId] = useState('');
   const [brief, setBrief] = useState({
-    projectTitle: '',
+    projectTitle: linkedTitle,
     timeline: '',
-    budget: '',
+    budget: String(linkedBudgetText).replace(/[^0-9.]/g, ''),
     currency: 'USD',
   });
+
+  useEffect(() => {
+    if (!linkedBrief) return;
+    setJdText(linkedBrief);
+    setBrief((current) => ({
+      ...current,
+      projectTitle: linkedTitle || current.projectTitle,
+      budget: String(linkedBudgetText).replace(/[^0-9.]/g, '') || current.budget,
+    }));
+  }, [linkedBrief, linkedTitle, linkedBudgetText]);
 
   // Auto-fill from the last Job Analyzer run — only on first mount if user
   // hasn't typed anything yet. Never overwrites user edits.

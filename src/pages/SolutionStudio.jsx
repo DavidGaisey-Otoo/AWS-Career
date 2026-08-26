@@ -1190,17 +1190,24 @@ function LiveStacksBanner({ stacks, onTeardown }) {
 // Next actions
 // ════════════════════════════════════════════════════════════════════
 function NextActions({ solution }) {
-  const brief = encodeURIComponent(solution.input.brief.slice(0, 900));
+  const sourceBrief = solution.input.brief.slice(0, 2000);
+  const brief = encodeURIComponent(sourceBrief);
+  const title = encodeURIComponent(solution.names.projectName);
+  const budget = encodeURIComponent(solution.input.budget || '');
   const actions = [
-    { to: `/freelance?tab=proposals&sub=smart&prefill=${brief}`, icon: FileText, label: 'Write the proposal', hint: 'Pre-filled from this solution' },
-    { to: `/job-analyzer?prefill=${brief}`, icon: Target, label: 'Deep job analysis', hint: 'Rate, fit, red flags' },
-    { to: '/rate-calculator', icon: DollarSign, label: 'Price it', hint: 'What to charge' },
-    { to: '/portfolio', icon: Briefcase, label: 'Add to portfolio', hint: 'Turn it into a case study' },
+    { n: 1, to: `/job-analyzer?prefill=${brief}`, icon: Target, label: 'Confirm scope and fit', hint: 'Review requirements, risks, missing facts, and rate before promising anything' },
+    { n: 2, to: `/freelance?tab=proposals&sub=smart&prefill=${brief}`, icon: FileText, label: 'Draft the proposal', hint: 'Uses this exact client brief; review it before submitting manually' },
+    { n: 3, to: `/discovery-call?prefill=${brief}&title=${title}&budget=${budget}`, icon: Briefcase, label: 'Prepare discovery questions', hint: 'Confirm assumptions directly with the client before final scope' },
+    { n: 4, to: `/project-plan?prefill=${brief}&title=${title}&budget=${budget}`, icon: ClipboardList, label: 'Create the project plan', hint: 'Milestones, dependencies, estimates, validation, and handover' },
+    { n: 5, to: `/documents?tab=contracts&prefill=${brief}&title=${title}&budget=${budget}`, icon: FileText, label: 'Draft the contract', hint: 'Same scope and price; legal review and client signature still required' },
+    { n: 6, to: '/architecture', icon: Layers, label: 'Refine the architecture', hint: 'Build or export the client diagram after requirements are confirmed' },
+    { n: 7, to: '/deploy', icon: Rocket, label: 'Validate in AWS', hint: 'Deploy only evidence-ready artifacts, then test and tear down' },
+    { n: 8, to: '/portfolio', icon: Briefcase, label: 'Package evidence', hint: 'Add screenshots, repository, results, and client-approved case study' },
   ];
   return (
     <section className="surface rounded-2xl p-4">
       <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-60 mb-2.5">
-        What next
+        Guided gig delivery — keep this order
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {actions.map((a) => (
@@ -1210,6 +1217,7 @@ function NextActions({ solution }) {
             className="flex items-center gap-2.5 rounded-xl border border-token p-3 hover:border-aws-orange/50 transition group tap-44"
           >
             <a.icon size={15} className="text-aws-orange shrink-0" />
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-aws-orange/15 text-[10px] font-black text-aws-orange">{a.n}</span>
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] font-extrabold">{a.label}</div>
               <div className="text-[10.5px] opacity-60">{a.hint}</div>
