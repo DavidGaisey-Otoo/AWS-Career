@@ -253,7 +253,18 @@ async function ghFetch(path, options = {}) {
     }
     throw new Error(`GitHub ${res.status}: ${text.slice(0, 200)}`);
   }
-  return res.json();
+  // GitHub legitimately returns an empty body for some successful requests
+  // (notably 204 responses), and browser/network intermediaries can also
+  // occasionally deliver headers before the JSON body. Calling res.json()
+  // unconditionally turns both cases into the unhelpful
+  // "Unexpected end of JSON input" sync loop.
+  const responseText = await res.text().catch(() => '');
+  if (!responseText.trim()) return null;
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    throw new Error('GitHub returned an incomplete response. Your local data is safe; please retry sync.');
+  }
 }
 
 export function getStoredSyncRepo() {
@@ -353,7 +364,7 @@ async function getOrCreateSyncRepo() {
   }
   try {
     const repo = await ghFetch(`/repos/${fullName}`);
-    if (!repo.private) throw new Error('SYNC_REPOSITORY_NOT_PRIVATE');
+    if (!repo || !repo.private) throw new Error(repo ? 'SYNC_REPOSITORY_NOT_PRIVATE' : 'GitHub returned an empty repository response. Please retry sync.');
     setStoredSyncRepo(repo.full_name);
     return repo;
   } catch (error) {
@@ -363,7 +374,7 @@ async function getOrCreateSyncRepo() {
     method: 'POST',
     body: JSON.stringify({ name: SYNC_REPO_NAME, description: SYNC_REPO_DESC, private: true, auto_init: true }),
   });
-  if (!created.private) throw new Error('SYNC_REPOSITORY_NOT_PRIVATE');
+  if (!created || !created.private) throw new Error(created ? 'SYNC_REPOSITORY_NOT_PRIVATE' : 'GitHub returned an empty create-repository response. Please retry sync.');
   setStoredSyncRepo(created.full_name);
   return created;
 }
@@ -371,10 +382,22 @@ async function getOrCreateSyncRepo() {
 async function readRepoSnapshot(repo) {
   try {
     const file = await ghFetch(`/repos/${repo.full_name}/contents/${SYNC_FILE_PATH}`);
+    if (!file || !file.sha) throw new Error('GitHub returned an empty sync-file response. Please retry sync.');
     const binary = atob(String(file.content || '').replace(/\s/g, ''));
     const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
     const content = new TextDecoder().decode(bytes);
-    return { snapshot: JSON.parse(content), sha: file.sha, repoUrl: repo.html_url };
+    // Keep the remote SHA even when a prior write left an empty/truncated
+    // document. A subsequent push can then replace that broken copy using
+    // GitHub's normal optimistic-lock check, without ever touching local data.
+    try {
+      const snapshot = content.trim() ? JSON.parse(content) : null;
+      if (!snapshot || typeof snapshot !== 'object' || !snapshot.data || typeof snapshot.data !== 'object') {
+        return { snapshot: null, sha: file.sha, repoUrl: repo.html_url, invalid: true };
+      }
+      return { snapshot, sha: file.sha, repoUrl: repo.html_url };
+    } catch {
+      return { snapshot: null, sha: file.sha, repoUrl: repo.html_url, invalid: true };
+    }
   } catch (error) {
     if (/GitHub 404/.test(String(error.message || ''))) return null;
     throw error;
@@ -406,7 +429,7 @@ async function writeRepoSnapshot(repo, snapshot, sha = null) {
     method: 'PUT',
     body: JSON.stringify({ message: 'Update sanitized app state', content, ...(sha ? { sha } : {}) }),
   });
-  return { snapshot, repoUrl: repo.html_url, sha: result.content?.sha };
+  return { snapshot, repoUrl: repo.html_url, sha: result?.content?.sha || sha };
 }
 
 async function migrateLegacyGist(repo) {
@@ -433,7 +456,9 @@ export async function pullSnapshot() {
   const repo = await getOrCreateSyncRepo();
   let remote = await readRepoSnapshot(repo);
   if (!remote) remote = await migrateLegacyGist(repo);
-  if (!remote) return null;
+  // An invalid cloud copy is treated like no usable remote snapshot. Pull
+  // never wipes this device; Retry/enable follows with a push that repairs it.
+  if (!remote || !remote.snapshot) return null;
   return { snapshot: remote.snapshot, remoteTimestamp: remote.snapshot.timestamp, repoUrl: remote.repoUrl };
 }
 
