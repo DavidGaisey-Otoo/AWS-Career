@@ -74,6 +74,7 @@ const DeployConsole        = lazy(() => import('./pages/DeployConsole.jsx'));
 const Walkthroughs         = lazy(() => import('./pages/Walkthroughs.jsx'));
 const SessionLog           = lazy(() => import('./pages/SessionLog.jsx'));
 const ProjectBuilder       = lazy(() => import('./pages/ProjectBuilder.jsx'));
+const GitHubProjects       = lazy(() => import('./pages/GitHubProjects.jsx'));
 const Updates              = lazy(() => import('./pages/Updates.jsx'));
 const Readiness            = lazy(() => import('./pages/Readiness.jsx'));
 const RenewGithubToken     = lazy(() => import('./pages/RenewGithubToken.jsx'));
@@ -188,6 +189,7 @@ export default function App() {
                        <Route path="/walkthroughs/:id" element={<Suspended><Walkthroughs /></Suspended>} />
                        <Route path="/session-log"   element={<Suspended><SessionLog /></Suspended>} />
                        <Route path="/project-builder" element={<Suspended><ProjectBuilder /></Suspended>} />
+                       <Route path="/github-projects" element={<Suspended><GitHubProjects /></Suspended>} />
                        <Route path="/updates"         element={<Suspended><Updates /></Suspended>} />
                        <Route path="/readiness"       element={<Suspended><Readiness /></Suspended>} />
                        <Route path="/renew-github"    element={<Suspended><RenewGithubToken /></Suspended>} />

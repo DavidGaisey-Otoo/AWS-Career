@@ -13,7 +13,7 @@ import {
   Calculator, Calendar, Cloud, DollarSign, FileSearch, FileText, FlaskConical, GanttChart,
   GraduationCap, Hammer, Heart, Home, Inbox, Layers, Library, Mail, Map as MapIcon,
   Newspaper, PhoneCall, Plane, Presentation, Settings, Sparkles, Target,
-  TrendingUp, Trophy, Users, Wand2, Mic, ShieldCheck, Rocket, ListChecks, Swords, KeyRound, RotateCcw,
+  TrendingUp, Trophy, Users, Wand2, Mic, ShieldCheck, Rocket, ListChecks, Swords, KeyRound, RotateCcw, Github,
 } from 'lucide-react';
 
 export const SECTIONS = [
@@ -87,6 +87,8 @@ export const SECTIONS = [
         hint: 'Paste a gig → get the architecture, plan, code, review + a build button' },
       { id: 'idea-studio',  label: 'Idea Studio',          icon: Sparkles,    path: '/idea-studio' },
       { id: 'project-builder', label: 'Project Builder',  icon: Wand2,       path: '/project-builder' },
+      { id: 'github-projects', label: 'Import from GitHub', icon: Github,      path: '/github-projects',
+        hint: 'Select an authorized repository, analyze it safely, then create a guided AWS deployment project' },
       { id: 'portfolio',    label: 'Portfolio',           icon: Briefcase,   path: '/portfolio' },
       { id: 'architecture', label: 'Architecture Studio', icon: Layers,      path: '/architecture' },
       { id: 'aws-accounts', label: 'AWS Account Manager', icon: Cloud,       path: '/aws-accounts' },
