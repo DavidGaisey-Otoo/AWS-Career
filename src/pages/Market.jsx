@@ -14,11 +14,18 @@ import {
   REGION_DEMAND, SAMPLE_JOBS, SEASONAL, TRENDING, skillDemand,
 } from '../data/marketIntel.js';
 import { cn, formatDate } from '../lib/utils.js';
+import { useFreelance } from '../context/FreelanceContext.jsx';
+import { usePortfolio } from '../context/PortfolioContext.jsx';
+import { useLocalStorage } from '../hooks/useLocalStorage.js';
+import { buildOpportunityLearningProfile, nextLearningActions, scoreOpportunity } from '../lib/opportunityLearningEngine.js';
 
 const PLATFORMS = ['Upwork', 'LinkedIn', 'Direct'];
 const LEVELS = ['Junior', 'Mid', 'Senior', 'Principal'];
 
 export default function Market() {
+  const { state: freelanceState } = useFreelance();
+  const portfolio = usePortfolio();
+  const [learningEvents, setLearningEvents] = useLocalStorage('awscl-pro::v1::opportunity-learning', []);
   const [rateFilter, setRateFilter] = useState('all');     // all | hourly | fixed
   const [levelFilter, setLevelFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
@@ -34,6 +41,13 @@ export default function Market() {
   }, [rateFilter, levelFilter, platformFilter, skillQuery]);
 
   const skills = useMemo(() => skillDemand().slice(0, 12), []);
+  const portfolioSkills = useMemo(() => portfolio.projects.flatMap((project) => project.services || project.skills || []), [portfolio.projects]);
+  const learningProfile = useMemo(() => buildOpportunityLearningProfile({ interactions: learningEvents, proposals: freelanceState.proposals, portfolioSkills }), [learningEvents, freelanceState.proposals, portfolioSkills]);
+  const learningActions = useMemo(() => nextLearningActions(SAMPLE_JOBS, learningProfile), [learningProfile]);
+
+  function recordPreference(job, outcome) {
+    setLearningEvents((events) => [{ id: `${job.id}-${Date.now()}`, opportunityId: job.id, title: job.title, skills: job.skills, outcome, sourceType: 'practice', at: new Date().toISOString() }, ...events].slice(0, 300));
+  }
 
   return (
     <div className="space-y-6">
@@ -48,6 +62,28 @@ export default function Market() {
           </span>
         }
       />
+
+      <section className="surface rounded-2xl p-4 sm:p-5 border border-aws-orange/30">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange">Opportunity Learning Engine</div>
+            <h2 className="text-lg font-extrabold mt-1">Learn the market rules, then improve from real outcomes</h2>
+            <p className="text-xs text-muted mt-1 max-w-3xl">{learningProfile.explanation} Practice-card preferences help ranking, but only submitted proposal outcomes count as real performance evidence.</p>
+          </div>
+          <span className="chip border border-token bg-[var(--card-2)] text-[11px] font-bold">{learningProfile.stage} · {learningProfile.sampleSize} real outcomes</span>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-3 mt-4">
+          <div className="rounded-xl border border-token bg-[var(--card-2)] p-3"><div className="text-[10px] uppercase tracking-widest text-muted font-bold">Confidence</div><div className="font-extrabold mt-1">{learningProfile.stage === 'evidence-trained' ? 'Medium' : 'Low — building evidence'}</div></div>
+          <div className="rounded-xl border border-token bg-[var(--card-2)] p-3"><div className="text-[10px] uppercase tracking-widest text-muted font-bold">Recorded success</div><div className="font-extrabold mt-1">{learningProfile.successRate == null ? 'Not enough data' : `${learningProfile.successRate}%`}</div></div>
+          <div className="rounded-xl border border-token bg-[var(--card-2)] p-3"><div className="text-[10px] uppercase tracking-widest text-muted font-bold">Privacy</div><div className="font-extrabold mt-1">Your synced app data only</div></div>
+        </div>
+        <div className="mt-4">
+          <div className="text-[11px] font-extrabold uppercase tracking-widest mb-2">Highest-value study gaps</div>
+          <div className="flex flex-wrap gap-2">
+            {learningActions.map((item) => <span key={item.skill} className="chip border border-token bg-[var(--card-2)] text-[11px]" title={item.action}><strong>{item.skill}</strong> · {item.demand} practice gigs</span>)}
+          </div>
+        </div>
+      </section>
 
       {/* Trending strip */}
       <section className="surface rounded-2xl p-4 sm:p-5 gradient-border relative overflow-hidden">
@@ -210,6 +246,7 @@ export default function Market() {
 
       {/* Job radar */}
       <section className="surface rounded-2xl p-4 sm:p-5">
+        <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 mb-4 text-xs"><strong>Training examples — not live listings.</strong> Use these to learn pricing, scope and skill patterns. Apply only through a verified listing in Live Gigs or Marketplace Gig Import.</div>
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <Filter size={14} className="text-aws-orange" />
           <input
@@ -237,7 +274,10 @@ export default function Market() {
         </div>
 
         <ul className="grid gap-3 sm:grid-cols-2">
-          {filtered.map((j) => (
+          {filtered.map((j) => {
+            const match = scoreOpportunity(j, learningProfile);
+            const lastPreference = learningEvents.find((event) => event.opportunityId === j.id)?.outcome;
+            return (
             <li key={j.id} className="rounded-2xl border border-token bg-[var(--card-2)]/40 p-4 hover:border-aws-orange/40 transition">
               <div className="flex items-start justify-between gap-2">
                 <h4 className="text-sm font-extrabold tracking-tight leading-snug">{j.title}</h4>
@@ -260,8 +300,16 @@ export default function Market() {
                 </span>
                 <span className="text-muted">{j.proposals} proposals · {j.level}</span>
               </div>
+              <div className="mt-3 rounded-lg border border-token bg-[var(--card)] p-2 text-[11px]">
+                <div className="font-extrabold">{match.recommendation} · {match.score}/100 · {match.confidence} confidence</div>
+                <div className="text-muted mt-1">{match.reasons[0] || (match.gaps.length ? `Study gaps: ${match.gaps.join(', ')}` : 'Review the full scope before deciding.')}</div>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button onClick={() => recordPreference(j, 'interested')} className={cn('flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-bold', lastPreference === 'interested' ? 'border-success text-success bg-success/10' : 'border-token')}>Interested</button>
+                <button onClick={() => recordPreference(j, 'skip')} className={cn('flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-bold', lastPreference === 'skip' ? 'border-danger text-danger bg-danger/10' : 'border-token')}>Not for me</button>
+              </div>
             </li>
-          ))}
+          )})}
         </ul>
         {filtered.length === 0 && (
           <div className="p-8 text-center text-sm text-muted">No jobs match those filters.</div>

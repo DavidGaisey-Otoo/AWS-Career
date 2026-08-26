@@ -23,6 +23,8 @@ import { assessEntryLevelGig, buildEntryLevelApplicationBrief } from '../../lib/
 import { assessCareerProgression } from '../../lib/careerProgression.js';
 import { usePortfolio } from '../../context/PortfolioContext.jsx';
 import { useFreelance } from '../../context/FreelanceContext.jsx';
+import { useLocalStorage } from '../../hooks/useLocalStorage.js';
+import { buildOpportunityLearningProfile, extractOpportunitySkills, scoreOpportunity } from '../../lib/opportunityLearningEngine.js';
 
 const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -42,6 +44,9 @@ export function GigFeed() {
     try { return JSON.parse(localStorage.getItem('awscl-pro::v1::marketplace-gigs') || '[]'); }
     catch { return []; }
   });
+  const [learningEvents, setLearningEvents] = useLocalStorage('awscl-pro::v1::opportunity-learning', []);
+  const portfolioSkills = useMemo(() => portfolio.projects.flatMap((project) => project.services || project.skills || []), [portfolio.projects]);
+  const learningProfile = useMemo(() => buildOpportunityLearningProfile({ interactions: learningEvents, proposals: freelance.state.proposals, portfolioSkills }), [learningEvents, freelance.state.proposals, portfolioSkills]);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -112,8 +117,12 @@ export function GigFeed() {
         if (n > 0 && n < minBudget) return false;
       }
       return true;
-    });
-  }, [data.gigs, platforms, search, datePosted, minBudget, experienceFit, career.current.id]);
+    }).sort((a, b) => scoreOpportunity(b, learningProfile).score - scoreOpportunity(a, learningProfile).score);
+  }, [data.gigs, platforms, search, datePosted, minBudget, experienceFit, career.current.id, learningProfile]);
+
+  function recordPreference(gig, outcome) {
+    setLearningEvents((events) => [{ id: `${gig.id}-${Date.now()}`, opportunityId: gig.id, title: gig.title, skills: extractOpportunitySkills(gig), outcome, sourceType: gig.importedByUser ? 'imported' : 'live-feed', at: new Date().toISOString() }, ...events].slice(0, 300));
+  }
 
   const cacheAgeMin = useMemo(() => {
     const age = getCacheAge();
@@ -255,6 +264,9 @@ export function GigFeed() {
       <MarketplaceGigImport
         gigs={marketplaceGigs}
         career={career}
+        learningProfile={learningProfile}
+        learningEvents={learningEvents}
+        onPreference={recordPreference}
         onAdd={(gig) => setMarketplaceGigs((current) => [gig, ...current].slice(0, 20))}
         onRemove={(id) => setMarketplaceGigs((current) => current.filter((gig) => gig.id !== id))}
       />
@@ -307,7 +319,7 @@ export function GigFeed() {
       {/* Cards grid */}
       {filtered.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {filtered.slice(0, 60).map((g) => <GigCard key={g.id} gig={g} career={career} />)}
+          {filtered.slice(0, 60).map((g) => <GigCard key={g.id} gig={g} career={career} learningProfile={learningProfile} learningEvents={learningEvents} onPreference={recordPreference} />)}
         </div>
       )}
 
@@ -323,7 +335,7 @@ export function GigFeed() {
 // ════════════════════════════════════════════════════════════════════
 // Single gig card
 // ════════════════════════════════════════════════════════════════════
-function MarketplaceGigImport({ gigs, career, onAdd, onRemove }) {
+function MarketplaceGigImport({ gigs, career, learningProfile, learningEvents, onPreference, onAdd, onRemove }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ platform: 'Upwork', title: '', budget: '', url: '', description: '' });
   const [formError, setFormError] = useState('');
@@ -397,7 +409,7 @@ function MarketplaceGigImport({ gigs, career, onAdd, onRemove }) {
             {gigs.map((gig) => (
               <div key={gig.id} className="relative">
                 <button type="button" onClick={() => onRemove(gig.id)} className="absolute right-3 bottom-3 z-10 p-1.5 rounded-md border border-danger/40 text-danger bg-[var(--surface)]" title="Remove imported gig"><Trash2 size={12} /></button>
-                <GigCard gig={gig} career={career} />
+                <GigCard gig={gig} career={career} learningProfile={learningProfile} learningEvents={learningEvents} onPreference={onPreference} />
               </div>
             ))}
           </div>
@@ -407,7 +419,7 @@ function MarketplaceGigImport({ gigs, career, onAdd, onRemove }) {
   );
 }
 
-function GigCard({ gig, career }) {
+function GigCard({ gig, career, learningProfile, learningEvents = [], onPreference }) {
   // Generate links for the action buttons
   const fit = assessEntryLevelGig(gig, { careerLevel: career.current.id });
   const applicationBrief = buildEntryLevelApplicationBrief(gig, { careerLevel: career.current.id, headline: career.current.headline });
@@ -420,6 +432,8 @@ function GigCard({ gig, career }) {
   const solutionHref = `/solution?gig=${encodeGig(gig)}`;
 
   const postedAgo = gig.postedAt ? humanAge(gig.postedAt) : null;
+  const learnedMatch = learningProfile ? scoreOpportunity(gig, learningProfile) : null;
+  const lastPreference = learningEvents.find((event) => event.opportunityId === gig.id)?.outcome;
 
   return (
     <div className="surface rounded-2xl p-4 flex flex-col gap-2 hover:border-aws-orange/30 border border-transparent transition">
@@ -451,6 +465,10 @@ function GigCard({ gig, career }) {
         <div className="opacity-80 mt-0.5">{fit.reasons[0]}</div>
         {fit.cautions[0] && <div className="text-amber-300 mt-0.5">Review: {fit.cautions[0]}</div>}
       </div>
+
+      {learnedMatch && (
+        <div className="text-[10.5px] opacity-75">Personal learning rank: <strong>{learnedMatch.score}/100</strong> · {learnedMatch.confidence} confidence</div>
+      )}
 
       {/* Meta line */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] opacity-75">
@@ -502,6 +520,8 @@ function GigCard({ gig, career }) {
 
       {/* Secondary actions */}
       <div className="flex flex-wrap gap-1.5 pt-2 border-t border-token">
+        {onPreference && <button type="button" onClick={() => onPreference(gig, 'interested')} className={cn('inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold border', lastPreference === 'interested' ? 'border-success text-success bg-success/10' : 'border-token')}>Interested</button>}
+        {onPreference && <button type="button" onClick={() => onPreference(gig, 'skip')} className={cn('inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold border', lastPreference === 'skip' ? 'border-danger text-danger bg-danger/10' : 'border-token')}>Not for me</button>}
         {gig.url && (
           <a
             href={gig.url}
