@@ -35,6 +35,10 @@ export default function Architecture() {
   const [edges, setEdges] = useState([]);
   const [name, setName] = useState('Untitled diagram');
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  // Legacy SVG fallback still renders node cursor/drag handlers even though
+  // React Flow is the visible canvas. Keep its transient drag state scoped to
+  // this page so merely opening Architecture Studio cannot throw a ReferenceError.
+  const [dragState, setDragState] = useState(null);
   const [connectingFrom, setConnectingFrom] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [reviewOpen, setReviewOpen] = useState(false);
