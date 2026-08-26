@@ -17,6 +17,7 @@ const PROJECT_DEFAULTS = {
   lessons: '',
   wouldDoDifferently: '',
   github: '',
+  githubPushVerified: false,
   demoUrl: '',
   videoUrl: '',
   screenshots: [],        // [{ id, dataUrl, caption }]
@@ -30,6 +31,14 @@ const DEFAULT_STATE = {
   projects: {},          // { [projectId]: PROJECT_DEFAULTS }
   publicShareEnabled: false,
   visitorCount: 0,
+  publishingTargets: {
+    publicPortfolio: true,
+    github: true,
+    upwork: false,
+    hashnode: false,
+    cv: true,
+    linkedin: false,
+  },
 };
 
 export function PortfolioProvider({ children }) {
@@ -120,6 +129,20 @@ export function PortfolioProvider({ children }) {
 
   const togglePublicShare = useCallback(() => {
     setState((s) => ({ ...s, publicShareEnabled: !s.publicShareEnabled }));
+  }, [setState]);
+
+  const updatePublishingTarget = useCallback((target, enabled) => {
+    const allowed = new Set(['publicPortfolio', 'github', 'upwork', 'hashnode', 'cv', 'linkedin']);
+    if (!allowed.has(target)) return;
+    setState((s) => ({
+      ...s,
+      ...(target === 'publicPortfolio' && !enabled ? { publicShareEnabled: false } : {}),
+      publishingTargets: {
+        ...DEFAULT_STATE.publishingTargets,
+        ...(s.publishingTargets || {}),
+        [target]: Boolean(enabled),
+      },
+    }));
   }, [setState]);
 
   const bumpVisitor = useCallback(() => {
@@ -283,6 +306,7 @@ export function PortfolioProvider({ children }) {
     addScreenshot,
     removeScreenshot,
     togglePublicShare,
+    updatePublishingTarget,
     bumpVisitor,
     resetPortfolio,
     // BUILD-01
@@ -293,7 +317,7 @@ export function PortfolioProvider({ children }) {
   }), [
     state, allProjects, projectStats, intelligence,
     getProjectState, updateProjectState, moveToStatus, toggleStep,
-    addScreenshot, removeScreenshot, togglePublicShare, bumpVisitor, resetPortfolio,
+    addScreenshot, removeScreenshot, togglePublicShare, updatePublishingTarget, bumpVisitor, resetPortfolio,
     customProjects, addCustomProject, removeCustomProject,
   ]);
 

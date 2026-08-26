@@ -1,5 +1,5 @@
 import {
-  Eye, Link2, Monitor, Printer, Share2, Smartphone, Users,
+  Eye, Link2, Monitor, Printer, Share2, Smartphone, Users, Settings2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { usePortfolio } from '../../context/PortfolioContext.jsx';
@@ -16,9 +16,11 @@ import { cn } from '../../lib/utils.js';
  */
 export function PortfolioExportShare({ previewDevice, setPreviewDevice, previewMode, setPreviewMode }) {
   const toast = useToast();
-  const { state, togglePublicShare, intelligence } = usePortfolio();
+  const { state, togglePublicShare, updatePublishingTarget, intelligence } = usePortfolio();
   const { profile } = useApp();
   const [copied, setCopied] = useState(false);
+  const [targetsOpen, setTargetsOpen] = useState(false);
+  const targets = { publicPortfolio: true, github: true, upwork: false, hashnode: false, cv: true, linkedin: false, ...(state.publishingTargets || {}) };
 
   const onPrint = () => {
     document.body.classList.add('printing-portfolio');
@@ -100,12 +102,27 @@ export function PortfolioExportShare({ previewDevice, setPreviewDevice, previewM
       )}
 
       <Button variant="ghost" icon={Printer} onClick={onPrint}>PDF</Button>
+      <div className="relative">
+        <Button variant="ghost" icon={Settings2} onClick={() => setTargetsOpen((open) => !open)}>Platforms</Button>
+        {targetsOpen && <div className="absolute right-0 top-full mt-2 z-30 w-72 surface rounded-xl border border-token p-3 shadow-2xl">
+          <div className="text-xs font-extrabold mb-1">Choose where projects may appear</div>
+          <p className="text-[11px] opacity-65 mb-2">Nothing is posted automatically. LinkedIn is off by default.</p>
+          {[
+            ['publicPortfolio', 'Public portfolio'], ['github', 'GitHub'], ['upwork', 'Upwork'],
+            ['hashnode', 'Hashnode'], ['cv', 'CV'], ['linkedin', 'LinkedIn'],
+          ].map(([id, label]) => <label key={id} className="flex items-center justify-between gap-3 py-1.5 text-xs">
+            <span>{label}</span><input type="checkbox" checked={Boolean(targets[id])} onChange={(e) => updatePublishingTarget(id, e.target.checked)} className="accent-aws-orange" />
+          </label>)}
+          <button onClick={() => setTargetsOpen(false)} className="btn btn-ghost w-full mt-2">Done</button>
+        </div>}
+      </div>
       <Button
         variant={state.publicShareEnabled ? 'glass' : 'ghost'}
         icon={copied ? Link2 : Share2}
         onClick={onShare}
+        disabled={!targets.publicPortfolio}
       >
-        {copied ? 'Link copied!' : state.publicShareEnabled ? 'Share' : 'Make public'}
+        {!targets.publicPortfolio ? 'Public sharing off' : copied ? 'Link copied!' : state.publicShareEnabled ? 'Share' : 'Make public'}
       </Button>
       {state.publicShareEnabled && (
         <button

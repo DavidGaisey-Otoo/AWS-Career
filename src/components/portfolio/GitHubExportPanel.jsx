@@ -26,14 +26,14 @@ import { cn } from '../../lib/utils.js';
  */
 export function GitHubExportPanel({ projectId, project, projectState, stats }) {
   const { profile } = useApp();
-  const { updateProjectState } = usePortfolio();
+  const { state, updateProjectState } = usePortfolio();
   const toast = useToast();
   const [tab, setTab] = useState('push');
   const [draftUrl, setDraftUrl] = useState(projectState.github || '');
 
   const readme = useMemo(() =>
-    generateReadme({ project, projectState, stats, profile }),
-  [project, projectState, stats, profile]);
+    generateReadme({ project, projectState, stats, profile, publishingTargets: state.publishingTargets }),
+  [project, projectState, stats, profile, state.publishingTargets]);
 
   const slug = useMemo(() =>
     project.title.toLowerCase()
@@ -57,7 +57,7 @@ export function GitHubExportPanel({ projectId, project, projectState, stats }) {
   const saveUrl = () => {
     const trimmed = (draftUrl || '').trim();
     if (!trimmed) {
-      updateProjectState(projectId, { github: '' });
+      updateProjectState(projectId, { github: '', githubPushVerified: false });
       toast.info('GitHub URL cleared');
       return;
     }
@@ -65,8 +65,8 @@ export function GitHubExportPanel({ projectId, project, projectState, stats }) {
       toast.warning('Please paste a https://github.com/... URL');
       return;
     }
-    updateProjectState(projectId, { github: trimmed });
-    toast.success('GitHub repository saved — green badge unlocked');
+    updateProjectState(projectId, { github: trimmed, githubPushVerified: false });
+    toast.success('GitHub repository link saved. This does not claim files were pushed.');
   };
 
   const TABS = [
@@ -91,7 +91,7 @@ export function GitHubExportPanel({ projectId, project, projectState, stats }) {
             </h3>
             {saved && (
               <span className="chip bg-success/15 text-success border border-success/30 text-[10px] font-extrabold">
-                <Check size={10} /> Pushed to GitHub
+                <Check size={10} /> {projectState.githubPushVerified ? 'Pushed to GitHub' : 'Repository linked'}
               </span>
             )}
           </div>
@@ -132,7 +132,7 @@ export function GitHubExportPanel({ projectId, project, projectState, stats }) {
             readme={readme}
             slug={slug}
             profile={profile}
-            onSaved={(url) => { setDraftUrl(url); updateProjectState(projectId, { github: url }); }}
+            onSaved={(url) => { setDraftUrl(url); updateProjectState(projectId, { github: url, githubPushVerified: true }); }}
           />
         )}
         {tab === 'readme'   && <ReadmeView readme={readme} onCopy={copy} />}
@@ -502,7 +502,7 @@ function SaveUrlView({ draftUrl, setDraftUrl, onSave, saved }) {
 
 // ============================ README generator ============================
 
-function generateReadme({ project, projectState, stats, profile }) {
+function generateReadme({ project, projectState, stats, profile, publishingTargets = {} }) {
   const services = (project.services || [])
     .map((id) => `![${id}](https://img.shields.io/badge/${getServiceMeta(id).label.replace(/\s/g, '%20')}-FF9900?style=flat-square&logo=amazonaws&logoColor=white)`)
     .join(' ');
@@ -540,9 +540,9 @@ function generateReadme({ project, projectState, stats, profile }) {
   const integrations = profile?.integrations || {};
   const author = [
     `**${profile?.name || 'Cloud Engineer'}**`,
-    integrations.linkedin ? `[LinkedIn](${integrations.linkedin})` : null,
-    integrations.github ? `[GitHub](${integrations.github})` : null,
-    integrations.hashnode ? `[Blog](${integrations.hashnode})` : null,
+    publishingTargets.linkedin && integrations.linkedin ? `[LinkedIn](${integrations.linkedin})` : null,
+    publishingTargets.github !== false && integrations.github ? `[GitHub](${integrations.github})` : null,
+    publishingTargets.hashnode && integrations.hashnode ? `[Blog](${integrations.hashnode})` : null,
   ].filter(Boolean).join(' · ');
 
   return `# ${project.title} — AWS Portfolio Project
@@ -603,10 +603,11 @@ terraform apply -auto-approve
 ## 🧪 Testing Results
 
 ${stats?.doneSteps !== undefined
-    ? `- ✅ ${stats.doneSteps} of ${stats.totalSteps} build-guide steps completed
-- ✅ Deployment verified end-to-end
-- ✅ Cleanup procedure documented`
-    : '- ✅ Deployment verified end-to-end\n- ✅ Cleanup procedure documented'}
+    ? `- ${stats.doneSteps === stats.totalSteps && stats.totalSteps > 0 ? '✅' : '⏳'} ${stats.doneSteps} of ${stats.totalSteps} build-guide steps completed
+- ${projectState.demoUrl ? `✅ Live evidence recorded: ${projectState.demoUrl}` : '⏳ Live deployment evidence not recorded yet'}
+- ${projectState.screenshots?.length ? `✅ ${projectState.screenshots.length} screenshot(s) recorded` : '⏳ Screenshots not recorded yet'}
+- Verification claims require AWS/service evidence; progress ticks alone are not proof.`
+    : '- ⏳ Testing evidence has not been recorded yet.'}
 
 ## 💰 Estimated Monthly Cost
 
