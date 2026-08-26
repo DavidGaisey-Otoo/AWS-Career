@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
@@ -25,6 +25,7 @@ import { UKProvider } from './context/UKContext.jsx';
 import { WellnessProvider } from './context/WellnessContext.jsx';
 import { SyncProvider } from './context/SyncContext.jsx';
 import { SyncModal } from './components/sync/SyncModal.jsx';
+import { lazyWithRecovery } from './lib/lazyWithRecovery.js';
 
 // Eager — entry point + tiny pages that load instantly
 import Dashboard from './pages/Dashboard.jsx';
@@ -32,7 +33,10 @@ import SAAHome from './pages/SAAHome.jsx';
 import SectionLanding from './pages/SectionLanding.jsx';
 
 // Lazy — everything else. Loads on demand for a smaller initial bundle.
-const Roadmap              = lazy(() => import('./pages/Roadmap.jsx'));
+// Keep the short alias so every existing and future route below receives the
+// same stale-deployment recovery behavior.
+const lazy = lazyWithRecovery;
+const Roadmap              = lazyWithRecovery(() => import('./pages/Roadmap.jsx'));
 const Portfolio            = lazy(() => import('./pages/Portfolio.jsx'));
 const ProjectDetail        = lazy(() => import('./pages/ProjectDetail.jsx'));
 const Learning             = lazy(() => import('./pages/Learning.jsx'));

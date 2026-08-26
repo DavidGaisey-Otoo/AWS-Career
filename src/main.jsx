@@ -3,6 +3,13 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
+import { isStaleChunkError, recoverStaleChunk } from './lib/lazyWithRecovery.js';
+
+// Non-route dynamic imports (PDF export, search data, AWS SDK actions) can
+// encounter the same old-tab/new-deploy mismatch. Recover those globally too.
+window.addEventListener('unhandledrejection', (event) => {
+  if (isStaleChunkError(event.reason)) recoverStaleChunk(event.reason);
+});
 
 // Remove the pre-React fallback splash before mounting. If React fails
 // during render, ErrorBoundary will show its own error UI.
@@ -34,7 +41,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       // deploys, an earlier dev server, etc.). Cheap and safe.
       if (window.caches?.keys) {
         const keys = await caches.keys();
-        await Promise.all(keys.filter((k) => !k.includes('v3-2026-06-launch')).map((k) => caches.delete(k)));
+        await Promise.all(keys.filter((k) => k.startsWith('awscl-app-') && !k.includes('v5-2026-08-release-recovery')).map((k) => caches.delete(k)));
       }
       const registration = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
       await registration.update();

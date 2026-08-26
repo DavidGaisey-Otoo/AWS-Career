@@ -12,6 +12,7 @@ import { runGeneratedArtifactSafetyTests } from '../src/lib/__tests__/generatedA
 import { runEntryLevelGigMatcherTests } from '../src/lib/__tests__/entryLevelGigMatcher.test.js';
 import { runCareerProgressionTests } from '../src/lib/__tests__/careerProgression.test.js';
 import { runGithubImporterTests } from '../src/lib/__tests__/githubProjectImporter.test.js';
+import { runLazyRecoveryTests } from '../src/lib/__tests__/lazyWithRecovery.test.js';
 
 const agents = runAllTests();
 console.log(printReport(agents));
@@ -91,6 +92,13 @@ console.log('  GITHUB PROJECT IMPORTER SAFETY TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of githubImporter.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
+const lazyRecovery = runLazyRecoveryTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  DEPLOYMENT VERSION RECOVERY TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of lazyRecovery.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
 const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
 const syncOk = sync.allPassed;
@@ -103,7 +111,8 @@ const artifactsOk = artifacts.allPassed;
 const entryLevelOk = entryLevel.allPassed;
 const careerOk = career.allPassed;
 const githubImporterOk = githubImporter.allPassed;
-const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk;
+const lazyRecoveryOk = lazyRecovery.allPassed;
+const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk;
 
 console.log('');
 console.log(allOk
@@ -111,6 +120,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

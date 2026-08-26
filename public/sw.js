@@ -10,7 +10,7 @@
  * fully refresh. Old caches get pruned on activate.
  */
 
-const CACHE_VERSION = 'v4-2026-08-saa';
+const CACHE_VERSION = 'v5-2026-08-release-recovery';
 const APP_CACHE = `awscl-app-${CACHE_VERSION}`;
 
 // Assets we want available offline immediately on first visit
@@ -71,7 +71,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin assets — stale-while-revalidate
+  // Hashed build assets are immutable. Network-first prevents a tab from
+  // being handed an obsolete runtime/chunk pairing immediately after deploy;
+  // the cache remains an offline fallback.
+  if (url.origin === self.location.origin && url.pathname.includes('/assets/')) {
+    event.respondWith(networkFirst(req));
+    return;
+  }
+
+  // Other same-origin assets — stale-while-revalidate
   if (url.origin === self.location.origin) {
     event.respondWith(staleWhileRevalidate(req));
     return;
