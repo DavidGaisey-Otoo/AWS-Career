@@ -152,13 +152,31 @@ export function analyzeRepository({ fullName = '', branch = 'main', paths = [], 
     ],
     productionAllowed: false,
   } : null;
+  const awsServices = kind === 'fullstack-container'
+    ? [
+      { id: 'cloudformation', label: 'CloudFormation', purpose: 'Create and destroy the complete stack' },
+      { id: 'ecr', label: 'Private ECR', purpose: 'Store the tested application image' },
+      { id: 'ec2', label: 'EC2', purpose: 'Run the development application' },
+      { id: 'ebs', label: 'Encrypted EBS', purpose: 'Persist application and MongoDB data' },
+      { id: 'ssm', label: 'Systems Manager', purpose: 'Manage the server without opening SSH' },
+      { id: 'cloudwatch', label: 'CloudWatch', purpose: 'Health, logs, and alarms' },
+      { id: 'budgets', label: 'AWS Budgets', purpose: 'Warn before credits or cost limits are exceeded' },
+    ]
+    : kind === 'static-web'
+      ? [
+        { id: 'cloudformation', label: 'CloudFormation', purpose: 'Create and destroy the stack' },
+        { id: 's3', label: 'Private S3', purpose: 'Store the built website' },
+        { id: 'cloudfront', label: 'CloudFront', purpose: 'Serve the site over HTTPS' },
+        { id: 'budgets', label: 'AWS Budgets', purpose: 'Monitor usage' },
+      ]
+      : [];
 
   return {
     fullName, branch, kind, framework, buildCommand, outputDirectory,
     awsPattern, deployClass, infrastructure, secretLikeFiles,
     fileCount: paths.length,
     manifestsRead: Object.keys(manifests),
-    blockers, sensitiveDomain, deploymentProfile,
+    blockers, sensitiveDomain, deploymentProfile, awsServices,
     canDeployNow: false,
     evidenceGates: ['Build succeeds', 'Automated tests pass', 'Secret scan passes', 'Cost approved', 'Development health check passes'],
   };

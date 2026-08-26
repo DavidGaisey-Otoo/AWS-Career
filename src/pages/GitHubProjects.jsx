@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ExternalLink, Github, Loader2, Lock, RefreshCw, Rocket, Search, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
@@ -23,6 +23,8 @@ export default function GitHubProjects() {
   const [analysis, setAnalysis] = useState(null);
 
   const filtered = useMemo(() => repos.filter((repo) => repo.fullName.toLowerCase().includes(query.toLowerCase())), [repos, query]);
+
+  useEffect(() => { loadRepos(); }, []); // one simple entry point: opening the page lists applications
 
   async function loadRepos() {
     setBusy(true); setError(''); setAnalysis(null);
@@ -61,7 +63,7 @@ export default function GitHubProjects() {
 
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Secure GitHub import" title="GitHub → guided AWS project" subtitle="Select an authorized repository, inspect deployment metadata, learn the recommended AWS architecture, then approve each deployment stage." icon={Github} />
+      <PageHeader eyebrow="Applications & Deployment" title="Choose an application to deploy" subtitle="Pick a GitHub project. The app identifies its AWS services and walks you through Review → Approve → Deploy → Test → Destroy." icon={Github} />
 
       <div className="surface rounded-2xl p-4 border-l-4 border-l-success flex gap-3">
         <ShieldCheck className="text-success shrink-0" size={20} />
@@ -69,7 +71,7 @@ export default function GitHubProjects() {
       </div>
 
       <button onClick={loadRepos} disabled={busy} className="btn btn-primary">
-        {busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Load authorized repositories
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Refresh applications
       </button>
 
       {error && <div className="rounded-xl border border-danger/40 bg-danger/5 p-3 text-xs text-danger flex gap-2"><AlertTriangle size={14} />{error}</div>}
@@ -104,6 +106,7 @@ function Analysis({ analysis, onImport }) {
   return <div className="space-y-3 pt-3 border-t border-token">
     <div className="grid sm:grid-cols-2 gap-2 text-xs"><Fact label="Detected" value={analysis.framework} /><Fact label="Project type" value={analysis.kind} /><Fact label="Build" value={analysis.buildCommand || 'Not detected'} /><Fact label="Files inspected" value={`${analysis.fileCount} names; ${analysis.manifestsRead.length} safe manifests`} /></div>
     <div className="rounded-xl bg-[var(--card-2)] p-3"><div className="font-bold text-xs mb-1">Recommended AWS pattern</div><p className="text-xs leading-relaxed">{analysis.awsPattern}</p></div>
+    {analysis.awsServices?.length > 0 && <div><div className="font-bold text-xs mb-2">AWS services this application needs</div><div className="grid sm:grid-cols-2 gap-2">{analysis.awsServices.map((service) => <div key={service.id} className="rounded-lg border border-token p-2"><div className="text-xs font-bold">{service.label}</div><div className="text-[11px] opacity-65">{service.purpose}</div></div>)}</div></div>}
     {analysis.secretLikeFiles.length > 0 && <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 text-xs"><strong>Secret review required:</strong> {analysis.secretLikeFiles.length} secret-like filename(s) detected. Their contents were not read.</div>}
     <div><div className="font-bold text-xs mb-1">Required before deployment</div><ul className="text-xs space-y-1">{analysis.blockers.map((item) => <li key={item} className="flex gap-1.5"><AlertTriangle size={11} className="text-warning mt-0.5 shrink-0" />{item}</li>)}</ul></div>
     <div className="rounded-xl border border-warning/40 p-3 text-xs"><strong>Deployment status: Review required.</strong> Import creates a study project only. AWS deployment stays locked until build, tests, secrets, cost, and development health evidence pass.</div>
@@ -112,7 +115,7 @@ function Analysis({ analysis, onImport }) {
       <ol className="mt-2 space-y-1 text-xs list-decimal pl-4">{analysis.deploymentProfile.stages.map((stage) => <li key={stage}>{stage}</li>)}</ol>
       {analysis.sensitiveDomain && <p className="mt-2 text-xs text-warning"><strong>Synthetic data only.</strong> A successful AWS deployment is not proof of HIPAA, GDPR, or other health-data compliance.</p>}
     </div>}
-    <button onClick={onImport} className="btn btn-primary w-full"><Rocket size={14} /> Import and start guided project</button>
+    <button onClick={onImport} className="btn btn-primary w-full"><Rocket size={14} /> Select application and start deployment guide</button>
   </div>;
 }
 function Fact({ label, value }) { return <div className="rounded-lg border border-token p-2"><div className="text-[10px] uppercase opacity-55 font-bold">{label}</div><div className="font-semibold mt-0.5">{value}</div></div>; }

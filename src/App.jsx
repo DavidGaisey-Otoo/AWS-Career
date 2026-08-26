@@ -190,6 +190,7 @@ export default function App() {
                        <Route path="/session-log"   element={<Suspended><SessionLog /></Suspended>} />
                        <Route path="/project-builder" element={<Suspended><ProjectBuilder /></Suspended>} />
                        <Route path="/github-projects" element={<Suspended><GitHubProjects /></Suspended>} />
+                       <Route path="/applications" element={<Suspended><GitHubProjects /></Suspended>} />
                        <Route path="/updates"         element={<Suspended><Updates /></Suspended>} />
                        <Route path="/readiness"       element={<Suspended><Readiness /></Suspended>} />
                        <Route path="/renew-github"    element={<Suspended><RenewGithubToken /></Suspended>} />
