@@ -81,7 +81,7 @@ export default function Portfolio() {
         title={previewMode === 'public' ? 'AWS Project Portfolio' : 'Your AWS portfolio'}
         subtitle={
           previewMode === 'public'
-            ? 'Hand-built, production-grade cloud projects with architecture diagrams and code.'
+            ? 'Evidence-backed cloud projects with architecture diagrams, implementation notes, and code.'
             : 'Drag projects across the board. Open any card for the full build guide, errors, and presentation notes.'
         }
         icon={Briefcase}

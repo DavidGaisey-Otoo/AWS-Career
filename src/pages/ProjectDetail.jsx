@@ -19,18 +19,21 @@ import { Button } from '../components/ui/Button.jsx';
 import { fireConfetti } from '../components/ui/Confetti.js';
 import { usePortfolio } from '../context/PortfolioContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { PRIORITY, STATUS, STATUS_ORDER, getProjectById } from '../data/projects.js';
+import { PRIORITY, STATUS, STATUS_ORDER } from '../data/projects.js';
 import { cn, formatDate } from '../lib/utils.js';
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
-  const project = getProjectById(projectId);
   const nav = useNavigate();
   const toast = useToast();
   const {
     getProjectState, updateProjectState, moveToStatus, toggleStep,
-    addScreenshot, removeScreenshot, projectStats,
+    addScreenshot, removeScreenshot, projectStats, projects,
   } = usePortfolio();
+  // Custom projects live in PortfolioContext rather than the fixed catalogue.
+  // Resolving from the merged list keeps generated projects usable after the
+  // creation screen redirects here.
+  const project = projects.find((item) => item.id === projectId);
   const ps = getProjectState(projectId);
   const stats = projectStats.find((s) => s.id === projectId);
   const fileRef = useRef(null);
@@ -156,6 +159,14 @@ export default function ProjectDetail() {
                   Live demo
                 </Button>
               )}
+              <Button
+                as={Link}
+                to={`/walkthroughs/deep/new?title=${encodeURIComponent(project.title)}&brief=${encodeURIComponent(`${project.tagline || ''} ${project.businessCase || ''}`.trim())}&services=${encodeURIComponent((project.services || []).join(','))}&source=project`}
+                variant="primary"
+                icon={Sparkles}
+              >
+                Start guided walkthrough
+              </Button>
             </div>
           </div>
 
