@@ -74,9 +74,12 @@ export async function inspectRepository(fullName, branch) {
 
 export function analyzeRepository({ fullName = '', branch = 'main', paths = [], manifests = {} }) {
   const lowerPaths = paths.map((path) => path.toLowerCase());
-  const packageJson = parseJson(findManifest(manifests, 'package.json')) || {};
-  const deps = { ...(packageJson.dependencies || {}), ...(packageJson.devDependencies || {}) };
-  const scripts = packageJson.scripts || {};
+  const packageFiles = Object.entries(manifests)
+    .filter(([path]) => path.toLowerCase().endsWith('package.json'))
+    .map(([, value]) => parseJson(value) || {});
+  const packageJson = packageFiles[0] || {};
+  const deps = packageFiles.reduce((all, pkg) => ({ ...all, ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) }), {});
+  const scripts = packageFiles.reduce((all, pkg) => ({ ...all, ...(pkg.scripts || {}) }), {});
   const has = (name) => Object.prototype.hasOwnProperty.call(deps, name);
   const pathHas = (pattern) => lowerPaths.some((path) => pattern.test(path));
   const secretLikeFiles = paths.filter((path) => /(^|\/)(\.env($|\.)|.*\.(pem|key|p12|pfx)$|id_rsa$|credentials$)/i.test(path));
@@ -88,7 +91,17 @@ export function analyzeRepository({ fullName = '', branch = 'main', paths = [], 
   let awsPattern = 'Planning only — choose the runtime and hosting model after review.';
   let deployClass = 'planning-only';
 
-  if (has('next')) {
+  const hasRootDockerfile = lowerPaths.includes('dockerfile');
+  const hasFrontend = lowerPaths.some((path) => /^frontend\/(package\.json|src\/)/.test(path));
+  const hasPythonBackend = lowerPaths.some((path) => /^backend\/(requirements\.txt|pyproject\.toml|server\.py|main\.py)/.test(path));
+  const sensitiveDomain = /health|patient|medical|screening|vital/i.test(`${fullName} ${paths.join(' ')}`);
+
+  if (hasRootDockerfile && hasFrontend && hasPythonBackend) {
+    kind = 'fullstack-container'; framework = 'React + Python API + Docker';
+    buildCommand = 'docker build';
+    awsPattern = 'Private ECR image + one development EC2 instance with encrypted EBS and SSM; MongoDB stays private. Production health data requires a separately reviewed, resilient architecture.';
+    deployClass = 'review-required';
+  } else if (has('next')) {
     kind = 'fullstack'; framework = 'Next.js';
     awsPattern = 'AWS Amplify Hosting or containerized App Runner/ECS, depending on server-side features.';
     deployClass = 'review-required';
@@ -123,13 +136,29 @@ export function analyzeRepository({ fullName = '', branch = 'main', paths = [], 
   if (secretLikeFiles.length) blockers.push('Secret-like filenames exist; confirm they are ignored and rotate any committed credentials.');
   if (!buildCommand && kind === 'static-web') blockers.push('No build script was found.');
   blockers.push('Environment variables, data classification, domain, traffic, and budget require human confirmation.');
+  if (sensitiveDomain) blockers.push('Health/PII project: use synthetic data until privacy, legal, retention, access-control, backup, and incident-response reviews are complete.');
+
+  const deploymentProfile = kind === 'fullstack-container' ? {
+    id: sensitiveDomain ? 'health-screening-dev' : 'container-dev',
+    label: sensitiveDomain ? 'Health screening — development only' : 'Container development',
+    stages: [
+      'Build and test the private repository',
+      'Scan dependencies, container, and repository history for secrets',
+      'Preview the AWS CloudFormation change set and monthly-cost range',
+      'Create encrypted development infrastructure after approval',
+      'Publish the image through GitHub Actions OIDC (no long-lived GitHub key)',
+      'Verify HTTPS, application health, database privacy, logs, and budget alarm',
+      'Destroy the CloudFormation stack and verify DELETE_COMPLETE',
+    ],
+    productionAllowed: false,
+  } : null;
 
   return {
     fullName, branch, kind, framework, buildCommand, outputDirectory,
     awsPattern, deployClass, infrastructure, secretLikeFiles,
     fileCount: paths.length,
     manifestsRead: Object.keys(manifests),
-    blockers,
+    blockers, sensitiveDomain, deploymentProfile,
     canDeployNow: false,
     evidenceGates: ['Build succeeds', 'Automated tests pass', 'Secret scan passes', 'Cost approved', 'Development health check passes'],
   };
@@ -157,4 +186,3 @@ function findManifest(manifests, basename) {
   return key ? manifests[key] : '';
 }
 function parseJson(value) { try { return JSON.parse(value || ''); } catch { return null; } }
-

@@ -20,6 +20,22 @@ test('unknown repositories fail closed as planning only', () => {
   assert(result.blockers.length > 0, 'unknown repository has no blockers');
 });
 
+test('detects a health full-stack container before its nested React package', () => {
+  const result = analyzeRepository({
+    fullName: 'me/health-screening',
+    paths: ['Dockerfile', 'frontend/package.json', 'frontend/src/App.jsx', 'backend/requirements.txt', 'backend/server.py'],
+    manifests: {
+      'frontend/package.json': JSON.stringify({ scripts: { build: 'react-scripts build' }, dependencies: { 'react-scripts': '^5' } }),
+      'backend/requirements.txt': 'fastapi\nmotor\n',
+      Dockerfile: 'FROM node:20 AS frontend\nFROM python:3.11-slim',
+    },
+  });
+  assert(result.kind === 'fullstack-container', 'full-stack container was misclassified as a static site');
+  assert(result.sensitiveDomain === true, 'health data sensitivity was not detected');
+  assert(result.deploymentProfile?.productionAllowed === false, 'health deployment was not development-gated');
+  assert(result.canDeployNow === false, 'health repository bypassed evidence and approval gates');
+});
+
 export function runGithubImporterTests() {
   const results = tests.map(([name, fn]) => {
     try { fn(); return { name, pass: true }; }

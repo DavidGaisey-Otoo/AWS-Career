@@ -107,6 +107,11 @@ function Analysis({ analysis, onImport }) {
     {analysis.secretLikeFiles.length > 0 && <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 text-xs"><strong>Secret review required:</strong> {analysis.secretLikeFiles.length} secret-like filename(s) detected. Their contents were not read.</div>}
     <div><div className="font-bold text-xs mb-1">Required before deployment</div><ul className="text-xs space-y-1">{analysis.blockers.map((item) => <li key={item} className="flex gap-1.5"><AlertTriangle size={11} className="text-warning mt-0.5 shrink-0" />{item}</li>)}</ul></div>
     <div className="rounded-xl border border-warning/40 p-3 text-xs"><strong>Deployment status: Review required.</strong> Import creates a study project only. AWS deployment stays locked until build, tests, secrets, cost, and development health evidence pass.</div>
+    {analysis.deploymentProfile && <div className="rounded-xl border border-sky-400/30 bg-sky-400/5 p-3">
+      <div className="font-bold text-xs">Front-end deployment journey · {analysis.deploymentProfile.label}</div>
+      <ol className="mt-2 space-y-1 text-xs list-decimal pl-4">{analysis.deploymentProfile.stages.map((stage) => <li key={stage}>{stage}</li>)}</ol>
+      {analysis.sensitiveDomain && <p className="mt-2 text-xs text-warning"><strong>Synthetic data only.</strong> A successful AWS deployment is not proof of HIPAA, GDPR, or other health-data compliance.</p>}
+    </div>}
     <button onClick={onImport} className="btn btn-primary w-full"><Rocket size={14} /> Import and start guided project</button>
   </div>;
 }
