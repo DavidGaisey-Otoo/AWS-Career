@@ -547,7 +547,7 @@ function SolutionHeader({ solution, gigMeta, saved, onSave }) {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0 flex-1">
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-1">
-            {solution.blueprints.best ? 'Matched a proven blueprint' : 'Custom architecture'}
+            {solution.blueprints.best ? 'Strong reusable blueprint match' : 'Custom architecture required'}
           </div>
           <h2 className="text-lg sm:text-xl font-black leading-tight">{solution.names.projectName}</h2>
           <p className="text-[12px] opacity-80 mt-1">{solution.analysis.summary}</p>
@@ -570,12 +570,12 @@ function SolutionHeader({ solution, gigMeta, saved, onSave }) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-        <Stat label="Services" value={solution.services.length} />
+        <Stat label="Requested services" value={solution.services.length} />
         <Stat label="Region" value={solution.region.primary} mono />
         <Stat label="Est. effort" value={`${solution.plan.estimatedDays}d`} />
         <Stat
-          label="Review"
-          value={solution.review.grade || '—'}
+          label="Delivery readiness"
+          value={solution.review.readiness?.clientReady ? (solution.review.grade || 'Ready') : 'Not ready'}
           className={v.text}
         />
       </div>

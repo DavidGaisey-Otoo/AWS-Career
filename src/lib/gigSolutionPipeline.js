@@ -196,8 +196,9 @@ export function matchBlueprints(brief, services) {
   }).sort((a, b) => b.score - a.score);
 
   const best = ranked[0];
-  // Below 30 the "match" is noise — better to admit it's a custom build.
-  const isCustom = !best || best.score < 30;
+  // Loose service overlap is only a reference, not a blueprint match.
+  // Below 60%, calling it "proven" misrepresents an unrelated design.
+  const isCustom = !best || best.score < 60;
 
   return { ranked: ranked.slice(0, 4), best: isCustom ? null : best, isCustom };
 }

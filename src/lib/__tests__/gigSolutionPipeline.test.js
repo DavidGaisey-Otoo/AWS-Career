@@ -67,6 +67,16 @@ const CHECKS = [
       assert(a.review.expert.score === b.review.expert.score, 'review score drifted between runs');
     },
   },
+  {
+    name: 'structured professional briefs use the title value, not the label',
+    run: () => {
+      const s = runPipeline('Project title:\nWindows Server Administration — Secure Managed Server\n\nOriginal request:\nBuild a Windows Server administration lab with EC2, IAM, and CloudWatch.');
+      assert(s.names.projectName === 'Windows Server Administration — Secure Managed Server',
+        `structured title became "${s.names.projectName}"`);
+      assert(!s.blueprints.best || s.blueprints.best.score >= 60,
+        `weak ${s.blueprints.best?.score}% match was promoted as a blueprint`);
+    },
+  },
 
   // ── grade must be a renderable string, never an object ────────────
   {

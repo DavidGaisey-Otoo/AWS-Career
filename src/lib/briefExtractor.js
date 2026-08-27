@@ -18,6 +18,11 @@ export function extractProjectName(brief = '') {
   const text = String(brief || '').trim();
   if (!text) return '';
 
+  // Structured briefs place the value on the line after the label.
+  // Capture that value instead of treating the literal label as the title.
+  const labelled = text.match(/^(?:project\s+title|job\s+title|gig\s+title)\s*:\s*(?:\r?\n\s*)?([^\r\n]{4,120})/im);
+  if (labelled?.[1]) return titleCase(labelled[1].trim().replace(/[\.,;:]$/, ''));
+
   // Try common "Build/Create/Design a X for Y" patterns first
   const patterns = [
     /^(?:we\s+(?:need|want|require)|i\s+(?:need|want|require)|looking\s+for|seeking)\s+(?:an?\s+|the\s+)?([^\.;\n]{8,80}?)(?:\.|;|\n|$)/i,
