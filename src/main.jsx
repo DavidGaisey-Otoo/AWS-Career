@@ -16,6 +16,7 @@ window.addEventListener('unhandledrejection', (event) => {
 try {
   const fb = document.getElementById('bootstrap-fallback');
   if (fb) fb.remove();
+  sessionStorage.removeItem('awscl-startup-repair-attempted');
 } catch {}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -41,7 +42,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       // deploys, an earlier dev server, etc.). Cheap and safe.
       if (window.caches?.keys) {
         const keys = await caches.keys();
-        await Promise.all(keys.filter((k) => k.startsWith('awscl-app-') && !k.includes('v5-2026-08-release-recovery')).map((k) => caches.delete(k)));
+        await Promise.all(keys.filter((k) => k.startsWith('awscl-app-') && !k.includes('v6-2026-08-startup-recovery')).map((k) => caches.delete(k)));
       }
       const registration = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
       await registration.update();

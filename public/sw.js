@@ -10,7 +10,7 @@
  * fully refresh. Old caches get pruned on activate.
  */
 
-const CACHE_VERSION = 'v5-2026-08-release-recovery';
+const CACHE_VERSION = 'v6-2026-08-startup-recovery';
 const APP_CACHE = `awscl-app-${CACHE_VERSION}`;
 
 // Assets we want available offline immediately on first visit
@@ -67,7 +67,7 @@ self.addEventListener('fetch', (event) => {
   // HTML/navigation must prefer the latest deployment. Falling back to the
   // cached shell keeps offline support without trapping users on an old UI.
   if (req.mode === 'navigate') {
-    event.respondWith(networkFirst(req));
+    event.respondWith(networkFirst(req, true));
     return;
   }
 
@@ -75,7 +75,7 @@ self.addEventListener('fetch', (event) => {
   // being handed an obsolete runtime/chunk pairing immediately after deploy;
   // the cache remains an offline fallback.
   if (url.origin === self.location.origin && url.pathname.includes('/assets/')) {
-    event.respondWith(networkFirst(req));
+    event.respondWith(networkFirst(req, false));
     return;
   }
 
@@ -104,14 +104,21 @@ async function staleWhileRevalidate(req) {
   return cached || fetchPromise;
 }
 
-async function networkFirst(req) {
+async function networkFirst(req, allowShellFallback = false) {
   const cache = await caches.open(APP_CACHE);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
   try {
-    const res = await fetch(req, { cache: 'no-store' });
+    const res = await fetch(req, { cache: 'no-store', signal: controller.signal });
     if (res.ok) cache.put(req, res.clone()).catch(() => {});
     return res;
   } catch {
-    return (await cache.match(req)) || (await cache.match('./index.html'));
+    const exact = await cache.match(req);
+    if (exact) return exact;
+    if (allowShellFallback) return (await cache.match('./index.html')) || Response.error();
+    return Response.error();
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
