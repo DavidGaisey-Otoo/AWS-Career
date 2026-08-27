@@ -173,6 +173,16 @@ export default function SolutionStudio() {
     }
   }
 
+  async function copyBrief() {
+    if (!brief.trim()) return;
+    try {
+      await navigator.clipboard.writeText(brief);
+      toast?.success?.('Professional brief copied to clipboard.');
+    } catch {
+      toast?.error?.('Clipboard access was blocked. Click inside the brief, then press Ctrl+A and Ctrl+C.');
+    }
+  }
+
   function handleSave() {
     if (!solution) return;
     const rec = saveSolution(solution);
@@ -253,6 +263,16 @@ export default function SolutionStudio() {
           />
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={copyBrief}
+              disabled={!brief.trim()}
+              className={cn(
+                'btn btn-ghost !text-[13px] !py-3 tap-44 gap-2',
+                !brief.trim() && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <Copy size={15} /> Copy brief
+            </button>
             <button
               onClick={expandBrief}
               disabled={!brief.trim() || analysing}
