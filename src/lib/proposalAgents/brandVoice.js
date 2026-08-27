@@ -71,7 +71,7 @@ export const brandVoiceCoach = {
         ruleId: 'VOICE-YOU-RATIO-001',
         title: '"I/my" outweighs "you/your"',
         body: `Proposal uses "I/my" ${youI.i}× vs "you/your" ${youI.you}×. Client-facing copy should heavily favour "you".`,
-        fix: 'Flip self-statements: "I have 5 years of AWS experience" → "You\'ll get someone with 5 years on production AWS."',
+        fix: 'Rewrite around the client outcome without changing factual claims. Example: "I will provide a reviewable AWS plan and validation evidence." Never invent years, clients, or production history.',
       }));
     }
 

@@ -67,7 +67,7 @@ export const outreachStrategist = {
         ruleId: 'EMAIL-YOU-RATIO-001',
         title: '"I/my" appears more often than "you/your"',
         body: `Body uses "you/your" ${youI.you}× vs "I/my/me" ${youI.i}×. Reader-facing emails should lean heavily on "you".`,
-        fix: 'Rewrite self-statements as benefit statements. Instead of "I have 5 years experience with AWS" → "You\'ll get someone who has shipped on AWS for 5 years."',
+        fix: 'Rewrite around the recipient\'s decision without changing factual claims. Example: "You will receive a scoped plan and validation evidence." Never invent years or delivery history.',
       }));
     }
 

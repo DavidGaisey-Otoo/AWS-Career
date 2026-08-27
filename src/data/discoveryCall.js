@@ -183,11 +183,11 @@ function objections() {
   return [
     {
       objection: 'You have no reviews yet.',
-      response: 'I am building my portfolio with competitive rates and high-quality work. I offer a satisfaction guarantee — if the first milestone doesn\'t meet the agreed scope, you don\'t pay.',
+      response: 'I am building my portfolio, so I propose a small first milestone with written scope, acceptance criteria, and evidence for your review. Payment and refund terms must be agreed in the platform contract before work starts.',
     },
     {
       objection: 'Your rate is too high.',
-      response: 'I test everything thoroughly before touching your account. You only pay for proven working solutions, and you avoid the rework cost that comes from cheaper engineers shipping fragile infra.',
+      response: 'I can explain the estimate, narrow the first milestone, and define measurable acceptance criteria. I will not promise results or payment terms that are not written into our contract.',
     },
     {
       objection: 'Can you start today?',
@@ -195,7 +195,7 @@ function objections() {
     },
     {
       objection: 'I need someone senior.',
-      response: 'I hold certs that map directly to this work and I\'ve shipped projects of this shape recently. Judge me on the actual code and architectures — happy to share my GitHub.',
+      response: 'That may be a valid requirement. I will not claim senior experience I cannot evidence. I can share relevant portfolio code, state my verified credentials, and suggest a small evaluation milestone—or step aside if senior production ownership is essential.',
     },
     {
       objection: 'We already have an in-house team.',

@@ -13,6 +13,7 @@ import { runEntryLevelGigMatcherTests } from '../src/lib/__tests__/entryLevelGig
 import { runCareerProgressionTests } from '../src/lib/__tests__/careerProgression.test.js';
 import { runGithubImporterTests } from '../src/lib/__tests__/githubProjectImporter.test.js';
 import { runLazyRecoveryTests } from '../src/lib/__tests__/lazyWithRecovery.test.js';
+import { runFreelanceClaimSafetyTests } from '../src/lib/__tests__/freelanceClaimSafety.test.js';
 
 const agents = runAllTests();
 console.log(printReport(agents));
@@ -99,6 +100,13 @@ console.log('  DEPLOYMENT VERSION RECOVERY TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of lazyRecovery.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
+const freelanceClaims = runFreelanceClaimSafetyTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  FREELANCE CLAIM SAFETY TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of freelanceClaims.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
 const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
 const syncOk = sync.allPassed;
@@ -112,7 +120,8 @@ const entryLevelOk = entryLevel.allPassed;
 const careerOk = career.allPassed;
 const githubImporterOk = githubImporter.allPassed;
 const lazyRecoveryOk = lazyRecovery.allPassed;
-const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk;
+const freelanceClaimsOk = freelanceClaims.allPassed;
+const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk;
 
 console.log('');
 console.log(allOk
@@ -120,6 +129,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

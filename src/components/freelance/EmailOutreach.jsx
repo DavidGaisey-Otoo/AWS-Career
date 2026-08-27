@@ -36,6 +36,7 @@ import { BookDiscoveryCallButton } from '../calendar/BookDiscoveryCallButton.jsx
 import { AddToCalendarButton } from '../calendar/AddToCalendarButton.jsx';
 import { cn } from '../../lib/utils.js';
 import { findDraftMarkers } from '../../lib/businessWorkflow.js';
+import { findUnsupportedClaims } from '../../lib/claimSafety.js';
 
 // ════════════════════════════════════════════════════════════════════
 // Outreach modes
@@ -119,7 +120,7 @@ function bodyFor(mode, { gigTitle, firstName, recipientName }) {
     case 'cold':
       return [
         greet, '',
-        `I came across your work and noticed you are running on AWS. I am an AWS-certified architect who has built ${t.length < 30 ? 'production stacks' : 'similar production stacks'} for teams like yours.`,
+        `I came across your work while researching organisations that may benefit from documented AWS planning. I do not want to assume your current stack, so I would first confirm whether AWS support is relevant to ${t}.`,
         '',
         `Without making this a long pitch — here is one specific idea I would explore at your company:`,
         ` • Review [workload] and evaluate whether [service] can reduce [cost/latency/effort]`,
@@ -200,6 +201,11 @@ export function EmailOutreach() {
   );
 
   async function handleCopy() {
+    const unsupported = findUnsupportedClaims(`${subject}\n${body}`);
+    if (unsupported.length) {
+      toast?.error?.(`Review required: remove or prove unsupported claim${unsupported.length > 1 ? 's' : ''} before copying.`);
+      return;
+    }
     const text = `Subject: ${subject}\n\n${body}`;
     try {
       await navigator.clipboard.writeText(text);

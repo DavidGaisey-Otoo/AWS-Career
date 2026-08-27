@@ -21,13 +21,8 @@
 import { analyzeJobDescription } from './freelanceEngine.js';
 
 // ════════════════════════════════════════════════════════════════════
-// Cert picker — based on the seniority/services hinted in the JD
-// ════════════════════════════════════════════════════════════════════
-const CERT_BY_LEVEL = {
-  Junior: 'AWS Certified Cloud Practitioner',
-  Mid:    'AWS Certified Solutions Architect — Associate',
-  Senior: 'AWS Certified Solutions Architect — Professional',
-};
+// Never infer certifications or delivery history from a job description.
+// Those are identity claims and must come from verified profile evidence.
 
 // ════════════════════════════════════════════════════════════════════
 // Service explainers — kept short, plain-English, used in MY APPROACH
@@ -70,10 +65,10 @@ const APPROACH_PHRASES = {
 // ════════════════════════════════════════════════════════════════════
 function pickHook(seed, painPoint, projectTitle, primaryService) {
   const variants = [
-    `${painPoint}${endPunct(painPoint)} I've shipped this exact pattern on AWS before — let's get yours done properly.`,
-    `Sounds like ${shortPain(painPoint)} is costing you time. Here's how I'd fix it cleanly on AWS.`,
-    `I read your post twice — ${shortPain(painPoint)} is fixable, and ${primaryService.toUpperCase()} is the right tool for the job.`,
-    `Your project caught my eye because ${shortPain(painPoint)} is exactly the kind of AWS work I do day-to-day.`,
+    `${painPoint}${endPunct(painPoint)} I would start by confirming the scope, constraints, and success checks before proposing an AWS design.`,
+    `It sounds like ${shortPain(painPoint)} is the main concern. I would confirm the impact and acceptance criteria before choosing an AWS design.`,
+    `I reviewed your post carefully. ${primaryService.toUpperCase()} may fit ${shortPain(painPoint)}, but I would validate the requirements and alternatives first.`,
+    `Your project caught my eye because ${shortPain(painPoint)} can be broken into clear, reviewable AWS milestones.`,
     `Quick proposal for "${projectTitle}" — I think you'll like how lean the AWS approach makes this.`,
   ];
   return variants[seed % variants.length];
@@ -82,12 +77,12 @@ function pickHook(seed, painPoint, projectTitle, primaryService) {
 // ════════════════════════════════════════════════════════════════════
 // Why-Me variations
 // ════════════════════════════════════════════════════════════════════
-function pickWhyMe(seed, cert, primaryService, level) {
+function pickWhyMe(seed, primaryService) {
   const variants = [
-    `I'm ${cert}-certified and I've built production ${primaryService.toUpperCase()} stacks for ${level === 'Senior' ? 'enterprise' : 'startup'} clients. Every project ships with IaC, monitoring, and a written handover doc.`,
-    `${cert} certified, and the last three projects I delivered all used ${primaryService.toUpperCase()} as the core service. You'd get a clean architecture diagram, runbooks, and cost guardrails included.`,
-    `My background: ${cert}, hands-on with ${primaryService.toUpperCase()} on real client work, and I document everything so your future team isn't stuck reverse-engineering it.`,
-    `I hold the ${cert} and I've spent the last year building AWS solutions exactly like this. You get tested infra-as-code, not "it works on my laptop" scripts.`,
+    `I use an evidence-first workflow: agreed requirements, a reviewable ${primaryService.toUpperCase()} design, infrastructure-as-code where supported, validation results, and written handover notes. Any experience or certification claim should be added only when you can verify it.`,
+    `You would receive a scoped plan, architecture diagram, cost assumptions, risk register, and acceptance checks before production changes are considered.`,
+    `My proposed workflow keeps assumptions visible and separates planning from verified deployment evidence, so you can review every important decision.`,
+    `I would begin with a small, agreed milestone and provide the resulting code, test evidence, and documentation for review before expanding the scope.`,
   ];
   return variants[seed % variants.length];
 }
@@ -98,8 +93,8 @@ function pickWhyMe(seed, cert, primaryService, level) {
 function pickCta(seed, firstName) {
   const variants = [
     `Happy to jump on a 15-minute call this week to walk through the architecture and confirm scope. Just send me a time that works for you. — ${firstName}`,
-    `If this approach lines up with what you had in mind, message me and I'll send over a fixed-scope proposal with milestones inside 24 hours. — ${firstName}`,
-    `Send me a quick reply if you'd like the full architecture diagram and a milestone-based quote — I can have both with you tomorrow. — ${firstName}`,
+    `If this approach lines up with what you had in mind, message me and we can agree the requirements needed for a fixed-scope proposal and milestones. — ${firstName}`,
+    `Send me a quick reply if you would like to review the requirements for an architecture diagram and milestone-based estimate. — ${firstName}`,
     `Let's set up a 15-minute discovery call to lock in the scope. Reply with two times that work and I'll send the meeting invite. — ${firstName}`,
   ];
   return variants[seed % variants.length];
@@ -113,14 +108,14 @@ function buildTimeline(services, isHourly) {
   // Rough heuristic — small (1-2 svc) = 1-2 wks, medium (3-5) = 3-4 wks, large (6+) = 5-6 wks
   const weeks = n <= 2 ? '1-2 weeks' : n <= 5 ? '3-4 weeks' : '5-6 weeks';
   const milestones = [
-    'Week 1 — discovery call, architecture diagram, agreed scope + cost estimate',
-    'Mid-project — first working build deployed to a staging account for your review',
-    'Final — production cutover, runbooks delivered, 7-day post-go-live support',
+    'Discovery — confirm requirements, architecture, scope, cost assumptions, and acceptance checks',
+    'Build — implement the agreed milestone and present test or validation evidence for review',
+    'Handover — deliver approved code and documentation; production and support terms require separate confirmation',
   ];
   if (isHourly) {
-    return `Realistic timeline: ${weeks} of focused work. I bill weekly with timesheets and a milestone summary so you can see exactly what was done. Key checkpoints:\n${milestones.map((m) => `• ${m}`).join('\n')}`;
+    return `Initial planning estimate: ${weeks}, subject to confirmed scope and dependencies. Billing cadence and timesheet requirements must be agreed in the platform contract. Draft checkpoints:\n${milestones.map((m) => `• ${m}`).join('\n')}`;
   }
-  return `Realistic timeline: ${weeks} from kickoff. Milestones:\n${milestones.map((m) => `• ${m}`).join('\n')}`;
+  return `Initial planning estimate: ${weeks} from kickoff, subject to confirmed scope, access, dependencies, and client review. Draft milestones:\n${milestones.map((m) => `• ${m}`).join('\n')}`;
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -149,7 +144,6 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
 
   const firstName = (profile?.name || 'David').split(' ')[0];
   const primaryService = analysis.services?.[0] || 'aws';
-  const cert = CERT_BY_LEVEL[analysis.level] || CERT_BY_LEVEL.Mid;
 
   // ──────── HOOK (1 sentence)
   const hook = pickHook(seed, analysis.painPoint, analysis.projectTitle, primaryService);
@@ -183,8 +177,8 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
   }
   const approach = approachSteps.map((s, i) => `${i + 1}. ${s}.`).join('\n');
 
-  // ──────── WHY ME (cert + experience)
-  const whyMe = pickWhyMe(seed, cert, primaryService, analysis.level);
+  // ──────── WHY ME (process only; never invent credentials or client history)
+  const whyMe = pickWhyMe(seed, primaryService);
 
   // ──────── TIMELINE
   const timeline = buildTimeline(analysis.services, analysis.isHourly);
@@ -246,7 +240,7 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
     meta: {
       seed,
       lengthMode,
-      cert,
+      claimPolicy: 'evidence-required',
       primaryService,
       firstName,
       generatedAt: new Date().toISOString(),

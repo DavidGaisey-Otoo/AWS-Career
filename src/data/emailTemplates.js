@@ -409,7 +409,7 @@ Best,
 
 If anyone in your network is wrestling with AWS, would you be open to sending them my way?
 
-I am picking up two new clients this month and word-of-mouth from teams like {clientCompany} is by far the best signal.
+I am selectively taking on suitable AWS projects. If you were satisfied with the completed work, would you be comfortable introducing me to someone who may need similar help?
 
 Best,
 {authorName}`,
