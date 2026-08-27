@@ -132,7 +132,7 @@ export function runExpertReview(input) {
 }
 
 function gradeFromScore(score) {
-  if (score >= 95) return { letter: 'A+', tone: 'success', label: 'Production-ready' };
+  if (score >= 95) return { letter: 'A+', tone: 'success', label: 'Excellent rule-check score' };
   if (score >= 90) return { letter: 'A',  tone: 'success', label: 'Strong' };
   if (score >= 80) return { letter: 'B',  tone: 'success', label: 'Solid with minor gaps' };
   if (score >= 70) return { letter: 'C',  tone: 'warning', label: 'Needs improvement' };

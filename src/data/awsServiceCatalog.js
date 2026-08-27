@@ -354,6 +354,24 @@ export const AWS_SERVICE_CATALOG = {
     ],
     companions: ['sns'],
   },
+  ssm: {
+    id: 'ssm', label: 'AWS Systems Manager', icon: '⚙', category: 'DevOps',
+    what: 'Securely administer, patch, inventory, and automate EC2 instances. Session Manager avoids exposing inbound RDP or SSH when the operating system and agent support the required workflow.',
+    freeTier: 'Core EC2 management features generally have no additional service charge; advanced features and connected-node tiers may cost money',
+    triggers: [
+      { pattern: /\b(ssm|systems manager|session manager|patch manager|run command|secure remote administration)\b/i, reason: 'Brief requests Systems Manager or secure remote administration and patching.' },
+    ],
+    companions: ['ec2', 'iam', 'cloudwatch'],
+  },
+  backup: {
+    id: 'backup', label: 'AWS Backup', icon: '💾', category: 'Storage',
+    what: 'Centralised policy-based backup, retention, restore, and recovery-point management for supported AWS resources.',
+    freeTier: 'Usage-based backup storage, restore, copy, and transfer charges; verify current account eligibility and pricing',
+    triggers: [
+      { pattern: /\b(aws backup|backup vault|backup plan|controlled restore|backup and restore)\b/i, reason: 'Brief explicitly requires managed backup and restore evidence.' },
+    ],
+    companions: ['ec2', 'iam', 'cloudwatch'],
+  },
   cloudtrail: {
     id: 'cloudtrail', label: 'AWS CloudTrail', icon: '🛤', category: 'DevOps',
     what: 'API audit log — records every API call across your account (who, what, when, from where). Free first trail for management events.',

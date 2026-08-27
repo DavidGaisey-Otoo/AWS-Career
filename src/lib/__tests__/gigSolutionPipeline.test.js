@@ -77,6 +77,32 @@ const CHECKS = [
         `weak ${s.blueprints.best?.score}% match was promoted as a blueprint`);
     },
   },
+  {
+    name: 'Windows Server briefs retain Systems Manager and AWS Backup requirements',
+    run: () => {
+      const s = runPipeline(`Project title:
+Windows Server Administration — Secure Managed Server
+
+Proposed components to validate:
+- Windows Server 2022
+- PowerShell
+- AWS EC2
+- AWS Systems Manager
+- Amazon CloudWatch
+- AWS Backup
+- IAM
+
+Use secure remote administration, patching, monitoring, backup, and a controlled restore.`);
+      const ids = new Set(s.services.map((service) => service.id));
+      for (const required of ['ec2', 'iam', 'ssm', 'backup', 'cloudwatch']) {
+        assert(ids.has(required), `missing explicitly requested service: ${required}`);
+      }
+      assert(s.review.score < 100, 'deployment findings were excluded from the combined score');
+      assert(s.deploy.canOneClick === false, 'unsupported service coverage must block one-click deployment');
+      assert(s.review.readiness.unsupported.some((item) => item.serviceId === 'ssm'), 'SSM coverage gap was hidden');
+      assert(s.review.readiness.unsupported.some((item) => item.serviceId === 'backup'), 'AWS Backup coverage gap was hidden');
+    },
+  },
 
   // ── grade must be a renderable string, never an object ────────────
   {

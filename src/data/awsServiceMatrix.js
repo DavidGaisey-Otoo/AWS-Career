@@ -243,6 +243,19 @@ export const SERVICE_MATRIX = {
     freeTier: 'always-free',
     costNote: 'IAM is FREE FOREVER',
   },
+  ssm: {
+    id: 'ssm', label: 'AWS Systems Manager', category: 'devops',
+    aliases: ['ssm', 'systems manager', 'session manager', 'patch manager', 'run command'],
+    freeTier: 'always-free',
+    costNote: 'Core Systems Manager capabilities for EC2 are generally available without an additional service charge; advanced features and connected-node tiers can cost money',
+  },
+  backup: {
+    id: 'backup', label: 'AWS Backup', category: 'storage',
+    aliases: ['aws backup', 'backup vault', 'backup plan'],
+    freeTier: 'costs-money',
+    costNote: 'Charged for backup storage, restore operations, copies, and data transfer; no blanket zero-cost promise',
+    testMap: { service: 'backup', spec: 'Short-retention encrypted EC2/EBS recovery point after account-specific estimate', cost: 'Usage-based' },
+  },
   kms: {
     id: 'kms', label: 'KMS', category: 'security',
     aliases: ['kms', 'key management', 'encryption key'],

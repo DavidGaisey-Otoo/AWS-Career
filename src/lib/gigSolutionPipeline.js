@@ -50,6 +50,7 @@ import { recommendApproach, getApproachById, APPROACH_OPTIONS } from './approach
 import { generateTerraform, generateCloudFormation, generateCli } from './scriptGenerator.js';
 import { runExpertReview } from './expertAgents/master.js';
 import { runDeployReview } from './deployAgents/master.js';
+import { scoreFromFindings, gradeFromScore } from './agentScoring.js';
 import { upsertSolution } from './solutionStore.js';
 import { PROJECTS } from '../data/projects.js';
 
@@ -490,6 +491,15 @@ export function runPipeline(gig, options = {}) {
     ...(expert?.findings || []).filter((f) => f.severity === 'high'),
     ...(deployReview?.findings || []).filter((f) => f.severity === 'high'),
   ];
+  // The visible review combines architecture and deployment findings, so its
+  // score must do the same. Scoring only the first set produced impossible
+  // screens such as A+ 100/100 beside unresolved deployment findings.
+  const scoredFindings = [
+    ...(expert?.findings || []),
+    ...(deployReview?.findings || []),
+  ].filter((finding) => finding.severity !== 'info');
+  const combinedScore = scoreFromFindings(scoredFindings);
+  const combinedGrade = gradeFromScore(combinedScore);
 
   // A template with no real resources in it is not deployable, no matter
   // how clean the review came back. Coverage is the honest gate here.
@@ -542,9 +552,10 @@ export function runPipeline(gig, options = {}) {
       verdict,
       // runExpertReview returns grade as { letter, tone, label } — flatten
       // it so the UI can render it directly without crashing on an object.
-      grade: expert?.grade?.letter || null,
-      gradeLabel: expert?.grade?.label || null,
-      gradeTone: expert?.grade?.tone || null,
+      score: combinedScore,
+      grade: combinedGrade.letter,
+      gradeLabel: combinedGrade.label,
+      gradeTone: combinedGrade.tone,
       readiness,
     },
     deploy: {

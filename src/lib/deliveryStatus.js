@@ -9,7 +9,7 @@ export function getDeliveryStatus(solution = {}) {
   const gates = Array.isArray(readiness.evidenceGates) ? readiness.evidenceGates : [];
   const openPreDeployGates = gates.filter((gate) => !gate.passed && gate.stage !== 'post-deploy');
   const openPostDeployGates = gates.filter((gate) => !gate.passed && gate.stage === 'post-deploy');
-  const score = review.expert?.score;
+  const score = Number.isFinite(review.score) ? review.score : review.expert?.score;
   const grade = review.grade;
   const canDeploy = solution.deploy?.canOneClick === true;
   const clientReady = readiness.clientReady === true;
