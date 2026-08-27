@@ -42,6 +42,7 @@ import { DeployFromScriptModal } from '../components/deploy/DeployFromScriptModa
 import { TeardownModal } from '../components/deploy/TeardownModal.jsx';
 import { cn } from '../lib/utils.js';
 import { assessFreeTierCost, formatPriceRange } from '../lib/projectCostEstimator.js';
+import { buildProfessionalBrief } from '../lib/professionalBriefBuilder.js';
 
 /**
  * The four verdict tiers the pipeline can return, and how each one looks.
@@ -72,6 +73,10 @@ const VERDICT = {
 };
 
 const EXAMPLES = [
+  {
+    label: 'Windows Server admin',
+    text: 'I want to start with a Windows Server administration project.',
+  },
   {
     label: 'E-commerce migration',
     text: 'We need to migrate our PCI-DSS compliant e-commerce store to AWS. Expecting 50,000 concurrent users during sales. Need high availability, a managed database, and a CDN. UK-based customers. Budget £8,000, timeline 2 weeks.',
@@ -158,6 +163,16 @@ export default function SolutionStudio() {
     }, 60);
   }
 
+  function expandBrief() {
+    try {
+      const expanded = buildProfessionalBrief(brief);
+      setBrief(expanded);
+      toast?.success?.('Professional brief created. Review or edit it, then build the solution.');
+    } catch (error) {
+      toast?.error?.(error.message || 'Describe the project first.');
+    }
+  }
+
   function handleSave() {
     if (!solution) return;
     const rec = saveSolution(solution);
@@ -223,8 +238,8 @@ export default function SolutionStudio() {
             <div>
               <h2 className="text-[15px] font-extrabold">Describe the work — or paste the gig</h2>
               <p className="text-[12.5px] opacity-75 mt-0.5 leading-relaxed">
-                A job post, a client email, a WhatsApp message, or a few sentences of your own.
-                The more detail, the sharper the solution.
+                Type one short idea or paste a complete job post. Use Professional Brief to expand a short idea
+                into questions, requirements, architecture, cost, security, evidence, rollback, and portfolio sections.
               </p>
             </div>
           </div>
@@ -238,6 +253,16 @@ export default function SolutionStudio() {
           />
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={expandBrief}
+              disabled={!brief.trim() || analysing}
+              className={cn(
+                'btn btn-ghost !text-[13px] !py-3 tap-44 gap-2',
+                (!brief.trim() || analysing) && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <Sparkles size={15} /> Expand professional brief
+            </button>
             <button
               onClick={() => analyse(brief)}
               disabled={analysing || !brief.trim()}
@@ -264,7 +289,7 @@ export default function SolutionStudio() {
               {EXAMPLES.map((ex) => (
                 <button
                   key={ex.label}
-                  onClick={() => { setBrief(ex.text); analyse(ex.text); }}
+                  onClick={() => setBrief(ex.text)}
                   className="px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition tap-44"
                 >
                   {ex.label}
