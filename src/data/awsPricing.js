@@ -660,6 +660,24 @@ export const SERVICE_PRICING = {
     },
     freeTierTips: ['Use Parameter Store for non-rotating config (free) — Secrets Manager only for secrets needing rotation'],
   },
+  backup: {
+    label: 'AWS Backup',
+    freeTier: {
+      headline: 'No free tier — usage based',
+      limit: 'Pay for backup storage, restores, restore testing, copies, and applicable data transfer',
+      alwaysFree: false,
+    },
+    afterFreeTier: {
+      low: 0, high: 5,
+      unit: 'Illustrative small learning workload only; actual charge depends on protected GB, retention, restores, copies, and Region',
+      explanation: 'AWS has no setup charge or minimum fee, but backup storage and recovery activity are billable. Confirm the account-specific estimate before creating a plan.',
+    },
+    freeTierTips: [
+      'Use short retention for a learning lab and delete recovery points after evidence is captured',
+      'Avoid cross-Region copies until their transfer and destination-storage cost is approved',
+      'Budget for a controlled restore test; a backup without restore evidence is not verified',
+    ],
+  },
   ecr: {
     label: 'ECR',
     freeTier: {
@@ -776,6 +794,8 @@ const SERVICE_ALIASES = {
   'secrets-manager': 'secretsmgr',
   'ssm':           'ssm',
   'parameter-store': 'ssm',
+  'backup':        'backup',
+  'aws-backup':    'backup',
   'waf':           'waf',
   'shield':        'shield',
   'acm':           'acm',

@@ -16,6 +16,7 @@
  */
 
 import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness, extractBudgetFromBrief } from '../gigSolutionPipeline.js';
+import { assessFreeTierCost } from '../projectCostEstimator.js';
 
 // ════════════════════════════════════════════════════════════════════
 // Fixtures
@@ -101,6 +102,9 @@ Use secure remote administration, patching, monitoring, backup, and a controlled
       assert(s.deploy.canOneClick === false, 'unsupported service coverage must block one-click deployment');
       assert(s.review.readiness.unsupported.some((item) => item.serviceId === 'ssm'), 'SSM coverage gap was hidden');
       assert(s.review.readiness.unsupported.some((item) => item.serviceId === 'backup'), 'AWS Backup coverage gap was hidden');
+      const cost = assessFreeTierCost([...ids], 'us-east-1');
+      assert(!cost.unknownServices.includes('backup'), 'AWS Backup pricing coverage is missing');
+      assert(cost.noFreeTier.some((item) => item.id === 'backup'), 'AWS Backup was incorrectly presented as free');
     },
   },
 

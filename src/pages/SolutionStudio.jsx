@@ -62,12 +62,12 @@ const VERDICT = {
     chip: 'bg-warning/20 text-warning', ok: true,
   },
   'fix-first': {
-    label: 'Fix the critical issues first',
+    label: 'Resolve the open readiness gates first',
     border: 'border-l-danger', text: 'text-danger', bg: 'bg-danger/10',
     chip: 'bg-danger/20 text-danger', ok: false,
   },
   blocked: {
-    label: 'Needs more detail',
+    label: 'Planning only — more verified detail is required',
     border: 'border-l-danger', text: 'text-danger', bg: 'bg-danger/10',
     chip: 'bg-danger/20 text-danger', ok: false,
   },
