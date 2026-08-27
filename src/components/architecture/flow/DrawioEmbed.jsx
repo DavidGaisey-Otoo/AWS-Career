@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { getServiceDef } from '../../../data/archStudio.js';
-import { DRAWIO_ORIGIN, normalizeArchitecture, validateDrawioXml } from '../../../lib/drawioBridge.js';
+import { architectureToDrawioXml, DRAWIO_ORIGIN, validateDrawioXml } from '../../../lib/drawioBridge.js';
 
 // Build the embed URL — we want the AWS shape library auto-loaded
 // and the "save" button to post back to us instead of saving to disk.
@@ -26,40 +26,8 @@ const EMBED_URL = 'https://embed.diagrams.net/?embed=1&ui=dark&spin=1&modified=u
 // Convert our internal {nodes, edges} → minimal draw.io XML
 // ════════════════════════════════════════════════════════════════════
 function nodesToDrawioXml(nodes, edges, name = 'AWS architecture') {
-  // The app's graph is canonical: do not export dangling or duplicated
-  // relationships that cannot correspond to deployable infrastructure.
-  ({ nodes, edges } = normalizeArchitecture(nodes, edges));
-  // Tile each node into a default grid if positions aren't sensible
-  const xmlNodes = nodes.map((n, i) => {
-    const def = getServiceDef(n.serviceId);
-    const label = def?.label || n.serviceId;
-    const x = Number.isFinite(n.x) ? n.x : 40 + (i % 6) * 160;
-    const y = Number.isFinite(n.y) ? n.y : 40 + Math.floor(i / 6) * 100;
-    return `<mxCell id="${escapeXml(n.id)}" value="${escapeXml(label)}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f2937;strokeColor=#FF9900;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
-      <mxGeometry x="${x}" y="${y}" width="120" height="60" as="geometry"/>
-    </mxCell>`;
-  }).join('\n');
-
-  const xmlEdges = edges.map((e, i) => `<mxCell id="edge-${i}" style="endArrow=classic;html=1;rounded=1;strokeColor=#FF9900;" edge="1" parent="1" source="${escapeXml(e.from)}" target="${escapeXml(e.to)}">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>`).join('\n');
-
-  return `<mxfile host="aws-career-launchpad-pro">
-  <diagram name="${escapeXml(name)}">
-    <mxGraphModel grid="1" gridSize="10" math="0" shadow="0">
-      <root>
-        <mxCell id="0"/>
-        <mxCell id="1" parent="0"/>
-        ${xmlNodes}
-        ${xmlEdges}
-      </root>
-    </mxGraphModel>
-  </diagram>
-</mxfile>`;
-}
-
-function escapeXml(s) {
-  return String(s ?? '').replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
+  return architectureToDrawioXml(nodes, edges, name,
+    (node) => getServiceDef(node.serviceId)?.label || node.serviceId || node.id);
 }
 
 // ════════════════════════════════════════════════════════════════════

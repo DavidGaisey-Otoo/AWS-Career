@@ -19,6 +19,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import {
   CATEGORY_COLOR, PALETTE_CATEGORIES, SERVICE_PALETTE, TEMPLATES, getServiceDef,
 } from '../data/archStudio.js';
+import { architectureToDrawioXml, validateDrawioXml } from '../lib/drawioBridge.js';
 import { cn, uid } from '../lib/utils.js';
 
 const NODE_W = 124;
@@ -72,6 +73,8 @@ export default function Architecture() {
     setNodes(d.nodes || []);
     setEdges(d.edges || []);
     setName(d.name || 'Untitled diagram');
+    setDrawioXml(validateDrawioXml(d.drawioXml).valid ? d.drawioXml : null);
+    setRegion(d.region || 'us-east-1');
     setSelectedNodeId(null);
     setConnectingFrom(null);
     setDidMutate(false);
@@ -203,14 +206,28 @@ export default function Architecture() {
     setNodes([]); setEdges([]); setName('Untitled diagram');
     setSelectedNodeId(null); setConnectingFrom(null);
     setCurrentDiagram(null);
+    setDrawioXml(null);
     setDidMutate(false);
   };
 
   const save = () => {
     const id = current?.id || uid();
-    saveDiagram({ id, name, nodes, edges });
+    saveDiagram({ id, name, nodes, edges, drawioXml, region });
     setDidMutate(false);
     toast.success(`Saved "${name}"`);
+  };
+
+  const currentDrawioXml = () => {
+    const saved = validateDrawioXml(drawioXml);
+    return saved.valid ? saved.xml : architectureToDrawioXml(
+      nodes, edges, name,
+      (node) => getServiceDef(node.serviceId)?.label || node.serviceId || node.id,
+    );
+  };
+
+  const exportDrawio = () => {
+    download(`${safeFilename(name)}.drawio`, currentDrawioXml(), 'application/vnd.jgraph.mxfile');
+    toast.success('Downloaded editable Draw.io file');
   };
 
   // Find the react-flow viewport element for screenshot export
@@ -300,6 +317,15 @@ img{max-width:100%;height:auto}
 
   const cost = useMemo(() => estimateCost(nodes), [nodes]);
   const review = useMemo(() => reviewArchitecture(nodes, edges), [nodes, edges]);
+  const proposal = useMemo(
+    () => buildArchitectureProposal({ name, nodes, edges, region, cost, review }),
+    [name, nodes, edges, region, cost, review],
+  );
+
+  const exportProposal = () => {
+    download(`${safeFilename(name)}-architecture-proposal.md`, proposal, 'text/markdown;charset=utf-8');
+    toast.success('Downloaded architecture proposal');
+  };
 
   // -------- EXPERT-01 multi-agent review (derived from canvas) --------
 
@@ -316,7 +342,7 @@ img{max-width:100%;height:auto}
     const hasDB       = services.some((s) => ['rds', 'aurora', 'dynamodb', 'redshift', 'neptune'].includes(s));
 
     const briefParts = [
-      `${name || 'Architecture diagram'} — production AWS workload running ${services.length} services in ${region}.`,
+      `${name || 'Architecture diagram'} — unverified AWS design draft containing ${services.length} services and targeting ${region}.`,
       hasUser   && 'Customer-facing application accessed by end users over the internet.',
       hasOnPrem && 'Hybrid topology integrating on-premises infrastructure with AWS.',
       hasML     && 'ML/AI workload requires inference endpoints with predictable latency.',
@@ -351,7 +377,7 @@ img{max-width:100%;height:auto}
       <PageHeader
         eyebrow="Architecture Studio"
         title="Design clouds visually."
-        subtitle="Drag AWS services onto the canvas, connect with arrows, save versions, export PNG/SVG/PDF, and get AI review."
+        subtitle="Build a reviewable AWS design, edit it in Draw.io, and download the diagram plus an evidence-first architecture proposal."
         icon={Layers}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
@@ -434,6 +460,7 @@ img{max-width:100%;height:auto}
               onNew={newDiagram}
               onSave={save}
               onSVG={exportSVG} onPNG={exportPNG} onPDF={exportPDF}
+              onDrawioDownload={exportDrawio} onProposal={exportProposal}
               onShare={shareURL}
               onReview={() => setReviewOpen(true)}
               onExpertReview={() => {
@@ -702,8 +729,10 @@ img{max-width:100%;height:auto}
         initialXml={drawioXml}
         onSaveXml={(xml) => {
           setDrawioXml(xml);
-          setDidMutate(true);
-          toast.success('Saved draw.io edits — your diagram XML is stored.');
+          const id = current?.id || uid();
+          saveDiagram({ id, name, nodes, edges, drawioXml: xml, region });
+          setDidMutate(false);
+          toast.success('Saved draw.io edits with this diagram.');
         }}
       />
     </div>
@@ -748,7 +777,8 @@ function ExpertReviewModal({ inputs, onClose }) {
 
 function Toolbar({
   connectingFrom, setConnectingFrom, selectedNodeId, removeNode,
-  onNew, onSave, onSVG, onPNG, onPDF, onShare, onReview, onExpertReview, hasNodes, onDrawio,
+  onNew, onSave, onSVG, onPNG, onPDF, onDrawioDownload, onProposal,
+  onShare, onReview, onExpertReview, hasNodes, onDrawio,
 }) {
   return (
     <>
@@ -756,6 +786,8 @@ function Toolbar({
       <TBtn onClick={() => selectedNodeId && removeNode(selectedNodeId)} icon={Trash2} label="Delete" disabled={!selectedNodeId} />
       <TBtn onClick={onDrawio} icon={ExternalLink} label="Open in draw.io" disabled={!hasNodes} />
       <div className="ml-auto flex items-center gap-1">
+        <TBtn onClick={onDrawioDownload} icon={Download} label=".drawio" disabled={!hasNodes} />
+        <TBtn onClick={onProposal} icon={FileText} label="Proposal" disabled={!hasNodes} />
         <TBtn onClick={onPNG} icon={FileImage} label="PNG" />
         <TBtn onClick={onSVG} icon={Download} label="SVG" />
         <TBtn onClick={onPDF} icon={FileText} label="PDF" />
@@ -913,6 +945,52 @@ function estimateCost(nodes) {
   return { total: Math.round(total), lines };
 }
 
+export function buildArchitectureProposal({ name, nodes = [], edges = [], region, cost, review }) {
+  const services = Array.from(new Set(nodes
+    .map((node) => getServiceDef(node.serviceId)?.label || node.serviceId)
+    .filter(Boolean)));
+  const disconnected = nodes.filter((node) => !edges.some((edge) => edge.from === node.id || edge.to === node.id));
+  return `# ${name || 'AWS Architecture'} — Architecture Proposal
+
+> **Status: design draft — not deployment evidence.** Client requirements, AWS quotas, pricing, security controls, data classification, recovery objectives, and acceptance criteria must be confirmed before implementation.
+
+## Executive summary
+This document describes the current visual design targeting **${region || 'region not selected'}**. It contains **${nodes.length} components** and **${edges.length} documented relationships**. It is suitable for discovery and review; it is not proof that resources were deployed or tested.
+
+## Proposed services
+${services.length ? services.map((service) => `- ${service}`).join('\n') : '- No services selected.'}
+
+## Architecture quality review
+- Heuristic review score: **${review?.score ?? 0}/100**
+- Review summary: ${review?.tagline || 'Not reviewed'}
+- Disconnected components requiring explanation: **${disconnected.length}**
+
+## Cost position
+- Static planning baseline: **$${cost?.total ?? 0}/month**
+- This is not an AWS quote and does not prove Free Tier eligibility.
+- Validate usage, region, data transfer, support, taxes, and current AWS pricing before client approval.
+
+## Questions requiring client confirmation
+1. What business outcome and measurable acceptance criteria define success?
+2. What traffic, storage, concurrency, latency, availability, RTO, and RPO are required?
+3. What data classifications, retention rules, residency, privacy, and compliance obligations apply?
+4. Which AWS accounts, environments, domains, repositories, and third-party systems are in scope?
+5. What budget ceiling, Free Tier expectations, timeline, maintenance, and support terms are approved?
+6. Who approves architecture, security, cost, deployment, rollback, and final acceptance?
+
+## Required validation evidence
+- Client-approved requirements and assumptions
+- AWS Well-Architected and threat-model review
+- Current AWS Pricing Calculator estimate or equivalent documented calculation
+- Infrastructure-as-code validation and peer review
+- Staging deployment evidence, automated tests, security checks, and rollback test
+- Client acceptance record and operations handover
+
+## Next decision
+Resolve the questions above, update the diagram, run the expert review, and only then create a separately reviewed deployment artifact.
+`;
+}
+
 // ---------- review modal ----------
 
 function ReviewModal({ review, onClose, onSave }) {
@@ -959,4 +1037,10 @@ function download(filename, content, mimeType) {
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function safeFilename(value) {
+  return String(value || 'aws-architecture').trim()
+    .replace(/[^a-z0-9._-]+/gi, '-')
+    .replace(/^-+|-+$/g, '') || 'aws-architecture';
 }
