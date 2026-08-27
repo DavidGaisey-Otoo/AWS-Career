@@ -43,6 +43,7 @@ import { TeardownModal } from '../components/deploy/TeardownModal.jsx';
 import { cn } from '../lib/utils.js';
 import { assessFreeTierCost, formatPriceRange } from '../lib/projectCostEstimator.js';
 import { buildProfessionalBrief } from '../lib/professionalBriefBuilder.js';
+import { getDeliveryStatus } from '../lib/deliveryStatus.js';
 
 /**
  * The four verdict tiers the pipeline can return, and how each one looks.
@@ -402,7 +403,7 @@ export default function SolutionStudio() {
                 'px-2 py-0.5 rounded-full text-[10px] font-extrabold',
                 (VERDICT[solution.review.verdict] || VERDICT.blocked).chip
               )}>
-                {solution.review.grade} · {solution.review.expert.score}
+                {getDeliveryStatus(solution).clientReady ? 'Pre-deploy review passed' : 'Not ready'}
               </span>
             )}
             defaultOpen
@@ -933,6 +934,7 @@ function PlanPanel({ solution }) {
 // ════════════════════════════════════════════════════════════════════
 function ReviewPanel({ solution }) {
   const { expert, deploy: deployReview } = solution.review;
+  const deliveryStatus = getDeliveryStatus(solution);
   const [showAll, setShowAll] = useState(false);
 
   if (!expert) {
@@ -946,14 +948,14 @@ function ReviewPanel({ solution }) {
     <div className="space-y-3">
       <div className="flex items-center gap-3 flex-wrap">
         <div className="text-[26px] font-black leading-none">
-          {solution.review.grade}
-          <span className="text-[13px] opacity-55 font-bold ml-1.5">{expert.score}/100</span>
+          {deliveryStatus.grade || '—'}
+          <span className="text-[13px] opacity-55 font-bold ml-1.5">{Number.isFinite(deliveryStatus.score) ? `${deliveryStatus.score}/100` : 'not scored'}</span>
         </div>
         <div className="flex-1 min-w-[180px]">
-          {solution.review.gradeLabel && (
-            <div className="text-[12px] font-extrabold">{solution.review.gradeLabel}</div>
-          )}
-          <div className="text-[11.5px] opacity-80">{expert.summary}</div>
+          <div className={cn('text-[12px] font-extrabold', deliveryStatus.clientReady ? 'text-success' : 'text-warning')}>
+            {deliveryStatus.reviewStatus}
+          </div>
+          <div className="text-[11.5px] opacity-80">{deliveryStatus.reviewSummary}</div>
         </div>
       </div>
 
@@ -1038,6 +1040,7 @@ function BuildPanel({ solution, onDeploy }) {
   const cov = solution.deploy.coverage;
   const readiness = solution.review.readiness;
   const canDeploy = !!solution.deploy.canOneClick;
+  const deliveryStatus = getDeliveryStatus(solution);
 
   function download(artifact) {
     if (!artifact?.code) return;
@@ -1063,13 +1066,12 @@ function BuildPanel({ solution, onDeploy }) {
         </div>
       ) : (
         <>
-          {needsFix && (
+          {(needsFix || !canDeploy) && (
             <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 text-[11.5px] leading-relaxed">
               <div className="flex items-center gap-1.5 font-extrabold text-warning mb-1">
-                <AlertTriangle size={13} /> Review flagged {solution.review.blockers.length + solution.review.highs.length} serious issue(s)
+                <AlertTriangle size={13} /> {deliveryStatus.deployTitle}
               </div>
-              You can still deploy this to <strong>your own</strong> account to learn from it — but read
-              step 6 before you hand anything to a client.
+              {deliveryStatus.deploySummary}
             </div>
           )}
 
