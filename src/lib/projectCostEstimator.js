@@ -78,13 +78,46 @@ export function estimateProjectCost(serviceIds = [], region = DEFAULT_REGION) {
     regionLabel: REGION_LABELS[region] || region,
     regionMultiplier: multiplier,
     freeTier: {
-      totalMonthly: 0,
-      headline: '$0 / month — within AWS Free Tier limits',
+      totalMonthly: null,
+      headline: 'Free Tier eligibility must be verified against account age and usage',
     },
     afterFreeTier: { min, max },
     breakdown,
     freeTierTips: allTips,
     unknownServices: unknown,
+  };
+}
+
+export function assessFreeTierCost(serviceIds = [], region = DEFAULT_REGION) {
+  const estimate = estimateProjectCost(serviceIds, region);
+  const noFreeTier = estimate.breakdown.filter((item) => /^no free tier/i.test(item.freeTierHeadline));
+  const timeLimited = estimate.breakdown.filter((item) => !item.freeTierAlwaysFree && !/^no free tier/i.test(item.freeTierHeadline));
+  const allAlwaysFree = estimate.breakdown.length > 0 && estimate.breakdown.every((item) => item.freeTierAlwaysFree);
+  let classification = 'potential-zero';
+  let label = 'Potential $0 — verify eligibility and usage limits';
+  if (!serviceIds.length || estimate.unknownServices.length) {
+    classification = 'unverified';
+    label = 'Cost not fully verified';
+  } else if (noFreeTier.length) {
+    classification = 'not-free-safe';
+    label = 'Not Free Tier safe as designed';
+  } else if (allAlwaysFree) {
+    classification = 'always-free-potential';
+    label = 'Estimated $0 within always-free monthly allowances';
+  }
+  return {
+    ...estimate,
+    classification,
+    label,
+    noFreeTier,
+    timeLimited,
+    canClaimGuaranteedZero: false,
+    assumptions: [
+      'The AWS account is eligible for every listed offer and has remaining credits or allowance.',
+      'Traffic, storage, requests, logs and data transfer remain below each monthly limit.',
+      'No manual resources or resources outside this generated stack remain running.',
+    ],
+    exclusions: ['Domain registration', 'Taxes', 'Unexpected traffic', 'Resources created outside this plan'],
   };
 }
 

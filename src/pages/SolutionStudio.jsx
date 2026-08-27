@@ -41,6 +41,7 @@ import { getApproachById } from '../lib/approachRecommender.js';
 import { DeployFromScriptModal } from '../components/deploy/DeployFromScriptModal.jsx';
 import { TeardownModal } from '../components/deploy/TeardownModal.jsx';
 import { cn } from '../lib/utils.js';
+import { assessFreeTierCost, formatPriceRange } from '../lib/projectCostEstimator.js';
 
 /**
  * The four verdict tiers the pipeline can return, and how each one looks.
@@ -492,6 +493,9 @@ function AnalysingCard() {
 // ════════════════════════════════════════════════════════════════════
 function SolutionHeader({ solution, gigMeta, saved, onSave }) {
   const v = VERDICT[solution.review.verdict] || VERDICT.blocked;
+  const cost = assessFreeTierCost(solution.services.map((service) => service.id), solution.region.primary);
+  const costTone = cost.classification === 'not-free-safe' || cost.classification === 'unverified'
+    ? 'border-warning/40 bg-warning/5 text-warning' : 'border-success/40 bg-success/5 text-success';
 
   return (
     <section className={cn('surface rounded-2xl p-5 border-l-4', v.border)}>
@@ -537,6 +541,14 @@ function SolutionHeader({ solution, gigMeta, saved, onSave }) {
         {solution.review.blockers.length > 0 && ` — ${solution.review.blockers.length} critical issue${solution.review.blockers.length > 1 ? 's' : ''}`}
         {!solution.review.blockers.length && solution.review.highs.length > 0
           && ` — ${solution.review.highs.length} thing${solution.review.highs.length > 1 ? 's' : ''} worth checking`}
+      </div>
+      <div className={cn('mt-3 rounded-lg border p-3 text-[11.5px]', costTone)}>
+        <div className="font-extrabold flex items-center gap-1.5"><DollarSign size={13} /> {cost.label}</div>
+        <div className="mt-1 opacity-90">After allowances or credits: {formatPriceRange(cost.afterFreeTier)}. This is an estimate, not a guaranteed bill.</div>
+        {cost.noFreeTier.length > 0 && <div className="mt-1">No free offer detected: <strong>{cost.noFreeTier.map((item) => item.label).join(', ')}</strong>.</div>}
+        {cost.timeLimited.length > 0 && <div className="mt-1">Time-limited eligibility: <strong>{cost.timeLimited.map((item) => item.label).join(', ')}</strong>.</div>}
+        {cost.unknownServices.length > 0 && <div className="mt-1">Pricing coverage missing: <strong>{cost.unknownServices.join(', ')}</strong>. Treat cost as unverified.</div>}
+        <div className="mt-1">Before deployment: confirm Billing credits, create a $1 budget alert, use a $3 internal ceiling, and verify teardown.</div>
       </div>
     </section>
   );
