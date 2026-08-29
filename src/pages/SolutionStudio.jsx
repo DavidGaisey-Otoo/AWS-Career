@@ -45,7 +45,7 @@ import { assessFreeTierCost, formatPriceRange } from '../lib/projectCostEstimato
 import { buildProfessionalBrief } from '../lib/professionalBriefBuilder.js';
 import { getDeliveryStatus } from '../lib/deliveryStatus.js';
 import { appendApprovedPlanningDecisions, recommendPlanningDecisions } from '../lib/planningRecommendations.js';
-import { appendClientDiscoveryAnswers, buildClientDiscoveryForm, discoveryFormAsText } from '../lib/clientDiscoveryForm.js';
+import { appendClientDiscoveryAnswers, buildClientDiscoveryForm, buildSimulatedLearningAnswers, discoveryFormAsText, isSimulatedLearningProject } from '../lib/clientDiscoveryForm.js';
 
 /**
  * The four verdict tiers the pipeline can return, and how each one looks.
@@ -873,6 +873,7 @@ function ClientDiscoveryForm({ solution, onApply }) {
   useEffect(() => { setAnswers({}); }, [solution.id]);
 
   const completed = fields.filter((field) => String(answers[field.id] || '').trim()).length;
+  const simulatedLearning = isSimulatedLearningProject(solution);
 
   async function copyForm(includeAnswers = false) {
     const text = discoveryFormAsText(solution.input.title, fields, includeAnswers ? answers : {});
@@ -899,7 +900,21 @@ function ClientDiscoveryForm({ solution, onApply }) {
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => copyForm(false)} className="btn btn-ghost !text-[11px] tap-44 gap-1.5"><Copy size={12} /> Copy blank client form</button>
             {completed > 0 && <button type="button" onClick={() => copyForm(true)} className="btn btn-ghost !text-[11px] tap-44 gap-1.5"><Copy size={12} /> Copy answers</button>}
+            {simulatedLearning && (
+              <button type="button" onClick={() => {
+                const defaults = buildSimulatedLearningAnswers(solution, fields);
+                setAnswers(defaults || {});
+                toast?.success?.('Safe simulated-lab answers filled. Review them, then apply and rebuild.');
+              }} className="btn btn-secondary !text-[11px] tap-44 gap-1.5">
+                <Sparkles size={12} /> Fill safe simulated-lab answers
+              </button>
+            )}
           </div>
+          {simulatedLearning && (
+            <p className="rounded-lg border border-aws-orange/30 bg-aws-orange/5 p-2.5 text-[10.5px] leading-relaxed">
+              This shortcut is available because the brief explicitly identifies a simulated portfolio lab. It records project-owner planning decisions only. If this becomes real client work, start a new solution and obtain the client’s actual answers.
+            </p>
+          )}
           <div className="space-y-3">
             {fields.map((field, index) => (
               <label key={field.id} className="block rounded-lg border border-token bg-[var(--card-2)]/40 p-3 space-y-1.5">

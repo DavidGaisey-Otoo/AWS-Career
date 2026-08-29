@@ -33,6 +33,39 @@ export function buildClientDiscoveryForm(solution) {
   });
 }
 
+export function isSimulatedLearningProject(solution) {
+  const brief = String(solution?.input?.brief || '');
+  return /(?:portfolio\s+learning\s+project|simulated\s+client\s+gig|synthetic,?\s+non-sensitive\s+learning\s+data)/i.test(brief);
+}
+
+export function buildSimulatedLearningAnswers(solution, fields) {
+  if (!isSimulatedLearningProject(solution)) return null;
+
+  const title = solution?.input?.title || 'the learning project';
+  return Object.fromEntries(fields.map((field) => {
+    const prompt = `${field.category} ${field.question}`.toLowerCase();
+    let answer;
+
+    if (/region|residency|location/.test(prompt)) {
+      answer = 'Project owner approves us-east-1 for this synthetic learning lab. No client, regulated, or residency-controlled data will be used.';
+    } else if (/budget|fee|spend|cost/.test(prompt)) {
+      answer = 'Simulated portfolio project with no client fee. Maximum AWS planning ceiling: USD 20/month; target each short lab session below USD 2. Billing alerts do not stop spend.';
+    } else if (/delivery|deadline|timeline|business outcome|success/.test(prompt)) {
+      answer = `Complete ${title} within 3 weeks. Success means the approved design is deployed in a short-lived lab, tested with evidence, documented, and fully torn down with AWS-side verification.`;
+    } else if (/security|recovery|classification|compliance|retention|rpo|rto/.test(prompt)) {
+      answer = 'Synthetic, non-sensitive learning data only; no regulated data or external compliance scope. Backup retention 7 days, RPO 24 hours, RTO 4 hours, with restore and teardown evidence.';
+    } else if (/user|access|identity/.test(prompt)) {
+      answer = 'Project owner is the only approved lab operator. Use least privilege, MFA, short-lived credentials, and separate administrator and standard-user test paths.';
+    } else if (/accept|evidence|test/.test(prompt)) {
+      answer = 'Project-owner acceptance requires passing the stated tests, linking every claim to captured evidence, and verifying all AWS resources are removed.';
+    } else {
+      answer = 'Not applicable to this simulated learning lab. Keep this as an open decision if the project is later converted to real client work.';
+    }
+
+    return [field.id, answer];
+  }));
+}
+
 export function discoveryFormAsText(title, fields, answers = {}) {
   const lines = [
     `CLIENT DISCOVERY FORM — ${title || 'Project'}`,
@@ -66,4 +99,3 @@ export function appendClientDiscoveryAnswers(brief, fields, answers) {
   const answerLines = completed.map((field) => `- [${field.category}] ${field.question}\n  Confirmed answer: ${field.answer}`);
   return `${base}\n\n${marker}\n${answerLines.join('\n')}\n- These answers are recorded as client/project-owner input, not independently verified deployment evidence.\n- No answer authorizes AWS deployment; AWS write actions still require separate explicit approval.`;
 }
-

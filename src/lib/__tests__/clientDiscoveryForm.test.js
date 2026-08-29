@@ -1,4 +1,4 @@
-import { appendClientDiscoveryAnswers, buildClientDiscoveryForm, discoveryFormAsText } from '../clientDiscoveryForm.js';
+import { appendClientDiscoveryAnswers, buildClientDiscoveryForm, buildSimulatedLearningAnswers, discoveryFormAsText, isSimulatedLearningProject } from '../clientDiscoveryForm.js';
 import { runPipeline } from '../gigSolutionPipeline.js';
 
 export function runClientDiscoveryFormTests() {
@@ -46,6 +46,23 @@ export function runClientDiscoveryFormTests() {
     const rebuilt = runPipeline(appendClientDiscoveryAnswers(original.input.brief, fields, answers));
     assert(rebuilt.analysis.missingQuestions.length > 0, 'unknown answers falsely completed discovery');
     assert(!rebuilt.review.readiness.clientReady, 'unknown answers falsely passed readiness');
+  });
+
+  test('simulated portfolio labs receive transparent safe project-owner defaults', () => {
+    const solution = runPipeline('Portfolio learning project treated as a simulated client gig. Build a Windows Server lab using synthetic, non-sensitive learning data only.');
+    const fields = buildClientDiscoveryForm(solution);
+    const answers = buildSimulatedLearningAnswers(solution, fields);
+    assert(isSimulatedLearningProject(solution), 'simulated project was not detected');
+    assert(answers && fields.every((field) => String(answers[field.id] || '').trim()), 'safe defaults did not complete every generated field');
+    assert(Object.values(answers).some((answer) => /USD 20\/month/.test(answer)), 'cost ceiling was not disclosed');
+    assert(Object.values(answers).some((answer) => /synthetic/i.test(answer)), 'synthetic-data boundary was not disclosed');
+  });
+
+  test('real client work never receives invented discovery answers', () => {
+    const solution = runPipeline('A real client needs an EC2-hosted production website.');
+    const fields = buildClientDiscoveryForm(solution);
+    assert(!isSimulatedLearningProject(solution), 'real client work was classified as simulated');
+    assert(buildSimulatedLearningAnswers(solution, fields) === null, 'real client answers were fabricated');
   });
 
   return { results, allPassed: results.every((result) => result.pass) };
