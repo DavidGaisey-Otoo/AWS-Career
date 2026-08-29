@@ -743,10 +743,11 @@ export function generateCloudFormation(services, opts = {}) {
 
   // 2. Emit in dependency order — networking before anything that sits in it.
   const EMIT_ORDER = [
-    'vpc', 'subnet', 'igw', 'security-group', 'kms', 'iam',
-    's3', 'dynamodb', 'rds',
-    'lambda', 'ec2', 'apigw', 'cloudfront',
-    'ssm', 'backup', 'sns', 'cloudwatch-logs', 'cloudwatch', 'ssm-parameter',
+    'vpc', 'subnet', 'igw', 'route-table', 'nacl', 'security-group', 'kms', 'iam',
+    's3', 'ebs', 'dynamodb', 'rds', 'rds-multiaz', 'rds-r5-large',
+    'sqs', 'sns', 'eventbridge', 'lambda', 'ec2', 'ec2-t3-large',
+    'ecr', 'ecs', 'apigw', 'cloudfront',
+    'ssm', 'backup', 'guardduty', 'cloudwatch-logs', 'xray', 'cloudwatch', 'ssm-parameter',
   ];
   const ordered = [
     ...EMIT_ORDER.filter((id) => wanted.has(id)),
@@ -914,6 +915,33 @@ const CFN_PER_SERVICE = {
     },
   }),
 
+  // Service variants share the same hardened base resource. Test mode still
+  // applies the low-cost substitution; client mode preserves the requested
+  // instance specification through specFor().
+  'rds-multiaz': (spec, mode) => CFN_PER_SERVICE.rds(spec, mode),
+  'rds-r5-large': (spec, mode) => CFN_PER_SERVICE.rds(spec, mode),
+  'ec2-t3-large': (spec, mode, opts) => CFN_PER_SERVICE.ec2(spec, mode, opts),
+
+  'route-table': () => ({
+    WorkloadRouteTable: {
+      Type: 'AWS::EC2::RouteTable',
+      Properties: {
+        VpcId: { Ref: 'Vpc' },
+        Tags: [{ Key: 'Name', Value: { 'Fn::Sub': '${ProjectName}-workload-rt' } }],
+      },
+    },
+  }),
+
+  nacl: () => ({
+    WorkloadNetworkAcl: {
+      Type: 'AWS::EC2::NetworkAcl',
+      Properties: {
+        VpcId: { Ref: 'Vpc' },
+        Tags: [{ Key: 'Name', Value: { 'Fn::Sub': '${ProjectName}-nacl' } }],
+      },
+    },
+  }),
+
   'security-group': (spec, mode, opts) => ({
     AppSecurityGroup: {
       Type: 'AWS::EC2::SecurityGroup',
@@ -976,6 +1004,20 @@ const CFN_PER_SERVICE = {
     },
   }),
 
+  ebs: (spec, mode) => ({
+    DataVolume: {
+      Type: 'AWS::EC2::Volume',
+      DeletionPolicy: mode === 'test' ? 'Delete' : 'Snapshot',
+      Properties: {
+        AvailabilityZone: { 'Fn::GetAtt': ['PublicSubnet1', 'AvailabilityZone'] },
+        Encrypted: true,
+        Size: mode === 'test' ? 8 : 20,
+        VolumeType: 'gp3',
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+
   dynamodb: (spec, mode) => ({
     AppTable: {
       Type: 'AWS::DynamoDB::Table',
@@ -992,6 +1034,44 @@ const CFN_PER_SERVICE = {
         ],
         PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: mode !== 'test' },
         SSESpecification: { SSEEnabled: true },
+      },
+    },
+  }),
+
+  sqs: () => ({
+    WorkQueue: {
+      Type: 'AWS::SQS::Queue',
+      Properties: {
+        QueueName: { 'Fn::Sub': '${ProjectName}-queue' },
+        SqsManagedSseEnabled: true,
+        VisibilityTimeout: 60,
+        RedrivePolicy: {
+          deadLetterTargetArn: { 'Fn::GetAtt': ['DeadLetterQueue', 'Arn'] },
+          maxReceiveCount: 5,
+        },
+      },
+    },
+    DeadLetterQueue: {
+      Type: 'AWS::SQS::Queue',
+      Properties: {
+        QueueName: { 'Fn::Sub': '${ProjectName}-dlq' },
+        SqsManagedSseEnabled: true,
+        MessageRetentionPeriod: 1209600,
+      },
+    },
+  }),
+
+  eventbridge: () => ({
+    ApplicationEventBus: {
+      Type: 'AWS::Events::EventBus',
+      Properties: { Name: { 'Fn::Sub': '${ProjectName}-events' } },
+    },
+    EventArchive: {
+      Type: 'AWS::Events::Archive',
+      Properties: {
+        ArchiveName: { 'Fn::Sub': '${ProjectName}-events-archive' },
+        SourceArn: { 'Fn::GetAtt': ['ApplicationEventBus', 'Arn'] },
+        RetentionDays: 7,
       },
     },
   }),
@@ -1023,6 +1103,66 @@ const CFN_PER_SERVICE = {
         Code: {
           ZipFile: "exports.handler = async (event) => ({ statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ok: true, message: 'Replace me with your code.' }) });",
         },
+      },
+    },
+  }),
+
+  ecr: () => ({
+    ContainerRepository: {
+      Type: 'AWS::ECR::Repository',
+      Properties: {
+        RepositoryName: { 'Fn::Sub': '${ProjectName}-app' },
+        ImageScanningConfiguration: { ScanOnPush: true },
+        ImageTagMutability: 'IMMUTABLE',
+        EncryptionConfiguration: { EncryptionType: 'AES256' },
+        LifecyclePolicy: {
+          LifecyclePolicyText: JSON.stringify({
+            rules: [{ rulePriority: 1, description: 'Retain 10 images', selection: { tagStatus: 'any', countType: 'imageCountMoreThan', countNumber: 10 }, action: { type: 'expire' } }],
+          }),
+        },
+      },
+    },
+  }),
+
+  ecs: () => ({
+    EcsCluster: {
+      Type: 'AWS::ECS::Cluster',
+      Properties: {
+        ClusterName: { 'Fn::Sub': '${ProjectName}-cluster' },
+        ClusterSettings: [{ Name: 'containerInsights', Value: 'enabled' }],
+      },
+    },
+    EcsTaskExecutionRole: {
+      Type: 'AWS::IAM::Role',
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [{ Effect: 'Allow', Principal: { Service: 'ecs-tasks.amazonaws.com' }, Action: 'sts:AssumeRole' }],
+        },
+        ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'],
+      },
+    },
+    EcsTaskDefinition: {
+      Type: 'AWS::ECS::TaskDefinition',
+      Properties: {
+        Family: { 'Fn::Sub': '${ProjectName}-task' },
+        Cpu: '256', Memory: '512', NetworkMode: 'awsvpc',
+        RequiresCompatibilities: ['FARGATE'],
+        ExecutionRoleArn: { 'Fn::GetAtt': ['EcsTaskExecutionRole', 'Arn'] },
+        ContainerDefinitions: [{
+          Name: 'app', Image: 'public.ecr.aws/nginx/nginx:stable-alpine', Essential: true,
+          PortMappings: [{ ContainerPort: 80, Protocol: 'tcp' }],
+          LogConfiguration: { LogDriver: 'awslogs', Options: { 'awslogs-group': { Ref: 'AppLogGroup' }, 'awslogs-region': { Ref: 'AWS::Region' }, 'awslogs-stream-prefix': 'app' } },
+        }],
+      },
+    },
+    EcsService: {
+      Type: 'AWS::ECS::Service',
+      Properties: {
+        Cluster: { Ref: 'EcsCluster' }, ServiceName: { 'Fn::Sub': '${ProjectName}-service' },
+        TaskDefinition: { Ref: 'EcsTaskDefinition' }, DesiredCount: 1, LaunchType: 'FARGATE',
+        EnableExecuteCommand: true,
+        NetworkConfiguration: { AwsvpcConfiguration: { AssignPublicIp: 'ENABLED', SecurityGroups: [{ Ref: 'AppSecurityGroup' }], Subnets: [{ Ref: 'PublicSubnet1' }, { Ref: 'PublicSubnet2' }] } },
       },
     },
   }),
@@ -1219,6 +1359,13 @@ const CFN_PER_SERVICE = {
     },
   }),
 
+  guardduty: () => ({
+    ThreatDetector: {
+      Type: 'AWS::GuardDuty::Detector',
+      Properties: { Enable: true, FindingPublishingFrequency: 'FIFTEEN_MINUTES' },
+    },
+  }),
+
   kms: () => ({
     AppKey: {
       Type: 'AWS::KMS::Key',
@@ -1251,6 +1398,17 @@ const CFN_PER_SERVICE = {
       Properties: {
         LogGroupName: { 'Fn::Sub': '/aws/${ProjectName}/app' },
         RetentionInDays: 30,
+      },
+    },
+  }),
+
+  xray: () => ({
+    TraceGroup: {
+      Type: 'AWS::XRay::Group',
+      Properties: {
+        GroupName: { 'Fn::Sub': '${ProjectName}-traces' },
+        FilterExpression: 'service(id(name: "AWS::Lambda"))',
+        InsightsConfiguration: { InsightsEnabled: true, NotificationsEnabled: true },
       },
     },
   }),
@@ -1328,11 +1486,18 @@ const CFN_PER_SERVICE = {
 const CFN_REQUIRES = {
   subnet: ['vpc'],
   igw: ['vpc'],
+  'route-table': ['vpc'],
+  nacl: ['vpc'],
   'security-group': ['vpc'],
   ec2: ['vpc', 'subnet', 'igw', 'security-group', 'iam'],
+  'ec2-t3-large': ['vpc', 'subnet', 'igw', 'security-group', 'iam'],
+  ebs: ['vpc', 'subnet'],
   ssm: ['ec2', 'iam'],
   backup: ['ec2', 'iam'],
   rds: ['vpc', 'subnet'],
+  'rds-multiaz': ['vpc', 'subnet'],
+  'rds-r5-large': ['vpc', 'subnet'],
+  ecs: ['vpc', 'subnet', 'igw', 'security-group', 'ecr', 'cloudwatch-logs'],
   apigw: ['lambda'],
   cloudfront: ['s3'],
 };

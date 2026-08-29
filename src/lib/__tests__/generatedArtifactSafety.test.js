@@ -22,6 +22,21 @@ const checks = [
     assert(result.coverage.pct === 50, 'partial coverage is inaccurate');
     assert(result.code.includes('IncompleteArtifactMustBeReviewed'), 'CloudFormation has no deployment rule');
   }],
+  ['common cross-domain CloudFormation services have complete generated coverage', () => {
+    const ids = [
+      'route-table', 'nacl', 'ebs', 'rds-multiaz', 'ec2-t3-large',
+      'sqs', 'eventbridge', 'ecr', 'ecs', 'guardduty', 'xray',
+    ];
+    const result = generateCloudFormation(ids.map((id) => service(id)), {
+      mode: 'test', region: 'us-east-1', projectName: 'coverage-regression',
+    });
+    assert(result.deployReady === true, `common services blocked: ${result.coverage.uncovered.join(', ')}`);
+    assert(result.coverage.pct === 100, `common coverage is ${result.coverage.pct}%`);
+    assert(result.code.includes('AWS::ECS::Service'), 'ECS service missing');
+    assert(result.code.includes('AWS::SQS::Queue'), 'SQS queue missing');
+    assert(result.code.includes('AWS::GuardDuty::Detector'), 'GuardDuty detector missing');
+    assert(result.code.includes('AWS::Budgets::Budget') === false, 'unrequested budget resource was added');
+  }],
   ['CLI with a password placeholder exits before AWS commands', () => {
     const result = generateCli([service('rds')]);
     assert(result.deployReady === false, 'placeholder CLI marked ready');
