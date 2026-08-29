@@ -44,6 +44,7 @@ import { cn } from '../lib/utils.js';
 import { assessFreeTierCost, formatPriceRange } from '../lib/projectCostEstimator.js';
 import { buildProfessionalBrief } from '../lib/professionalBriefBuilder.js';
 import { getDeliveryStatus } from '../lib/deliveryStatus.js';
+import { appendApprovedPlanningDecisions, recommendPlanningDecisions } from '../lib/planningRecommendations.js';
 
 /**
  * The four verdict tiers the pipeline can return, and how each one looks.
@@ -193,6 +194,17 @@ export default function SolutionStudio() {
       toast?.success?.('Saved. Find it under "Your solutions" any time.');
     } else {
       toast?.error?.('Could not save — browser storage may be full.');
+    }
+  }
+
+  function approvePlanningDecisions(decisions) {
+    try {
+      const updatedBrief = appendApprovedPlanningDecisions(solution.input.brief, decisions);
+      setBrief(updatedBrief);
+      analyse(updatedBrief, gigMeta);
+      toast?.success?.('Planning decisions approved. The solution was rebuilt with your region, budget, and timeline.');
+    } catch (error) {
+      toast?.error?.(error.message || 'Check the planning decisions and try again.');
     }
   }
 
@@ -375,7 +387,7 @@ export default function SolutionStudio() {
           />
 
           <Step n={1} title="What I understood" icon={Lightbulb} defaultOpen>
-            <UnderstandingPanel solution={solution} />
+            <UnderstandingPanel solution={solution} onApprovePlanning={approvePlanningDecisions} />
           </Step>
 
           <Step n={2} title="Your solution" icon={Layers} defaultOpen>
@@ -594,7 +606,7 @@ function SolutionHeader({ solution, gigMeta, saved, onSave }) {
         {cost.noFreeTier.length > 0 && <div className="mt-1">No free offer detected: <strong>{cost.noFreeTier.map((item) => item.label).join(', ')}</strong>.</div>}
         {cost.timeLimited.length > 0 && <div className="mt-1">Time-limited eligibility: <strong>{cost.timeLimited.map((item) => item.label).join(', ')}</strong>.</div>}
         {cost.unknownServices.length > 0 && <div className="mt-1">Pricing coverage missing: <strong>{cost.unknownServices.join(', ')}</strong>. Treat cost as unverified.</div>}
-        <div className="mt-1">Before deployment: confirm Billing credits, create a $1 budget alert, use a $3 internal ceiling, and verify teardown.</div>
+        <div className="mt-1">Before deployment: confirm Billing eligibility, choose an approved budget threshold at or above the estimate, remember alerts do not cap spend, and verify teardown.</div>
       </div>
     </section>
   );
@@ -614,8 +626,21 @@ function Stat({ label, value, mono, className }) {
 // ════════════════════════════════════════════════════════════════════
 // Step 1 — Understanding
 // ════════════════════════════════════════════════════════════════════
-function UnderstandingPanel({ solution }) {
+function UnderstandingPanel({ solution, onApprovePlanning }) {
   const { analysis, region, understanding } = solution;
+  const recommendation = useMemo(() => recommendPlanningDecisions(solution), [solution]);
+  const [planning, setPlanning] = useState(() => ({
+    region: recommendation.region,
+    monthlyBudget: recommendation.monthlyBudget || '',
+    timelineWeeks: recommendation.timelineWeeks,
+  }));
+  useEffect(() => {
+    setPlanning({
+      region: recommendation.region,
+      monthlyBudget: recommendation.monthlyBudget || '',
+      timelineWeeks: recommendation.timelineWeeks,
+    });
+  }, [recommendation.region, recommendation.monthlyBudget, recommendation.timelineWeeks]);
   const budgetText = formatBudget(analysis.budget);
   const facts = [
     analysis.client && { icon: Briefcase, label: 'Client', value: analysis.client },
@@ -695,6 +720,45 @@ function UnderstandingPanel({ solution }) {
           <ul className="space-y-0.5 pl-4 list-disc text-[11.5px] opacity-85 leading-relaxed">
             {analysis.missingQuestions.slice(0, 5).map((q, i) => <li key={i}>{q}</li>)}
           </ul>
+        </div>
+      )}
+
+      {analysis.missingQuestions?.length > 0 && (
+        <div className="rounded-xl border border-aws-orange/40 bg-aws-orange/5 p-3.5 space-y-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-aws-orange font-extrabold text-[12px]">
+              <Sparkles size={14} /> Recommended planning decisions
+            </div>
+            <p className="text-[11px] opacity-75 mt-1">
+              The app prepared these values. Review or change them, then approve once. Suggestions are not client facts until you approve them.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label className="text-[10.5px] font-bold space-y-1">
+              <span className="opacity-70">AWS Region</span>
+              <input value={planning.region} onChange={(e) => setPlanning((p) => ({ ...p, region: e.target.value }))}
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] font-mono outline-none focus:border-aws-orange" />
+            </label>
+            <label className="text-[10.5px] font-bold space-y-1">
+              <span className="opacity-70">Monthly ceiling (USD)</span>
+              <input type="number" min="1" value={planning.monthlyBudget} onChange={(e) => setPlanning((p) => ({ ...p, monthlyBudget: e.target.value }))}
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
+            </label>
+            <label className="text-[10.5px] font-bold space-y-1">
+              <span className="opacity-70">Timeline (weeks)</span>
+              <input type="number" min="1" step="1" value={planning.timelineWeeks} onChange={(e) => setPlanning((p) => ({ ...p, timelineWeeks: e.target.value }))}
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
+            </label>
+          </div>
+          <div className="space-y-1 text-[10.5px] opacity-75 leading-relaxed">
+            <p><strong>Region:</strong> {recommendation.regionReason}</p>
+            <p><strong>Budget:</strong> {recommendation.budgetReason}</p>
+            <p><strong>Timeline:</strong> {recommendation.timelineReason}</p>
+          </div>
+          <button onClick={() => onApprovePlanning(planning)} className="btn btn-primary !text-[12px] tap-44 gap-1.5">
+            <CheckCircle2 size={14} /> Approve decisions and rebuild
+          </button>
+          <p className="text-[10px] opacity-60">This approves planning facts only. AWS deployment still requires a separate explicit approval.</p>
         </div>
       )}
 
