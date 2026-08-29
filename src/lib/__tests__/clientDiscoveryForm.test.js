@@ -58,6 +58,11 @@ export function runClientDiscoveryFormTests() {
     assert(Object.values(answers).some((answer) => /synthetic/i.test(answer)), 'synthetic-data boundary was not disclosed');
   });
 
+  test('common simulated portfolio learning lab wording enables safe defaults', () => {
+    const solution = runPipeline('Build a Windows Server training project. This is a simulated portfolio learning lab using synthetic data.');
+    assert(isSimulatedLearningProject(solution), 'common simulated-lab wording was not recognized');
+  });
+
   test('real client work never receives invented discovery answers', () => {
     const solution = runPipeline('A real client needs an EC2-hosted production website.');
     const fields = buildClientDiscoveryForm(solution);

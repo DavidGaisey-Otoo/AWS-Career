@@ -35,7 +35,7 @@ export function buildClientDiscoveryForm(solution) {
 
 export function isSimulatedLearningProject(solution) {
   const brief = String(solution?.input?.brief || '');
-  return /(?:portfolio\s+learning\s+project|simulated\s+client\s+gig|synthetic,?\s+non-sensitive\s+learning\s+data)/i.test(brief);
+  return /(?:portfolio\s+learning\s+project|simulated\s+(?:client\s+gig|portfolio\s+(?:learning\s+)?lab)|synthetic,?\s+non-sensitive\s+learning\s+data)/i.test(brief);
 }
 
 export function buildSimulatedLearningAnswers(solution, fields) {
