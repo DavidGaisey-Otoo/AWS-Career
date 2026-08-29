@@ -198,6 +198,22 @@ export default function SolutionStudio() {
     }
   }
 
+  function handleDeleteSaved(record) {
+    if (record.liveStack) {
+      toast?.error?.('This solution is tracking a live AWS stack. Tear it down and verify deletion in AWS before removing the saved record.');
+      return;
+    }
+    const confirmed = window.confirm(`Delete the saved solution "${record.projectName || record.title || 'Untitled solution'}"?\n\nThis removes only the saved app record. It does not delete anything in AWS.`);
+    if (!confirmed) return;
+    if (!deleteSolution(record.id)) {
+      toast?.error?.('Could not delete the saved solution. Browser storage may be unavailable.');
+      return;
+    }
+    setSavedList(listSolutions());
+    if (solution?.id === record.id) setSaved(false);
+    toast?.success?.('Saved solution deleted. No AWS resources were changed.');
+  }
+
   function approvePlanningDecisions(decisions) {
     try {
       const updatedBrief = appendApprovedPlanningDecisions(solution.input.brief, decisions);
@@ -351,12 +367,13 @@ export default function SolutionStudio() {
               </div>
               <div className="space-y-1.5">
                 {savedList.slice(0, 5).map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => { setBrief(s.brief); analyse(s.brief); }}
-                    className="w-full text-left rounded-lg border border-token hover:border-aws-orange/50 p-2.5 transition group"
-                  >
-                    <div className="flex items-center justify-between gap-2">
+                  <div key={s.id} className="flex items-stretch rounded-lg border border-token hover:border-aws-orange/50 transition group overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => { setBrief(s.brief); analyse(s.brief); }}
+                      className="min-w-0 flex-1 text-left p-2.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="text-[12.5px] font-bold truncate">{s.projectName}</div>
                         <div className="text-[10.5px] opacity-60 truncate">
@@ -376,8 +393,21 @@ export default function SolutionStudio() {
                         )}
                         <ArrowRight size={12} className="opacity-40 group-hover:opacity-100 group-hover:text-aws-orange transition" />
                       </div>
-                    </div>
-                  </button>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSaved(s)}
+                      aria-label={`Delete ${s.projectName || s.title || 'saved solution'}`}
+                      title={s.liveStack ? 'Tear down the tracked live stack before deleting this record' : 'Delete saved solution'}
+                      className={cn(
+                        'w-11 shrink-0 border-l border-token grid place-items-center transition tap-44',
+                        s.liveStack ? 'text-warning/60 cursor-not-allowed' : 'text-danger/70 hover:text-danger hover:bg-danger/10'
+                      )}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
