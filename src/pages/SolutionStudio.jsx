@@ -464,6 +464,9 @@ export default function SolutionStudio() {
           script={solution.deploy.template || ''}
           defaultStackName={solution.deploy.stackName}
           defaultRegion={solution.deploy.region}
+          environmentProfile={solution.deploy.environmentMode === 'aws-employer' ? 'employer' : solution.deploy.environmentMode === 'aws-freelance' ? 'freelance' : 'learning'}
+          monthlyEstimateMax={assessFreeTierCost(solution.services.map((service) => service.id), solution.deploy.region).afterFreeTier.max}
+          monthlyCeilingUsd={Number(solution.input.brief.match(/Maximum monthly AWS budget[^$\n]*\$\s*(\d+(?:\.\d+)?)/i)?.[1] || (solution.deploy.environmentMode === 'aws-training' ? 20 : 50))}
           onDeployComplete={handleDeployComplete}
         />
       )}
@@ -774,8 +777,10 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
                 }))}
                 className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange"
               >
+                <option value="aws-training">AWS Training Lab — short lease, cost guardrails, verified teardown</option>
+                <option value="aws-freelance">AWS Freelance Delivery — client approval and evidence gates</option>
+                <option value="aws-employer">AWS Employer Change — company policy and change control</option>
                 <option value="local-zero">Strict $0 Local Lab — no AWS resources or AWS deployment</option>
-                <option value="aws-short-lived">Short-lived AWS Lab — real AWS; charges may occur</option>
               </select>
             </label>
             <label className="text-[10.5px] font-bold space-y-1">
@@ -794,7 +799,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
                 className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
             </label>
           </div>
-          {planning.environmentMode === 'aws-short-lived' ? (
+          {['aws-short-lived', 'aws-training', 'aws-freelance'].includes(planning.environmentMode) ? (
             <label className="block text-[10.5px] font-bold space-y-1 max-w-xs">
               <span className="opacity-70">Target teardown within (hours)</span>
               <input type="number" min="1" max="24" step="1" value={planning.labDurationHours} onChange={(e) => setPlanning((p) => ({ ...p, labDurationHours: e.target.value }))}

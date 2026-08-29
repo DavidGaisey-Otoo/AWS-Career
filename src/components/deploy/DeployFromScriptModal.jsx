@@ -31,6 +31,7 @@ import {
 import { deployStack, validateTemplate } from '../../lib/cfnDeployer.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { cn } from '../../lib/utils.js';
+import { assessEnvironmentDeployment } from '../../lib/awsEnvironmentPolicy.js';
 
 // AWS regions — abbreviated list, most-used first
 const REGIONS = [
@@ -47,15 +48,25 @@ export function DeployFromScriptModal({
   script,           // raw script text
   defaultStackName, // suggested CFN stack name
   defaultRegion,    // pre-fill from AD-01 if available
+  environmentProfile = 'learning',
+  monthlyEstimateMax,
+  monthlyCeilingUsd,
   onDeployComplete, // optional callback({ ok, ...result })
 }) {
   const toast = useToast();
   const [accessKeyId, setAccessKeyId] = useState('');
   const [secretAccessKey, setSecretAccessKey] = useState('');
+  const [sessionToken, setSessionToken] = useState('');
   const [region, setRegion] = useState(defaultRegion || 'eu-west-1');
   const [stackName, setStackName] = useState(defaultStackName || `awscl-${Date.now().toString(36)}`);
   const [showSecret, setShowSecret] = useState(false);
   const [namedIamAck, setNamedIamAck] = useState(false);
+  const [eligibilityAck, setEligibilityAck] = useState(false);
+  const [costAck, setCostAck] = useState(false);
+  const [teardownAck, setTeardownAck] = useState(false);
+  const policy = useMemo(() => assessEnvironmentDeployment({
+    template: script, profile: environmentProfile, monthlyEstimateMax, monthlyCeilingUsd,
+  }), [script, environmentProfile, monthlyEstimateMax, monthlyCeilingUsd]);
 
   const [phase, setPhase] = useState('form');  // form | deploying | done
   const [events, setEvents] = useState([]);     // progress events
@@ -72,7 +83,11 @@ export function DeployFromScriptModal({
       // Wipe creds defensively when modal closes
       setAccessKeyId('');
       setSecretAccessKey('');
+      setSessionToken('');
       setShowSecret(false);
+      setEligibilityAck(false);
+      setCostAck(false);
+      setTeardownAck(false);
       setPhase('form');
       setEvents([]);
       setResult(null);
@@ -96,6 +111,14 @@ export function DeployFromScriptModal({
       toast?.warning?.('Stack name is required.');
       return;
     }
+    if (!policy.ok) {
+      toast?.error?.('Deployment policy is blocked. Resolve the listed guardrails first.');
+      return;
+    }
+    if (!eligibilityAck || !costAck || !teardownAck) {
+      toast?.warning?.('Complete the account, cost, and teardown acknowledgements first.');
+      return;
+    }
 
     setPhase('deploying');
     setEvents([{ type: 'step', message: `Connecting to AWS in ${region}…`, ts: Date.now() }]);
@@ -115,6 +138,7 @@ export function DeployFromScriptModal({
     const credentials = {
       accessKeyId: accessKeyId.trim(),
       secretAccessKey: secretAccessKey.trim(),
+      ...(sessionToken.trim() ? { sessionToken: sessionToken.trim() } : {}),
     };
 
     try {
@@ -160,6 +184,7 @@ export function DeployFromScriptModal({
       // cfnDeployer also drop the SDK client via destroy() in their finally.
       credentials.accessKeyId = '';
       credentials.secretAccessKey = '';
+      credentials.sessionToken = '';
     }
   }
 
@@ -204,6 +229,13 @@ export function DeployFromScriptModal({
               </div>
             </div>
 
+            <div className={cn('rounded-xl border p-3 space-y-2', policy.ok ? 'border-warning/40 bg-warning/5' : 'border-danger/50 bg-danger/5')}>
+              <div className="font-extrabold text-[12px]">{policy.ok ? `${policy.profile.id} policy preflight passed` : 'Deployment policy blocked'}</div>
+              {policy.blockers.map((item) => <div key={item} className="text-[11px] text-danger">• {item}</div>)}
+              {policy.warnings.map((item) => <div key={item} className="text-[11px] text-warning">• {item}</div>)}
+              {policy.profile.leaseHours && <div className="text-[11px] opacity-80">Training lease: EC2 stop target {policy.profile.leaseHours}h. Cleanup target: {policy.profile.autoTerminateHours}h. Stopping is not deletion.</div>}
+            </div>
+
             {/* Credentials */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="AWS Access Key ID" required>
@@ -237,6 +269,17 @@ export function DeployFromScriptModal({
                   </button>
                 </div>
               </Field>
+            </div>
+            <Field label="AWS Session Token (required for temporary credentials)">
+              <input type="password" autoComplete="off" spellCheck="false" value={sessionToken}
+                onChange={(e) => setSessionToken(e.target.value)} placeholder="Optional for long-lived keys; required for STS credentials"
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-3 py-2 text-[12px] font-mono outline-none focus:border-aws-orange" />
+            </Field>
+
+            <div className="space-y-2 rounded-xl border border-token p-3 text-[11.5px]">
+              <Ack checked={eligibilityAck} onChange={setEligibilityAck}>I checked this account's plan, credits, Free Tier usage, and current region eligibility.</Ack>
+              <Ack checked={costAck} onChange={setCostAck}>I accept that the estimate and $2 target are not hard caps; delayed AWS billing can exceed an alert/action threshold.</Ack>
+              <Ack checked={teardownAck} onChange={setTeardownAck}>I will verify CloudFormation, EC2, EBS/snapshots, public IPs, Backup recovery points, logs, IAM, and Billing after teardown.</Ack>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -292,7 +335,7 @@ export function DeployFromScriptModal({
             <div className="flex flex-wrap gap-2 pt-2">
               <button
                 onClick={handleDeploy}
-                disabled={!accessKeyId || !secretAccessKey || !stackName}
+                disabled={!accessKeyId || !secretAccessKey || !stackName || !policy.ok || !eligibilityAck || !costAck || !teardownAck || (/AWS::IAM::/i.test(script) && !namedIamAck)}
                 className="btn btn-primary inline-flex items-center gap-2 disabled:opacity-50"
               >
                 <Rocket size={14} /> Deploy to AWS
@@ -400,6 +443,15 @@ function Field({ label, required, children }) {
         {label}{required && <span className="opacity-60">*</span>}
       </span>
       {children}
+    </label>
+  );
+}
+
+function Ack({ checked, onChange, children }) {
+  return (
+    <label className="flex items-start gap-2 cursor-pointer leading-relaxed">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 accent-[var(--aws-orange)]" />
+      <span>{children}</span>
     </label>
   );
 }

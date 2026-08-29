@@ -12,7 +12,8 @@ export function runPlanningRecommendationTests() {
   test('recommendations include editable region budget and timeline', () => {
     const solution = runPipeline('Build a Windows Server lab using EC2, Systems Manager, CloudWatch, AWS Backup, and IAM.');
     const recommendation = recommendPlanningDecisions(solution);
-    assert(recommendation.environmentMode === 'local-zero', 'safe local environment is not the default');
+    assert(recommendation.environmentMode === 'aws-training', 'AWS training environment is not the default');
+    assert(recommendation.monthlyBudget <= 20, 'training recommendation exceeded the monthly safety ceiling');
     assert(recommendation.region, 'region missing');
     assert(recommendation.monthlyBudget > 0, 'budget missing');
     assert(recommendation.timelineWeeks >= 1, 'timeline missing');

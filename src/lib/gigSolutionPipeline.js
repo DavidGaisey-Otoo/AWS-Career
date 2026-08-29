@@ -437,6 +437,11 @@ export function buildDeliveryPlan({ blueprint, services, approach, timeline, nam
 export function runPipeline(gig, options = {}) {
   const brief = gigToBrief(gig);
   const localOnly = /Execution environment:\s*Strict \$0 Local Lab/i.test(brief);
+  const environmentMode = localOnly ? 'local-zero'
+    : /Execution environment:\s*AWS Employer Change/i.test(brief) ? 'aws-employer'
+    : /Execution environment:\s*AWS Freelance Delivery/i.test(brief) ? 'aws-freelance'
+    : /Execution environment:\s*Short-lived AWS Lab/i.test(brief) ? 'aws-short-lived'
+    : 'aws-training';
   const mode = options.mode || 'test';
 
   // ── 1. UNDERSTAND ────────────────────────────────────────────────
@@ -618,7 +623,7 @@ export function runPipeline(gig, options = {}) {
     },
     deploy: {
       canOneClick: !localOnly && readiness.sandboxDeployable,
-      environmentMode: localOnly ? 'local-zero' : 'aws-short-lived',
+      environmentMode,
       localOnly,
       clientReady: readiness.clientReady,
       classification: readiness.classification,

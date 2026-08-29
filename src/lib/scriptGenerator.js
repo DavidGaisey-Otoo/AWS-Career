@@ -780,6 +780,48 @@ export function generateCloudFormation(services, opts = {}) {
     };
   }
 
+  // AWS Training Lab: an AWS-native lease stops EC2 even if the browser is
+  // closed. This limits compute runtime; it is not a billing cap and does not
+  // delete storage, snapshots, backups, logs, or the stack.
+  if (mode === 'test' && resources.AppInstance) {
+    const leaseHours = Math.min(24, Math.max(1, Number(String(opts.brief || '').match(/target teardown within\s+(\d+)\s+hours/i)?.[1] || 2)));
+    params.LabLeaseHours = {
+      Type: 'Number', Default: leaseHours, MinValue: 1, MaxValue: 24,
+      Description: 'Hours between automatic EC2 stop attempts. Stopping does not eliminate storage or other AWS charges.',
+    };
+    resources.LabStopSchedulerRole = {
+      Type: 'AWS::IAM::Role',
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [{ Effect: 'Allow', Principal: { Service: 'scheduler.amazonaws.com' }, Action: 'sts:AssumeRole' }],
+        },
+        Policies: [{
+          PolicyName: 'StopOnlyThisLabInstance',
+          PolicyDocument: {
+            Version: '2012-10-17',
+            Statement: [{ Effect: 'Allow', Action: 'ec2:StopInstances', Resource: { 'Fn::Sub': 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${AppInstance}' } }],
+          },
+        }],
+      },
+    };
+    resources.AutomaticLabStopSchedule = {
+      Type: 'AWS::Scheduler::Schedule',
+      Properties: {
+        Description: 'Training safety lease: repeatedly stops the lab EC2 instance after the selected interval.',
+        FlexibleTimeWindow: { Mode: 'OFF' },
+        ScheduleExpression: { 'Fn::Sub': 'rate(${LabLeaseHours} hours)' },
+        State: 'ENABLED',
+        Target: {
+          Arn: 'arn:aws:scheduler:::aws-sdk:ec2:stopInstances',
+          RoleArn: { 'Fn::GetAtt': ['LabStopSchedulerRole', 'Arn'] },
+          Input: { 'Fn::Sub': '{"InstanceIds":["${AppInstance}"]}' },
+          RetryPolicy: { MaximumEventAgeInSeconds: 3600, MaximumRetryAttempts: 2 },
+        },
+      },
+    };
+  }
+
   const notes = [
     `Deploy: \`aws cloudformation deploy --template-file ${project}-${mode}.yaml --stack-name ${project} --capabilities CAPABILITY_NAMED_IAM\``,
     mode === 'test' ? 'Test mode: free-tier substitutions applied.' : 'Client mode: EXACT specs from the brief.',

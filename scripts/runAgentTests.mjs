@@ -18,9 +18,17 @@ import { runProfessionalBriefBuilderTests } from '../src/lib/__tests__/professio
 import { runDeliveryStatusTests } from '../src/lib/__tests__/deliveryStatus.test.js';
 import { runPlanningRecommendationTests } from '../src/lib/__tests__/planningRecommendations.test.js';
 import { runClientDiscoveryFormTests } from '../src/lib/__tests__/clientDiscoveryForm.test.js';
+import { runAwsEnvironmentPolicyTests } from '../src/lib/__tests__/awsEnvironmentPolicy.test.js';
 
 const agents = runAllTests();
 console.log(printReport(agents));
+
+const awsEnvironmentPolicy = runAwsEnvironmentPolicyTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  AWS ENVIRONMENT POLICY TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of awsEnvironmentPolicy.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
 const pipeline = runPipelineTests();
 console.log('');
@@ -157,12 +165,13 @@ const professionalBriefOk = professionalBrief.allPassed;
 const deliveryStatusOk = deliveryStatus.allPassed;
 const planningRecommendationsOk = planningRecommendations.allPassed;
 const clientDiscoveryOk = clientDiscovery.allPassed;
-const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk;
+const awsEnvironmentPolicyOk = awsEnvironmentPolicy.allPassed;
+const allOk = agentsOk && awsEnvironmentPolicyOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk;
 
 console.log('');
 console.log(allOk
   ? '✅ ALL SUITES PASSED'
-  : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
+  : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} awsEnvironmentPolicy:${awsEnvironmentPolicyOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
     + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'}`);

@@ -23,11 +23,13 @@ import {
 import { deleteStack } from '../../lib/cfnDeployer.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { cn } from '../../lib/utils.js';
+import { requiredTeardownChecks } from '../../lib/awsEnvironmentPolicy.js';
 
 export function TeardownModal({ open, onClose, stackName, region, title, onComplete }) {
   const toast = useToast();
   const [accessKeyId, setAccessKeyId] = useState('');
   const [secretAccessKey, setSecretAccessKey] = useState('');
+  const [sessionToken, setSessionToken] = useState('');
   const [showSecret, setShowSecret] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [phase, setPhase] = useState('form');   // form | deleting | done
@@ -42,6 +44,7 @@ export function TeardownModal({ open, onClose, stackName, region, title, onCompl
     if (!open) {
       setAccessKeyId('');
       setSecretAccessKey('');
+      setSessionToken('');
       setShowSecret(false);
       setConfirmText('');
       setPhase('form');
@@ -61,7 +64,7 @@ export function TeardownModal({ open, onClose, stackName, region, title, onCompl
     setEvents([{ type: 'step', message: 'Starting teardown…', ts: Date.now() }]);
     try {
       const res = await deleteStack({
-        credentials: { accessKeyId: accessKeyId.trim(), secretAccessKey: secretAccessKey.trim() },
+        credentials: { accessKeyId: accessKeyId.trim(), secretAccessKey: secretAccessKey.trim(), ...(sessionToken.trim() ? { sessionToken: sessionToken.trim() } : {}) },
         region,
         stackName,
         onProgress: (e) => setEvents((prev) => [...prev, e]),
@@ -79,6 +82,7 @@ export function TeardownModal({ open, onClose, stackName, region, title, onCompl
       // Creds are no longer needed the moment the call returns
       setAccessKeyId('');
       setSecretAccessKey('');
+      setSessionToken('');
     }
   }
 
@@ -158,6 +162,12 @@ export function TeardownModal({ open, onClose, stackName, region, title, onCompl
                   {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
+              <input
+                type="password" autoComplete="off" spellCheck={false}
+                placeholder="Session token (required for temporary/STS credentials)"
+                value={sessionToken} onChange={(e) => setSessionToken(e.target.value)}
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-3 py-2.5 text-[12px] font-mono outline-none focus:border-danger"
+              />
               <p className="text-[10.5px] opacity-60 flex items-start gap-1.5 leading-relaxed">
                 <Lock size={11} className="shrink-0 mt-0.5" />
                 Held in memory for this one call, sent only to AWS, then discarded. Never saved.
@@ -218,11 +228,11 @@ export function TeardownModal({ open, onClose, stackName, region, title, onCompl
                   : <AlertTriangle size={16} className="text-danger shrink-0 mt-0.5" />}
                 <div className="text-[12.5px] leading-relaxed">
                   <strong className={result.ok ? 'text-success' : 'text-danger'}>
-                    {result.ok ? 'Everything deleted.' : 'Teardown did not finish.'}
+                    {result.ok ? 'CloudFormation stack deletion verified.' : 'Teardown did not finish.'}
                   </strong>
                   <div className="opacity-85 mt-0.5">
                     {result.ok
-                      ? 'The stack and all of its resources are gone. Nothing is billing.'
+                      ? 'AWS no longer reports this stack. This does not prove that retained, detached, manually created, or delayed-billing resources are gone; complete the checks below.'
                       : (result.error || 'Check the CloudFormation console.')}
                   </div>
                 </div>
@@ -242,6 +252,15 @@ export function TeardownModal({ open, onClose, stackName, region, title, onCompl
               ))}
               <div ref={endRef} />
             </div>
+
+            {phase === 'done' && result?.ok && (
+              <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 text-[11.5px] space-y-1">
+                <div className="font-extrabold text-warning">Required post-deletion verification</div>
+                {requiredTeardownChecks(['AWS::EC2::Instance', 'AWS::Backup::BackupPlan', 'AWS::Logs::LogGroup', 'AWS::IAM::Role']).map((check) => (
+                  <div key={check}>□ {check}</div>
+                ))}
+              </div>
+            )}
 
             {phase === 'done' && (
               <button onClick={onClose} className="w-full btn btn-ghost !text-[13px] !py-2.5 tap-44">

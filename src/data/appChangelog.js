@@ -16,6 +16,26 @@
 
 export const APP_CHANGELOG = [
   {
+    id: '2026-08-29-aws-environment-policy',
+    version: '2.1.0',
+    date: '2026-08-29',
+    highlight: 'AWS-only Training, Freelance, and Employer modes with enforceable cost, lease, credential, and teardown controls.',
+    sections: {
+      added: [
+        'Application-wide AWS environment policy preflight that fails closed on unsafe training resources, missing EC2 leases, or estimates above the approved ceiling.',
+        'AWS-native EC2 stop schedule for generated Training Lab CloudFormation stacks, plus explicit account eligibility, delayed-billing, and teardown acknowledgements.',
+        'Temporary STS session-token support in deployment and teardown flows.',
+      ],
+      changed: [
+        'AWS Training Lab is now the recommended learning environment with a $20 planning ceiling and a two-hour compute lease target.',
+        'Freelance and Employer modes preserve client/change-control boundaries instead of applying learning-lab assumptions to production work.',
+      ],
+      fixed: [
+        'Teardown no longer claims that a deleted CloudFormation stack proves nothing is billing; it presents evidence checks for retained and detached resources.',
+      ],
+    },
+  },
+  {
     id: '2026-05-23-deploy-console-and-step-by-step',
     version: '1.7.0',
     date: '2026-05-23',
