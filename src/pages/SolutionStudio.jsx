@@ -674,6 +674,11 @@ function Stat({ label, value, mono, className }) {
 function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
   const { analysis, region, understanding } = solution;
   const simulatedLearning = isSimulatedLearningProject(solution);
+  const hasMissingQuestions = (analysis.missingQuestions?.length || 0) > 0;
+  const hasApprovedPlanning = /Approved planning decisions:/i.test(solution.input.brief || '');
+  const showPlanningDecisions = simulatedLearning
+    ? !hasMissingQuestions && !hasApprovedPlanning
+    : hasMissingQuestions;
   const recommendation = useMemo(() => recommendPlanningDecisions(solution), [solution]);
   const [planning, setPlanning] = useState(() => ({
     environmentMode: recommendation.environmentMode,
@@ -786,7 +791,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
         <ClientDiscoveryForm solution={solution} onApply={onApplyDiscovery} />
       )}
 
-      {analysis.missingQuestions?.length > 0 && !simulatedLearning && (
+      {showPlanningDecisions && (
         <div className="rounded-xl border border-aws-orange/40 bg-aws-orange/5 p-3.5 space-y-3">
           <div>
             <div className="flex items-center gap-1.5 text-aws-orange font-extrabold text-[12px]">
