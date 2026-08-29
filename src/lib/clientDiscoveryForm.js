@@ -1,0 +1,69 @@
+const CATEGORY_RE = /^\[([^\]]+)\]\s*/;
+
+function slug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+}
+
+function fieldType(question) {
+  if (/budget|fee|spend|cost/i.test(question)) return { type: 'text', placeholder: 'Example: $500 fixed fee; maximum $30/month AWS spend' };
+  if (/delivery date|deadline|timeline|live\?/i.test(question)) return { type: 'text', placeholder: 'Example: pilot by 30 September; production after acceptance' };
+  if (/region|residency|location|from where/i.test(question)) return { type: 'text', placeholder: 'Country, user locations, approved AWS Region, and residency boundary' };
+  if (/database/i.test(question)) return { type: 'select', options: ['', 'Relational — PostgreSQL/MySQL', 'NoSQL — DynamoDB', 'Client needs recommendation', 'No database required'] };
+  if (/compute model/i.test(question)) return { type: 'select', options: ['', 'EC2 — full server control', 'Lambda — serverless', 'Containers — ECS/EKS', 'Client needs recommendation'] };
+  if (/custom domain/i.test(question)) return { type: 'text', placeholder: 'Domain name, registrar, DNS owner, or “none yet”' };
+  return { type: 'textarea', placeholder: 'Client-approved answer; write “Unknown” if it must remain an open decision' };
+}
+
+export function buildClientDiscoveryForm(solution) {
+  const questions = solution?.analysis?.missingQuestions || [];
+  return questions.map((raw, index) => {
+    const category = raw.match(CATEGORY_RE)?.[1] || 'Technical decision';
+    const question = raw.replace(CATEGORY_RE, '').trim();
+    return {
+      id: `${slug(category)}-${slug(question) || index + 1}`,
+      category,
+      question,
+      required: true,
+      ...fieldType(question),
+    };
+  });
+}
+
+export function discoveryFormAsText(title, fields, answers = {}) {
+  const lines = [
+    `CLIENT DISCOVERY FORM — ${title || 'Project'}`,
+    '',
+    'Instructions: Complete each answer with confirmed facts. Write “Unknown” where a decision is still pending. Do not include passwords, access keys, health records, payment-card data, or other secrets.',
+    '',
+  ];
+  let category = '';
+  fields.forEach((field) => {
+    if (field.category !== category) {
+      category = field.category;
+      lines.push(category.toUpperCase(), '');
+    }
+    lines.push(`${field.question}${field.required ? ' *' : ''}`);
+    lines.push(`Answer: ${String(answers[field.id] || '').trim()}`, '');
+  });
+  lines.push('Client/project owner name:', 'Approval date:', 'Approval reference (email/ticket/document):');
+  return lines.join('\n');
+}
+
+export function appendClientDiscoveryAnswers(brief, fields, answers) {
+  const completed = fields.map((field) => ({
+    ...field,
+    answer: String(answers?.[field.id] || '').trim(),
+  }));
+  const unanswered = completed.filter((field) => !field.answer);
+  if (unanswered.length) throw new Error(`Complete all required client fields (${unanswered.length} remaining). Use “Unknown” for decisions that are genuinely unresolved.`);
+
+  const marker = 'Client-approved discovery answers:';
+  const base = String(brief || '').split(`\n\n${marker}`)[0].trim();
+  const answerLines = completed.map((field) => `- [${field.category}] ${field.question}\n  Confirmed answer: ${field.answer}`);
+  return `${base}\n\n${marker}\n${answerLines.join('\n')}\n- These answers are recorded as client/project-owner input, not independently verified deployment evidence.\n- No answer authorizes AWS deployment; AWS write actions still require separate explicit approval.`;
+}
+

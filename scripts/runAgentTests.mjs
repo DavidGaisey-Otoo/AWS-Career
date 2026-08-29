@@ -17,6 +17,7 @@ import { runFreelanceClaimSafetyTests } from '../src/lib/__tests__/freelanceClai
 import { runProfessionalBriefBuilderTests } from '../src/lib/__tests__/professionalBriefBuilder.test.js';
 import { runDeliveryStatusTests } from '../src/lib/__tests__/deliveryStatus.test.js';
 import { runPlanningRecommendationTests } from '../src/lib/__tests__/planningRecommendations.test.js';
+import { runClientDiscoveryFormTests } from '../src/lib/__tests__/clientDiscoveryForm.test.js';
 
 const agents = runAllTests();
 console.log(printReport(agents));
@@ -131,6 +132,13 @@ console.log('  PLANNING RECOMMENDATION TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of planningRecommendations.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
+const clientDiscovery = runClientDiscoveryFormTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  CLIENT DISCOVERY FORM TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of clientDiscovery.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
 const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
 const syncOk = sync.allPassed;
@@ -148,7 +156,8 @@ const freelanceClaimsOk = freelanceClaims.allPassed;
 const professionalBriefOk = professionalBrief.allPassed;
 const deliveryStatusOk = deliveryStatus.allPassed;
 const planningRecommendationsOk = planningRecommendations.allPassed;
-const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk;
+const clientDiscoveryOk = clientDiscovery.allPassed;
+const allOk = agentsOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk;
 
 console.log('');
 console.log(allOk
@@ -156,6 +165,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

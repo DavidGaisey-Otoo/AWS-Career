@@ -45,6 +45,7 @@ import { assessFreeTierCost, formatPriceRange } from '../lib/projectCostEstimato
 import { buildProfessionalBrief } from '../lib/professionalBriefBuilder.js';
 import { getDeliveryStatus } from '../lib/deliveryStatus.js';
 import { appendApprovedPlanningDecisions, recommendPlanningDecisions } from '../lib/planningRecommendations.js';
+import { appendClientDiscoveryAnswers, buildClientDiscoveryForm, discoveryFormAsText } from '../lib/clientDiscoveryForm.js';
 
 /**
  * The four verdict tiers the pipeline can return, and how each one looks.
@@ -205,6 +206,17 @@ export default function SolutionStudio() {
       toast?.success?.('Planning decisions approved. The solution was rebuilt with your region, budget, and timeline.');
     } catch (error) {
       toast?.error?.(error.message || 'Check the planning decisions and try again.');
+    }
+  }
+
+  function applyClientDiscoveryAnswers(fields, answers) {
+    try {
+      const updatedBrief = appendClientDiscoveryAnswers(solution.input.brief, fields, answers);
+      setBrief(updatedBrief);
+      analyse(updatedBrief, gigMeta);
+      toast?.success?.('Client answers added. The architecture, plan, cost, and readiness checks were rebuilt.');
+    } catch (error) {
+      toast?.error?.(error.message || 'Complete the required discovery fields first.');
     }
   }
 
@@ -387,7 +399,7 @@ export default function SolutionStudio() {
           />
 
           <Step n={1} title="What I understood" icon={Lightbulb} defaultOpen>
-            <UnderstandingPanel solution={solution} onApprovePlanning={approvePlanningDecisions} />
+            <UnderstandingPanel solution={solution} onApprovePlanning={approvePlanningDecisions} onApplyDiscovery={applyClientDiscoveryAnswers} />
           </Step>
 
           <Step n={2} title="Your solution" icon={Layers} defaultOpen>
@@ -626,7 +638,7 @@ function Stat({ label, value, mono, className }) {
 // ════════════════════════════════════════════════════════════════════
 // Step 1 — Understanding
 // ════════════════════════════════════════════════════════════════════
-function UnderstandingPanel({ solution, onApprovePlanning }) {
+function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
   const { analysis, region, understanding } = solution;
   const recommendation = useMemo(() => recommendPlanningDecisions(solution), [solution]);
   const [planning, setPlanning] = useState(() => ({
@@ -737,6 +749,10 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
       )}
 
       {analysis.missingQuestions?.length > 0 && (
+        <ClientDiscoveryForm solution={solution} onApply={onApplyDiscovery} />
+      )}
+
+      {analysis.missingQuestions?.length > 0 && (
         <div className="rounded-xl border border-aws-orange/40 bg-aws-orange/5 p-3.5 space-y-3">
           <div>
             <div className="flex items-center gap-1.5 text-aws-orange font-extrabold text-[12px]">
@@ -837,6 +853,73 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
           <ul className="space-y-1 pl-4 list-disc text-[11.5px] opacity-90 leading-relaxed">
             {solution.review.readiness.assumptions.slice(0, 5).map((a) => <li key={a.id}>{a.statement}</li>)}
           </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientDiscoveryForm({ solution, onApply }) {
+  const toast = useToast();
+  const fields = useMemo(() => buildClientDiscoveryForm(solution), [solution]);
+  const [answers, setAnswers] = useState({});
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => { setAnswers({}); }, [solution.id]);
+
+  const completed = fields.filter((field) => String(answers[field.id] || '').trim()).length;
+
+  async function copyForm(includeAnswers = false) {
+    const text = discoveryFormAsText(solution.input.title, fields, includeAnswers ? answers : {});
+    try {
+      await navigator.clipboard.writeText(text);
+      toast?.success?.(includeAnswers ? 'Completed client form copied.' : 'Blank client form copied. Send it to the client or project owner.');
+    } catch {
+      toast?.error?.('Clipboard access was blocked.');
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-electric/40 bg-electric/5 overflow-hidden">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="w-full flex items-center gap-2 p-3.5 text-left tap-44">
+        <ClipboardList size={15} className="text-electric" />
+        <span className="font-extrabold text-[12px] flex-1">Client discovery form — {completed}/{fields.length} answered</span>
+        <ChevronDown size={14} className={cn('transition', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div className="px-3.5 pb-3.5 space-y-3">
+          <p className="text-[11px] opacity-75 leading-relaxed">
+            The app generated this form from facts missing in this exact project. Copy the blank form for the client, or complete it during a discovery call. Never enter passwords, access keys, health records, card data, or other secrets.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => copyForm(false)} className="btn btn-ghost !text-[11px] tap-44 gap-1.5"><Copy size={12} /> Copy blank client form</button>
+            {completed > 0 && <button type="button" onClick={() => copyForm(true)} className="btn btn-ghost !text-[11px] tap-44 gap-1.5"><Copy size={12} /> Copy answers</button>}
+          </div>
+          <div className="space-y-3">
+            {fields.map((field, index) => (
+              <label key={field.id} className="block rounded-lg border border-token bg-[var(--card-2)]/40 p-3 space-y-1.5">
+                <span className="block text-[9.5px] uppercase tracking-wider font-extrabold text-electric">{field.category}</span>
+                <span className="block text-[11.5px] font-bold">{index + 1}. {field.question} <span className="text-danger">*</span></span>
+                {field.type === 'select' ? (
+                  <select value={answers[field.id] || ''} onChange={(event) => setAnswers((current) => ({ ...current, [field.id]: event.target.value }))}
+                    className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-electric">
+                    {field.options.map((option) => <option key={option || 'blank'} value={option}>{option || 'Select a client-approved answer'}</option>)}
+                  </select>
+                ) : field.type === 'textarea' ? (
+                  <textarea rows={2} value={answers[field.id] || ''} placeholder={field.placeholder} onChange={(event) => setAnswers((current) => ({ ...current, [field.id]: event.target.value }))}
+                    className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-electric resize-y" />
+                ) : (
+                  <input value={answers[field.id] || ''} placeholder={field.placeholder} onChange={(event) => setAnswers((current) => ({ ...current, [field.id]: event.target.value }))}
+                    className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-electric" />
+                )}
+              </label>
+            ))}
+          </div>
+          <button type="button" onClick={() => onApply(fields, answers)} disabled={completed !== fields.length}
+            className="btn btn-primary !text-[12px] tap-44 gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed">
+            <CheckCircle2 size={14} /> Apply confirmed answers and rebuild solution
+          </button>
+          <p className="text-[10px] opacity-60">Answers update the brief and regenerate the design. They do not authorize deployment or prove that anything was built.</p>
         </div>
       )}
     </div>

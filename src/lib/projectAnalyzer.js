@@ -194,6 +194,15 @@ function extractFacts(text, parsed) {
 function missingQuestions(text, parsed, facts) {
   const Q = [];
   const has = (k) => facts[k] != null;
+  // Discovery appendices repeat each question for traceability. Never let the
+  // question wording itself satisfy its own gate. Only substantive confirmed
+  // answers are added back to the evidence text; Unknown/TBD/Pending stay open.
+  const discoveryMarker = 'Client-approved discovery answers:';
+  const [originalText, discoveryAppendix = ''] = String(text || '').split(discoveryMarker);
+  const confirmedAnswers = [...discoveryAppendix.matchAll(/Confirmed answer:\s*([^\n]+)/gi)]
+    .map((match) => match[1].trim())
+    .filter((answer) => answer && !/^(?:unknown|tbd|to be determined|pending|not decided|n\/a)$/i.test(answer));
+  const evidenceText = `${originalText}\n${confirmedAnswers.join('\n')}`;
 
   // Region
   if (!has('region') && parsed.services?.length) {
@@ -210,23 +219,23 @@ function missingQuestions(text, parsed, facts) {
     Q.push('[Business] What delivery date and business outcome define success?');
   }
 
-  if (!/\b(?:users?|administrators?|operators?|staff|team|roles?|personas?)\b/i.test(text)) {
+  if (!/\b(?:users?|administrators?|operators?|staff|team|roles?|personas?)\b/i.test(evidenceText)) {
     Q.push('[Users] Who will use or administer the solution, from where, and with which access levels?');
   }
 
-  if (!/\b(?:existing|current environment|brownfield|dependencies|integrat(?:e|ion)|on-prem|migration)\b/i.test(text)) {
+  if (!/\b(?:existing|current environment|brownfield|dependencies|integrat(?:e|ion)|on-prem|migration)\b/i.test(evidenceText)) {
     Q.push('[Technical environment] What already exists, what must integrate, and what dependencies or data must be preserved?');
   }
 
-  if (!/\b(?:rpo|rto|retention|classification|confidential|compliance|gdpr|hipaa|pci|soc\s?2)\b/i.test(text)) {
+  if (!/\b(?:rpo|rto|retention|classification|confidential|compliance|gdpr|hipaa|pci|soc\s?2)\b/i.test(evidenceText)) {
     Q.push('[Security & recovery] What data classification, compliance, retention, RPO, and RTO requirements apply?');
   }
 
-  if (!/\b(?:owner|on-call|support|maintenance window|escalation|incident response)\b/i.test(text)) {
+  if (!/\b(?:owner|on-call|support|maintenance window|escalation|incident response)\b/i.test(evidenceText)) {
     Q.push('[Operations] Who owns monitoring, patching, backup, incidents, maintenance, and escalation after handover?');
   }
 
-  if (!/\b(?:acceptance|sign[- ]?off|approver|success criteria|definition of done)\b/i.test(text)) {
+  if (!/\b(?:acceptance|sign[- ]?off|approver|success criteria|definition of done)\b/i.test(evidenceText)) {
     Q.push('[Acceptance] Who approves completion, and which tests and evidence must they sign off?');
   }
 
@@ -244,7 +253,7 @@ function missingQuestions(text, parsed, facts) {
   }
 
   // Domain
-  if (!/\b(?:custom\s+domain|domain\s+name|\.(?:com|co\.uk|io|net|org)|\w+\.\w+)\b/i.test(text) && Q.length < 10) {
+  if (!/\b(?:custom\s+domain|domain\s+name|\.(?:com|co\.uk|io|net|org)|\w+\.\w+)\b/i.test(evidenceText) && Q.length < 10) {
     if (parsed.projectTypes.some((p) => ['web-app'].includes(p.id))) {
       Q.push('Custom domain — do they already have one (Route 53 or external registrar)?');
     }
