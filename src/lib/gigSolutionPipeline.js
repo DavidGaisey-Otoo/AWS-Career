@@ -53,6 +53,7 @@ import { runDeployReview } from './deployAgents/master.js';
 import { scoreFromFindings, gradeFromScore } from './agentScoring.js';
 import { upsertSolution } from './solutionStore.js';
 import { PROJECTS } from '../data/projects.js';
+import { assessFreeTierCost } from './projectCostEstimator.js';
 
 // ════════════════════════════════════════════════════════════════════
 // STAGE 1 — UNDERSTAND
@@ -565,6 +566,26 @@ export function runPipeline(gig, options = {}) {
   const readiness = assessDeliveryReadiness({
     understanding, services, coverage, hasTemplate, blockers, highs,
   });
+  const costAssessment = assessFreeTierCost(services.map((service) => service.id), region.primary);
+  const approvedMonthlyBudget = Number(analysis?.budget?.awsMonthly || 0);
+  const costGateBlocked = !localOnly && (
+    costAssessment.unknownServices.length > 0
+    || (approvedMonthlyBudget > 0 && costAssessment.afterFreeTier.max > approvedMonthlyBudget)
+  );
+  if (costGateBlocked) {
+    const reason = costAssessment.unknownServices.length > 0
+      ? `Pricing is incomplete for: ${costAssessment.unknownServices.join(', ')}`
+      : `Estimated monthly maximum $${costAssessment.afterFreeTier.max} exceeds the approved $${approvedMonthlyBudget} ceiling`;
+    readiness.evidenceGates.push({
+      id: 'cost-within-approved-ceiling',
+      label: `${reason}. Simplify the design, choose Strict $0 Local Lab, or explicitly approve a sufficient ceiling`,
+      stage: 'pre-deploy',
+      passed: false,
+    });
+    readiness.clientReady = false;
+    readiness.sandboxDeployable = false;
+    readiness.classification = 'review-required';
+  }
   if (localOnly) {
     readiness.evidenceGates = readiness.evidenceGates.map((gate) => {
       if (gate.id === 'aws-validation') return { ...gate, label: 'Local virtual machine was created and configuration evidence captured', stage: 'local-validation' };

@@ -185,6 +185,20 @@ Use secure remote administration, patching, monitoring, backup, and a controlled
     },
   },
   {
+    name: 'estimated spend above the approved ceiling blocks AWS deployment',
+    run: () => {
+      const s = runPipeline(`Build a Windows Server EC2 training lab in us-east-1 with IAM, Systems Manager, CloudWatch, and AWS Backup.
+Maximum monthly AWS budget: AWS spend under $5/month.
+Target completion timeline: 2 weeks.
+Use synthetic non-sensitive data. This is a simulated portfolio learning lab.
+The environment is new and has no dependencies. The project owner handles operations and approves completion after access, monitoring, backup, restore, and teardown evidence pass.`);
+      const gate = s.review.readiness.evidenceGates.find((item) => item.id === 'cost-within-approved-ceiling');
+      assert(gate && gate.passed === false, 'missing failed cost-ceiling gate');
+      assert(!s.deploy.canOneClick, 'AWS deployment remained enabled above the approved ceiling');
+      assert(s.review.verdict === 'fix-first', `expected fix-first, got ${s.review.verdict}`);
+    },
+  },
+  {
     name: 'post-deploy evidence is never fabricated during generation',
     run: () => {
       const s = runPipeline(GIGS.serverless);

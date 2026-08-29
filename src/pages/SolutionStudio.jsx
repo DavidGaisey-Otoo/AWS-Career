@@ -673,6 +673,7 @@ function Stat({ label, value, mono, className }) {
 // ════════════════════════════════════════════════════════════════════
 function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
   const { analysis, region, understanding } = solution;
+  const simulatedLearning = isSimulatedLearningProject(solution);
   const recommendation = useMemo(() => recommendPlanningDecisions(solution), [solution]);
   const [planning, setPlanning] = useState(() => ({
     environmentMode: recommendation.environmentMode,
@@ -785,7 +786,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
         <ClientDiscoveryForm solution={solution} onApply={onApplyDiscovery} />
       )}
 
-      {analysis.missingQuestions?.length > 0 && (
+      {analysis.missingQuestions?.length > 0 && !simulatedLearning && (
         <div className="rounded-xl border border-aws-orange/40 bg-aws-orange/5 p-3.5 space-y-3">
           <div>
             <div className="flex items-center gap-1.5 text-aws-orange font-extrabold text-[12px]">
@@ -971,7 +972,7 @@ function ClientDiscoveryForm({ solution, onApply }) {
           </div>
           <button type="button" onClick={() => onApply(fields, answers)} disabled={completed !== fields.length}
             className="btn btn-primary !text-[12px] tap-44 gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed">
-            <CheckCircle2 size={14} /> Apply confirmed answers and rebuild solution
+            <CheckCircle2 size={14} /> {simulatedLearning ? 'Approve safe lab answers and continue' : 'Apply confirmed client answers and rebuild'}
           </button>
           <p className="text-[10px] opacity-60">Answers update the brief and regenerate the design. They do not authorize deployment or prove that anything was built.</p>
         </div>
