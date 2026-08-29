@@ -867,13 +867,17 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
 function ClientDiscoveryForm({ solution, onApply }) {
   const toast = useToast();
   const fields = useMemo(() => buildClientDiscoveryForm(solution), [solution]);
-  const [answers, setAnswers] = useState({});
+  const simulatedLearning = isSimulatedLearningProject(solution);
+  const [answers, setAnswers] = useState(() => (
+    simulatedLearning ? (buildSimulatedLearningAnswers(solution, fields) || {}) : {}
+  ));
   const [open, setOpen] = useState(true);
 
-  useEffect(() => { setAnswers({}); }, [solution.id]);
+  useEffect(() => {
+    setAnswers(simulatedLearning ? (buildSimulatedLearningAnswers(solution, fields) || {}) : {});
+  }, [solution.id, simulatedLearning, fields]);
 
   const completed = fields.filter((field) => String(answers[field.id] || '').trim()).length;
-  const simulatedLearning = isSimulatedLearningProject(solution);
 
   async function copyForm(includeAnswers = false) {
     const text = discoveryFormAsText(solution.input.title, fields, includeAnswers ? answers : {});
@@ -904,15 +908,15 @@ function ClientDiscoveryForm({ solution, onApply }) {
               <button type="button" onClick={() => {
                 const defaults = buildSimulatedLearningAnswers(solution, fields);
                 setAnswers(defaults || {});
-                toast?.success?.('Safe simulated-lab answers filled. Review them, then apply and rebuild.');
+                toast?.success?.('Safe simulated-lab defaults restored. Review them, then apply and rebuild.');
               }} className="btn btn-secondary !text-[11px] tap-44 gap-1.5">
-                <Sparkles size={12} /> Fill safe simulated-lab answers
+                <Sparkles size={12} /> Restore safe simulated-lab defaults
               </button>
             )}
           </div>
           {simulatedLearning && (
             <p className="rounded-lg border border-aws-orange/30 bg-aws-orange/5 p-2.5 text-[10.5px] leading-relaxed">
-              This shortcut is available because the brief explicitly identifies a simulated portfolio lab. It records project-owner planning decisions only. If this becomes real client work, start a new solution and obtain the client’s actual answers.
+              These editable answers were prefilled because the brief explicitly identifies a simulated portfolio lab. Review or change them before applying. They record project-owner planning decisions only. If this becomes real client work, start a new solution and obtain the client’s actual answers.
             </p>
           )}
           <div className="space-y-3">
