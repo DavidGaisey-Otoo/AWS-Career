@@ -560,10 +560,12 @@ export function runPipeline(gig, options = {}) {
     understanding, services, coverage, hasTemplate, blockers, highs,
   });
 
-  // Four tiers, so an otherwise-excellent design isn't branded broken by
-  // a single "high". Only criticals actually stop you.
+  // The visual verdict must agree with the evidence gates. A technically
+  // complete template with unanswered discovery questions is still not
+  // ready to build or hand off.
   const verdict = !hasTemplate || readiness.classification === 'planning-only' ? 'blocked'
                 : readiness.classification === 'partially-supported' ? 'fix-first'
+                : !readiness.clientReady ? 'fix-first'
                 : blockers.length ? 'fix-first'
                 : highs.length ? 'caution'
                 : 'ready';

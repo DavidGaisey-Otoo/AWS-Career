@@ -103,6 +103,7 @@ Use secure remote administration, patching, monitoring, backup, and a controlled
       assert(s.artifacts.cfn.coverage.pct === 100, `Windows coverage is ${s.artifacts.cfn.coverage.pct}% instead of 100%`);
       assert(!s.review.readiness.unsupported.some((item) => item.serviceId === 'ssm'), 'implemented SSM was reported unsupported');
       assert(!s.review.readiness.unsupported.some((item) => item.serviceId === 'backup'), 'implemented AWS Backup was reported unsupported');
+      assert(s.review.verdict === 'fix-first', `unanswered Windows discovery was labelled ${s.review.verdict}`);
       assert(/Windows_Server-2022/i.test(s.artifacts.cfn.code), 'Windows Server 2022 image is missing');
       assert(/AmazonSSMManagedInstanceCore/.test(s.artifacts.cfn.code), 'secure Systems Manager role is missing');
       assert(/AWS::Backup::BackupPlan/.test(s.artifacts.cfn.code), 'AWS Backup plan is missing');
