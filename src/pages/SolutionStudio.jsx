@@ -423,10 +423,10 @@ export default function SolutionStudio() {
             <ReviewPanel solution={solution} />
           </Step>
 
-          <Step n={7} title="Build it on AWS" icon={Rocket} defaultOpen>
+          <Step n={7} title={solution.deploy.localOnly ? 'Build locally — AWS disabled' : 'Build it on AWS'} icon={Rocket} defaultOpen>
             <BuildPanel
               solution={solution}
-              onDeploy={() => setDeployOpen(true)}
+              onDeploy={() => { if (!solution.deploy.localOnly) setDeployOpen(true); }}
             />
           </Step>
 
@@ -444,7 +444,7 @@ export default function SolutionStudio() {
       )}
 
       {/* ── MODALS ─────────────────────────────────────────────────── */}
-      {solution && (
+      {solution && !solution.deploy.localOnly && (
         <DeployFromScriptModal
           open={deployOpen}
           onClose={() => setDeployOpen(false)}
@@ -473,7 +473,7 @@ export default function SolutionStudio() {
             });
             setSavedList(listSolutions());
           }
-          if (result?.ok) toast?.success?.('Torn down. Nothing left billing.');
+          if (result?.ok) toast?.success?.('Stack deletion reported. Verify CloudFormation, Billing, backups, snapshots, and public IPs in AWS.');
         }}
       />
     </div>
@@ -630,8 +630,10 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
   const { analysis, region, understanding } = solution;
   const recommendation = useMemo(() => recommendPlanningDecisions(solution), [solution]);
   const [planning, setPlanning] = useState(() => ({
+    environmentMode: recommendation.environmentMode,
+    labDurationHours: recommendation.labDurationHours,
     region: recommendation.region,
-    monthlyBudget: recommendation.monthlyBudget || '',
+    monthlyBudget: recommendation.environmentMode === 'local-zero' ? 0 : (recommendation.monthlyBudget || ''),
     timelineWeeks: recommendation.timelineWeeks,
     dataClassification: recommendation.dataClassification,
     backupRetentionDays: recommendation.backupRetentionDays,
@@ -640,15 +642,17 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
   }));
   useEffect(() => {
     setPlanning({
+      environmentMode: recommendation.environmentMode,
+      labDurationHours: recommendation.labDurationHours,
       region: recommendation.region,
-      monthlyBudget: recommendation.monthlyBudget || '',
+      monthlyBudget: recommendation.environmentMode === 'local-zero' ? 0 : (recommendation.monthlyBudget || ''),
       timelineWeeks: recommendation.timelineWeeks,
       dataClassification: recommendation.dataClassification,
       backupRetentionDays: recommendation.backupRetentionDays,
       rpoHours: recommendation.rpoHours,
       rtoHours: recommendation.rtoHours,
     });
-  }, [recommendation.region, recommendation.monthlyBudget, recommendation.timelineWeeks,
+  }, [recommendation.environmentMode, recommendation.labDurationHours, recommendation.region, recommendation.monthlyBudget, recommendation.timelineWeeks,
     recommendation.dataClassification, recommendation.backupRetentionDays, recommendation.rpoHours, recommendation.rtoHours]);
   const budgetText = formatBudget(analysis.budget);
   const facts = [
@@ -743,6 +747,21 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label className="text-[10.5px] font-bold space-y-1 sm:col-span-3">
+              <span className="opacity-70">Execution environment</span>
+              <select
+                value={planning.environmentMode}
+                onChange={(e) => setPlanning((p) => ({
+                  ...p,
+                  environmentMode: e.target.value,
+                  monthlyBudget: e.target.value === 'local-zero' ? 0 : (recommendation.monthlyBudget || 5),
+                }))}
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange"
+              >
+                <option value="local-zero">Strict $0 Local Lab — no AWS resources or AWS deployment</option>
+                <option value="aws-short-lived">Short-lived AWS Lab — real AWS; charges may occur</option>
+              </select>
+            </label>
             <label className="text-[10.5px] font-bold space-y-1">
               <span className="opacity-70">AWS Region</span>
               <input value={planning.region} onChange={(e) => setPlanning((p) => ({ ...p, region: e.target.value }))}
@@ -750,7 +769,7 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
             </label>
             <label className="text-[10.5px] font-bold space-y-1">
               <span className="opacity-70">Monthly ceiling (USD)</span>
-              <input type="number" min="1" value={planning.monthlyBudget} onChange={(e) => setPlanning((p) => ({ ...p, monthlyBudget: e.target.value }))}
+              <input type="number" min={planning.environmentMode === 'local-zero' ? 0 : 1} value={planning.monthlyBudget} disabled={planning.environmentMode === 'local-zero'} onChange={(e) => setPlanning((p) => ({ ...p, monthlyBudget: e.target.value }))}
                 className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
             </label>
             <label className="text-[10.5px] font-bold space-y-1">
@@ -759,6 +778,17 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
                 className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
             </label>
           </div>
+          {planning.environmentMode === 'aws-short-lived' ? (
+            <label className="block text-[10.5px] font-bold space-y-1 max-w-xs">
+              <span className="opacity-70">Target teardown within (hours)</span>
+              <input type="number" min="1" max="24" step="1" value={planning.labDurationHours} onChange={(e) => setPlanning((p) => ({ ...p, labDurationHours: e.target.value }))}
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
+            </label>
+          ) : (
+            <div className="rounded-lg border border-success/40 bg-success/5 p-2.5 text-[11px] text-success leading-relaxed">
+              AWS spend is mechanically held at $0 because the app will disable AWS deployment. Use a local VM; your computer, internet, electricity, and Microsoft evaluation-license terms remain outside AWS billing.
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
             <label className="text-[10.5px] font-bold space-y-1 sm:col-span-2">
               <span className="opacity-70">Data classification</span>
@@ -784,12 +814,13 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
             </div>
           </div>
           <div className="space-y-1 text-[10.5px] opacity-75 leading-relaxed">
+            <p><strong>Environment:</strong> {recommendation.environmentReason}</p>
             <p><strong>Region:</strong> {recommendation.regionReason}</p>
             <p><strong>Budget:</strong> {recommendation.budgetReason}</p>
             <p><strong>Timeline:</strong> {recommendation.timelineReason}</p>
           </div>
           <button onClick={() => onApprovePlanning(planning)} className="btn btn-primary !text-[12px] tap-44 gap-1.5">
-            <CheckCircle2 size={14} /> Approve decisions and rebuild
+            <CheckCircle2 size={14} /> Approve environment and planning decisions
           </button>
           <p className="text-[10px] opacity-60">This approves planning facts only. AWS deployment still requires a separate explicit approval.</p>
         </div>
@@ -1155,6 +1186,7 @@ function BuildPanel({ solution, onDeploy }) {
   const cov = solution.deploy.coverage;
   const readiness = solution.review.readiness;
   const canDeploy = !!solution.deploy.canOneClick;
+  const localOnly = solution.deploy.localOnly || solution.deploy.environmentMode === 'local-zero';
   const deliveryStatus = getDeliveryStatus(solution);
 
   function download(artifact) {
@@ -1181,7 +1213,15 @@ function BuildPanel({ solution, onDeploy }) {
         </div>
       ) : (
         <>
-          {(needsFix || !canDeploy) && (
+          {localOnly && (
+            <div className="rounded-xl border border-success/40 bg-success/5 p-3.5 text-[11.5px] leading-relaxed">
+              <div className="flex items-center gap-1.5 font-extrabold text-success mb-1">
+                <CheckCircle2 size={14} /> Strict $0 Local Lab selected — AWS writes are disabled
+              </div>
+              Build the Windows Server lab in Hyper-V, VirtualBox, or another local hypervisor. Create an isolated/NAT VM, apply the generated configuration manually, capture access and restore-test evidence, then delete the VM and its virtual disks when finished. No AWS credentials are requested and no AWS resource can be created from this screen.
+            </div>
+          )}
+          {!localOnly && (needsFix || !canDeploy) && (
             <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 text-[11.5px] leading-relaxed">
               <div className="flex items-center gap-1.5 font-extrabold text-warning mb-1">
                 <AlertTriangle size={13} /> {deliveryStatus.deployTitle}
@@ -1193,6 +1233,7 @@ function BuildPanel({ solution, onDeploy }) {
           <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3 space-y-1 text-[11.5px]">
             <Row k="Stack name" v={solution.deploy.stackName} mono />
             <Row k="Region" v={solution.deploy.region} mono />
+            <Row k="Environment" v={localOnly ? 'Strict $0 Local Lab — no AWS resources' : 'Short-lived AWS Lab — charges may occur'} />
             <Row k="Resources" v={`${cov?.resourceCount ?? 0} AWS resources`} />
             <Row k="Mode" v={solution.mode === 'test' ? 'Test — Free Tier substitutions applied' : 'Client — exact specs'} />
             <Row k="Support status" v={(readiness?.classification || 'planning-only').replace(/-/g, ' ')} />
@@ -1240,11 +1281,12 @@ function BuildPanel({ solution, onDeploy }) {
             disabled={!canDeploy}
             className="btn btn-primary w-full !text-[14px] !py-3.5 tap-44 gap-2 disabled:opacity-45 disabled:cursor-not-allowed"
           >
-            <Rocket size={16} /> {canDeploy ? 'Build verified coverage on AWS' : 'Deployment unavailable — resolve coverage/review gates'}
+            <Rocket size={16} /> {localOnly ? 'AWS deployment disabled — Strict $0 Local Lab' : canDeploy ? 'Build verified coverage on AWS' : 'Deployment unavailable — resolve coverage/review gates'}
           </button>
           <p className="text-[10.5px] opacity-60 text-center leading-relaxed">
-            Opens the deploy panel. You&apos;ll enter AWS keys there — they stay in memory, are never
-            saved, and go only to AWS.
+            {localOnly
+              ? 'Local mode creates no AWS resources. Downloaded AWS templates remain reference artifacts and are not executed by the app.'
+              : <>Opens the deploy panel. You&apos;ll enter AWS keys there — they stay in memory, are never saved, and go only to AWS. Teardown reduces cost but cannot guarantee a $0 bill.</>}
           </p>
 
           <div className="pt-2 border-t border-token">

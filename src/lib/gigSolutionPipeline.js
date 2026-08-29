@@ -436,6 +436,7 @@ export function buildDeliveryPlan({ blueprint, services, approach, timeline, nam
  */
 export function runPipeline(gig, options = {}) {
   const brief = gigToBrief(gig);
+  const localOnly = /Execution environment:\s*Strict \$0 Local Lab/i.test(brief);
   const mode = options.mode || 'test';
 
   // ── 1. UNDERSTAND ────────────────────────────────────────────────
@@ -559,6 +560,13 @@ export function runPipeline(gig, options = {}) {
   const readiness = assessDeliveryReadiness({
     understanding, services, coverage, hasTemplate, blockers, highs,
   });
+  if (localOnly) {
+    readiness.evidenceGates = readiness.evidenceGates.map((gate) => {
+      if (gate.id === 'aws-validation') return { ...gate, label: 'Local virtual machine was created and configuration evidence captured', stage: 'local-validation' };
+      if (gate.id === 'health-checks') return { ...gate, label: 'Local workload, access, backup, and restore tests produced evidence', stage: 'local-validation' };
+      return gate;
+    });
+  }
 
   // The visual verdict must agree with the evidence gates. A technically
   // complete template with unanswered discovery questions is still not
@@ -609,7 +617,9 @@ export function runPipeline(gig, options = {}) {
       readiness,
     },
     deploy: {
-      canOneClick: readiness.sandboxDeployable,
+      canOneClick: !localOnly && readiness.sandboxDeployable,
+      environmentMode: localOnly ? 'local-zero' : 'aws-short-lived',
+      localOnly,
       clientReady: readiness.clientReady,
       classification: readiness.classification,
       coverage,
