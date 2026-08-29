@@ -99,9 +99,15 @@ Use secure remote administration, patching, monitoring, backup, and a controlled
         assert(ids.has(required), `missing explicitly requested service: ${required}`);
       }
       assert(s.review.score < 100, 'deployment findings were excluded from the combined score');
-      assert(s.deploy.canOneClick === false, 'unsupported service coverage must block one-click deployment');
-      assert(s.review.readiness.unsupported.some((item) => item.serviceId === 'ssm'), 'SSM coverage gap was hidden');
-      assert(s.review.readiness.unsupported.some((item) => item.serviceId === 'backup'), 'AWS Backup coverage gap was hidden');
+      assert(s.artifacts.cfn.deployReady === true, 'complete Windows infrastructure was not generated');
+      assert(s.artifacts.cfn.coverage.pct === 100, `Windows coverage is ${s.artifacts.cfn.coverage.pct}% instead of 100%`);
+      assert(!s.review.readiness.unsupported.some((item) => item.serviceId === 'ssm'), 'implemented SSM was reported unsupported');
+      assert(!s.review.readiness.unsupported.some((item) => item.serviceId === 'backup'), 'implemented AWS Backup was reported unsupported');
+      assert(/Windows_Server-2022/i.test(s.artifacts.cfn.code), 'Windows Server 2022 image is missing');
+      assert(/AmazonSSMManagedInstanceCore/.test(s.artifacts.cfn.code), 'secure Systems Manager role is missing');
+      assert(/AWS::Backup::BackupPlan/.test(s.artifacts.cfn.code), 'AWS Backup plan is missing');
+      assert(!/FromPort:\s*3389|ToPort:\s*3389/.test(s.artifacts.cfn.code), 'RDP was exposed');
+      assert(s.approach.recommended === 'cfn', 'an incomplete deployment format was recommended over complete CloudFormation');
       const cost = assessFreeTierCost([...ids], 'us-east-1');
       assert(!cost.unknownServices.includes('backup'), 'AWS Backup pricing coverage is missing');
       assert(cost.noFreeTier.some((item) => item.id === 'backup'), 'AWS Backup was incorrectly presented as free');
@@ -342,6 +348,26 @@ Use secure remote administration, patching, monitoring, backup, and a controlled
         assert(/discovery/i.test(phases[0].title), `${key}: first phase is not discovery`);
         assert(/verify|hand over/i.test(phases[phases.length - 1].title),
           `${key}: last phase is not handover`);
+      }
+    },
+  },
+  {
+    name: 'professional estimates include evidence recovery and handover work',
+    run: () => {
+      for (const [key, gig] of Object.entries(GIGS)) {
+        const plan = runPipeline(gig).plan;
+        assert(plan.estimatedDays >= 2, `${key}: estimate only covers resource creation`);
+        assert(plan.evidenceChecklist?.length >= 5, `${key}: evidence checklist missing`);
+        assert(plan.handoverChecklist?.length >= 4, `${key}: handover checklist missing`);
+      }
+    },
+  },
+  {
+    name: 'vague projects receive cross-domain discovery questions',
+    run: () => {
+      const questions = runPipeline('Build an EC2-hosted website.').analysis.missingQuestions.join('\n');
+      for (const category of ['Business', 'Users', 'Technical environment', 'Security & recovery', 'Operations', 'Acceptance', 'Cost']) {
+        assert(questions.includes(`[${category}`), `missing discovery category: ${category}`);
       }
     },
   },

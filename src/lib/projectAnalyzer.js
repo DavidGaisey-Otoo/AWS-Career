@@ -185,7 +185,10 @@ function extractFacts(text, parsed) {
 // ─────────────────── smart missing-info questions ───────────────────
 
 /**
- * Generate AT MOST 3 questions about info the analyser couldn't extract.
+ * Generate a compact, category-labelled discovery checklist about facts the
+ * analyser could not verify. Planning recommendations can answer region,
+ * budget, and timeline; the remaining questions still require a client or
+ * project-owner decision.
  * Returns [] if everything is already answered.
  */
 function missingQuestions(text, parsed, facts) {
@@ -194,17 +197,37 @@ function missingQuestions(text, parsed, facts) {
 
   // Region
   if (!has('region') && parsed.services?.length) {
-    Q.push('Which AWS region — UK/EU (eu-west-1/2), US (us-east-1) or somewhere else?');
+    Q.push('[Cost & residency] Which AWS region and data-residency boundary are approved?');
   }
 
   // Budget — only ask if monetary terms aren\'t already there
   if (!has('fixedBudget') && !has('monthlyBudget') && !has('awsMonthlyCap')) {
-    Q.push('Budget — fixed project fee, monthly AWS cap, or both?');
+    Q.push('[Cost] What are the fixed project fee and maximum monthly AWS spend?');
   }
 
   // Timeline
   if (!has('timeline')) {
-    Q.push('Timeline — when does this need to be live?');
+    Q.push('[Business] What delivery date and business outcome define success?');
+  }
+
+  if (!/\b(?:users?|administrators?|operators?|staff|team|roles?|personas?)\b/i.test(text)) {
+    Q.push('[Users] Who will use or administer the solution, from where, and with which access levels?');
+  }
+
+  if (!/\b(?:existing|current environment|brownfield|dependencies|integrat(?:e|ion)|on-prem|migration)\b/i.test(text)) {
+    Q.push('[Technical environment] What already exists, what must integrate, and what dependencies or data must be preserved?');
+  }
+
+  if (!/\b(?:rpo|rto|retention|classification|confidential|compliance|gdpr|hipaa|pci|soc\s?2)\b/i.test(text)) {
+    Q.push('[Security & recovery] What data classification, compliance, retention, RPO, and RTO requirements apply?');
+  }
+
+  if (!/\b(?:owner|on-call|support|maintenance window|escalation|incident response)\b/i.test(text)) {
+    Q.push('[Operations] Who owns monitoring, patching, backup, incidents, maintenance, and escalation after handover?');
+  }
+
+  if (!/\b(?:acceptance|sign[- ]?off|approver|success criteria|definition of done)\b/i.test(text)) {
+    Q.push('[Acceptance] Who approves completion, and which tests and evidence must they sign off?');
   }
 
   // Compute model (only if not detected)
@@ -216,18 +239,18 @@ function missingQuestions(text, parsed, facts) {
   // Database (only if not detected and project clearly needs one)
   const explicitDb = parsed.services.some((s) => ['rds', 'dynamodb', 'aurora', 'redshift', 'elasticache'].includes(s.id));
   const needsDb = parsed.projectTypes.some((p) => ['web-app', 'database', 'serverless'].includes(p.id));
-  if (!explicitDb && needsDb && Q.length < 3) {
+  if (!explicitDb && needsDb && Q.length < 10) {
     Q.push('Database — relational (RDS Postgres/MySQL) or NoSQL (DynamoDB)?');
   }
 
   // Domain
-  if (!/\b(?:custom\s+domain|domain\s+name|\.(?:com|co\.uk|io|net|org)|\w+\.\w+)\b/i.test(text) && Q.length < 3) {
+  if (!/\b(?:custom\s+domain|domain\s+name|\.(?:com|co\.uk|io|net|org)|\w+\.\w+)\b/i.test(text) && Q.length < 10) {
     if (parsed.projectTypes.some((p) => ['web-app'].includes(p.id))) {
       Q.push('Custom domain — do they already have one (Route 53 or external registrar)?');
     }
   }
 
-  return Q.slice(0, 3);
+  return [...new Set(Q)].slice(0, 10);
 }
 
 // ─────────────────── match-score for portfolio fit ───────────────────

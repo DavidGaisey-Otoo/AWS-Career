@@ -732,14 +732,21 @@ export function generateCloudFormation(services, opts = {}) {
       }
     }
   }
+  if (wanted.has('cloudwatch')) {
+    const approvedBudget = Number(String(opts.brief || '').match(/maximum monthly aws budget[^\n$]*\$\s*(\d+(?:\.\d+)?)/i)?.[1] || 10);
+    params.MonthlyBudget = {
+      Type: 'Number', Default: approvedBudget, MinValue: 1,
+      Description: 'Approved monthly AWS budget threshold in USD. A budget alerts; it does not cap charges.',
+    };
+  }
   const autoAdded = [...wanted].filter((id) => !requested.includes(id) && CFN_PER_SERVICE[id]);
 
   // 2. Emit in dependency order — networking before anything that sits in it.
   const EMIT_ORDER = [
-    'vpc', 'subnet', 'igw', 'security-group', 'kms',
+    'vpc', 'subnet', 'igw', 'security-group', 'kms', 'iam',
     's3', 'dynamodb', 'rds',
     'lambda', 'ec2', 'apigw', 'cloudfront',
-    'sns', 'cloudwatch-logs', 'cloudwatch', 'ssm-parameter',
+    'ssm', 'backup', 'sns', 'cloudwatch-logs', 'cloudwatch', 'ssm-parameter',
   ];
   const ordered = [
     ...EMIT_ORDER.filter((id) => wanted.has(id)),
@@ -755,7 +762,7 @@ export function generateCloudFormation(services, opts = {}) {
       continue;
     }
     const svc = services.find((s) => s.id === id);
-    const r = builder(specFor(svc || { id }, mode), mode);
+    const r = builder(specFor(svc || { id }, mode), mode, { ...opts, wanted: [...wanted] });
     if (r && Object.keys(r).length) {
       Object.assign(resources, r);
       covered.push(id);
@@ -860,6 +867,23 @@ const CFN_PER_SERVICE = {
   igw: () => ({
     Igw: { Type: 'AWS::EC2::InternetGateway' },
     IgwAttach: { Type: 'AWS::EC2::VPCGatewayAttachment', Properties: { VpcId: { Ref: 'Vpc' }, InternetGatewayId: { Ref: 'Igw' } } },
+    PublicRouteTable: {
+      Type: 'AWS::EC2::RouteTable',
+      Properties: { VpcId: { Ref: 'Vpc' }, Tags: [{ Key: 'Name', Value: { 'Fn::Sub': '${ProjectName}-public-rt' } }] },
+    },
+    PublicDefaultRoute: {
+      Type: 'AWS::EC2::Route',
+      DependsOn: 'IgwAttach',
+      Properties: { RouteTableId: { Ref: 'PublicRouteTable' }, DestinationCidrBlock: '0.0.0.0/0', GatewayId: { Ref: 'Igw' } },
+    },
+    PublicSubnet1RouteAssociation: {
+      Type: 'AWS::EC2::SubnetRouteTableAssociation',
+      Properties: { SubnetId: { Ref: 'PublicSubnet1' }, RouteTableId: { Ref: 'PublicRouteTable' } },
+    },
+    PublicSubnet2RouteAssociation: {
+      Type: 'AWS::EC2::SubnetRouteTableAssociation',
+      Properties: { SubnetId: { Ref: 'PublicSubnet2' }, RouteTableId: { Ref: 'PublicRouteTable' } },
+    },
   }),
   rds: (spec, mode) => ({
     DbSubnetGroup: {
@@ -890,17 +914,43 @@ const CFN_PER_SERVICE = {
     },
   }),
 
-  'security-group': () => ({
+  'security-group': (spec, mode, opts) => ({
     AppSecurityGroup: {
       Type: 'AWS::EC2::SecurityGroup',
       Properties: {
-        GroupDescription: 'App tier — HTTPS in, all out',
+        GroupDescription: /windows\s+server/i.test(opts?.brief || '')
+          ? 'Managed Windows host - no inbound administration ports; use Systems Manager'
+          : 'App tier - HTTPS in, all out',
         VpcId: { Ref: 'Vpc' },
-        SecurityGroupIngress: [
+        SecurityGroupIngress: /windows\s+server/i.test(opts?.brief || '') ? [] : [
           { IpProtocol: 'tcp', FromPort: 443, ToPort: 443, CidrIp: '0.0.0.0/0', Description: 'HTTPS from anywhere' },
           { IpProtocol: 'tcp', FromPort: 80, ToPort: 80, CidrIp: '0.0.0.0/0', Description: 'HTTP (redirects to HTTPS)' },
         ],
         Tags: [{ Key: 'Name', Value: { 'Fn::Sub': '${ProjectName}-app-sg' } }],
+      },
+    },
+  }),
+
+  iam: () => ({
+    ManagedInstanceRole: {
+      Type: 'AWS::IAM::Role',
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [{
+            Effect: 'Allow',
+            Principal: { Service: 'ec2.amazonaws.com' },
+            Action: 'sts:AssumeRole',
+          }],
+        },
+        ManagedPolicyArns: ['arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'],
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+    ManagedInstanceProfile: {
+      Type: 'AWS::IAM::InstanceProfile',
+      Properties: {
+        Roles: [{ Ref: 'ManagedInstanceRole' }],
       },
     },
   }),
@@ -1074,16 +1124,97 @@ const CFN_PER_SERVICE = {
     },
   }),
 
-  ec2: (spec, mode) => ({
+  ec2: (spec, mode, opts) => ({
     AppInstance: {
       Type: 'AWS::EC2::Instance',
       Properties: {
         InstanceType: mode === 'test' ? 't3.micro' : (spec || 't3.small'),
-        // SSM public parameter always resolves to the current AL2023 AMI
-        ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}',
+        // Public SSM parameters resolve to a maintained OS image at deployment.
+        ImageId: /windows\s+server/i.test(opts?.brief || '')
+          ? '{{resolve:ssm:/aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base}}'
+          : '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}',
         SubnetId: { Ref: 'PublicSubnet1' },
         SecurityGroupIds: [{ Ref: 'AppSecurityGroup' }],
-        Tags: [{ Key: 'Name', Value: { 'Fn::Sub': '${ProjectName}-app' } }],
+        IamInstanceProfile: { Ref: 'ManagedInstanceProfile' },
+        MetadataOptions: { HttpTokens: 'required', HttpEndpoint: 'enabled' },
+        BlockDeviceMappings: [{
+          DeviceName: /windows\s+server/i.test(opts?.brief || '') ? '/dev/sda1' : '/dev/xvda',
+          Ebs: { Encrypted: true, VolumeType: 'gp3', VolumeSize: /windows\s+server/i.test(opts?.brief || '') ? 30 : 12, DeleteOnTermination: true },
+        }],
+        Tags: [
+          { Key: 'Name', Value: { 'Fn::Sub': '${ProjectName}-app' } },
+          { Key: 'Project', Value: { Ref: 'ProjectName' } },
+        ],
+      },
+    },
+  }),
+
+  ssm: () => ({
+    InventoryAssociation: {
+      Type: 'AWS::SSM::Association',
+      Properties: {
+        Name: 'AWS-GatherSoftwareInventory',
+        AssociationName: { 'Fn::Sub': '${ProjectName}-inventory' },
+        ScheduleExpression: 'rate(1 day)',
+        Targets: [{ Key: 'tag:Project', Values: [{ Ref: 'ProjectName' }] }],
+      },
+    },
+    PatchAssociation: {
+      Type: 'AWS::SSM::Association',
+      Properties: {
+        Name: 'AWS-RunPatchBaseline',
+        AssociationName: { 'Fn::Sub': '${ProjectName}-patch-scan' },
+        ScheduleExpression: 'cron(0 3 ? * SUN *)',
+        Parameters: { Operation: ['Scan'], RebootOption: ['NoReboot'] },
+        Targets: [{ Key: 'tag:Project', Values: [{ Ref: 'ProjectName' }] }],
+      },
+    },
+  }),
+
+  backup: (spec, mode, opts) => ({
+    BackupVault: {
+      Type: 'AWS::Backup::BackupVault',
+      DeletionPolicy: mode === 'test' ? 'Delete' : 'Retain',
+      Properties: { BackupVaultName: { 'Fn::Sub': '${ProjectName}-vault' } },
+    },
+    BackupServiceRole: {
+      Type: 'AWS::IAM::Role',
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [{ Effect: 'Allow', Principal: { Service: 'backup.amazonaws.com' }, Action: 'sts:AssumeRole' }],
+        },
+        ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup'],
+      },
+    },
+    BackupPlan: {
+      Type: 'AWS::Backup::BackupPlan',
+      Properties: {
+        BackupPlan: {
+          BackupPlanName: { 'Fn::Sub': '${ProjectName}-daily' },
+          BackupPlanRule: [{
+            RuleName: 'DailyBackup',
+            TargetBackupVault: { Ref: 'BackupVault' },
+            ScheduleExpression: 'cron(0 5 ? * * *)',
+            StartWindowMinutes: 60,
+            CompletionWindowMinutes: 180,
+            Lifecycle: {
+              DeleteAfterDays: Number(String(opts?.brief || '').match(/backup retention:\s*(\d+)\s*days?/i)?.[1])
+                || (mode === 'test' ? 1 : 30),
+            },
+          }],
+        },
+      },
+    },
+    BackupSelection: {
+      Type: 'AWS::Backup::BackupSelection',
+      Properties: {
+        BackupPlanId: { Ref: 'BackupPlan' },
+        BackupSelection: {
+          SelectionName: { 'Fn::Sub': '${ProjectName}-tagged-resources' },
+          IamRoleArn: { 'Fn::GetAtt': ['BackupServiceRole', 'Arn'] },
+          ListOfTags: [{ ConditionType: 'STRINGEQUALS', ConditionKey: 'Project', ConditionValue: { Ref: 'ProjectName' } }],
+        },
       },
     },
   }),
@@ -1124,8 +1255,18 @@ const CFN_PER_SERVICE = {
     },
   }),
 
-  cloudwatch: () => ({
-    BillingAlarm: {
+  cloudwatch: (spec, mode, opts) => ({
+    CostBudget: {
+      Type: 'AWS::Budgets::Budget',
+      Properties: {
+        Budget: {
+          BudgetName: { 'Fn::Sub': '${ProjectName}-monthly-cost' },
+          BudgetType: 'COST', TimeUnit: 'MONTHLY',
+          BudgetLimit: { Amount: { Ref: 'MonthlyBudget' }, Unit: 'USD' },
+        },
+      },
+    },
+    ...(opts?.region === 'us-east-1' ? { BillingAlarm: {
       Type: 'AWS::CloudWatch::Alarm',
       Properties: {
         AlarmName: { 'Fn::Sub': '${ProjectName}-estimated-charges' },
@@ -1136,10 +1277,34 @@ const CFN_PER_SERVICE = {
         Statistic: 'Maximum',
         Period: 21600,
         EvaluationPeriods: 1,
-        Threshold: 10,
+        Threshold: { Ref: 'MonthlyBudget' },
         ComparisonOperator: 'GreaterThanThreshold',
       },
-    },
+    } } : {}),
+    ...(opts?.wanted?.includes('ec2') ? {
+      InstanceStatusAlarm: {
+        Type: 'AWS::CloudWatch::Alarm',
+        Properties: {
+          AlarmName: { 'Fn::Sub': '${ProjectName}-instance-status' },
+          AlarmDescription: 'Detects failed EC2 instance status checks.',
+          Namespace: 'AWS/EC2', MetricName: 'StatusCheckFailed_Instance', Statistic: 'Maximum',
+          Dimensions: [{ Name: 'InstanceId', Value: { Ref: 'AppInstance' } }],
+          Period: 300, EvaluationPeriods: 2, DatapointsToAlarm: 2, Threshold: 1,
+          ComparisonOperator: 'GreaterThanOrEqualToThreshold', TreatMissingData: 'missing',
+        },
+      },
+      HighCpuAlarm: {
+        Type: 'AWS::CloudWatch::Alarm',
+        Properties: {
+          AlarmName: { 'Fn::Sub': '${ProjectName}-high-cpu' },
+          AlarmDescription: 'Detects sustained high CPU on the managed instance.',
+          Namespace: 'AWS/EC2', MetricName: 'CPUUtilization', Statistic: 'Average',
+          Dimensions: [{ Name: 'InstanceId', Value: { Ref: 'AppInstance' } }],
+          Period: 300, EvaluationPeriods: 3, DatapointsToAlarm: 3, Threshold: 80,
+          ComparisonOperator: 'GreaterThanOrEqualToThreshold', TreatMissingData: 'missing',
+        },
+      },
+    } : {}),
   }),
 
   'ssm-parameter': () => ({
@@ -1164,7 +1329,9 @@ const CFN_REQUIRES = {
   subnet: ['vpc'],
   igw: ['vpc'],
   'security-group': ['vpc'],
-  ec2: ['vpc', 'subnet', 'security-group'],
+  ec2: ['vpc', 'subnet', 'igw', 'security-group', 'iam'],
+  ssm: ['ec2', 'iam'],
+  backup: ['ec2', 'iam'],
   rds: ['vpc', 'subnet'],
   apigw: ['lambda'],
   cloudfront: ['s3'],

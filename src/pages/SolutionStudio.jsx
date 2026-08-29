@@ -633,14 +633,23 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
     region: recommendation.region,
     monthlyBudget: recommendation.monthlyBudget || '',
     timelineWeeks: recommendation.timelineWeeks,
+    dataClassification: recommendation.dataClassification,
+    backupRetentionDays: recommendation.backupRetentionDays,
+    rpoHours: recommendation.rpoHours,
+    rtoHours: recommendation.rtoHours,
   }));
   useEffect(() => {
     setPlanning({
       region: recommendation.region,
       monthlyBudget: recommendation.monthlyBudget || '',
       timelineWeeks: recommendation.timelineWeeks,
+      dataClassification: recommendation.dataClassification,
+      backupRetentionDays: recommendation.backupRetentionDays,
+      rpoHours: recommendation.rpoHours,
+      rtoHours: recommendation.rtoHours,
     });
-  }, [recommendation.region, recommendation.monthlyBudget, recommendation.timelineWeeks]);
+  }, [recommendation.region, recommendation.monthlyBudget, recommendation.timelineWeeks,
+    recommendation.dataClassification, recommendation.backupRetentionDays, recommendation.rpoHours, recommendation.rtoHours]);
   const budgetText = formatBudget(analysis.budget);
   const facts = [
     analysis.client && { icon: Briefcase, label: 'Client', value: analysis.client },
@@ -749,6 +758,30 @@ function UnderstandingPanel({ solution, onApprovePlanning }) {
               <input type="number" min="1" step="1" value={planning.timelineWeeks} onChange={(e) => setPlanning((p) => ({ ...p, timelineWeeks: e.target.value }))}
                 className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
             </label>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <label className="text-[10.5px] font-bold space-y-1 sm:col-span-2">
+              <span className="opacity-70">Data classification</span>
+              <input value={planning.dataClassification} onChange={(e) => setPlanning((p) => ({ ...p, dataClassification: e.target.value }))}
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
+            </label>
+            <label className="text-[10.5px] font-bold space-y-1">
+              <span className="opacity-70">Backup retention (days)</span>
+              <input type="number" min="1" step="1" value={planning.backupRetentionDays} onChange={(e) => setPlanning((p) => ({ ...p, backupRetentionDays: e.target.value }))}
+                className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-[10.5px] font-bold space-y-1">
+                <span className="opacity-70">RPO hours</span>
+                <input type="number" min="1" value={planning.rpoHours} onChange={(e) => setPlanning((p) => ({ ...p, rpoHours: e.target.value }))}
+                  className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
+              </label>
+              <label className="text-[10.5px] font-bold space-y-1">
+                <span className="opacity-70">RTO hours</span>
+                <input type="number" min="1" value={planning.rtoHours} onChange={(e) => setPlanning((p) => ({ ...p, rtoHours: e.target.value }))}
+                  className="w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12px] outline-none focus:border-aws-orange" />
+              </label>
+            </div>
           </div>
           <div className="space-y-1 text-[10.5px] opacity-75 leading-relaxed">
             <p><strong>Region:</strong> {recommendation.regionReason}</p>
@@ -986,9 +1019,27 @@ function PlanPanel({ solution }) {
           </li>
         ))}
       </ol>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+        <PlanChecklist title="Validation and evidence" items={plan.evidenceChecklist} />
+        <PlanChecklist title="Operations and handover" items={plan.handoverChecklist} />
+      </div>
       <Link to="/project-plan" className="btn btn-ghost !text-[11.5px] tap-44 gap-1.5">
         <ClipboardList size={13} /> Open full Project Plan tool
       </Link>
+    </div>
+  );
+}
+
+function PlanChecklist({ title, items = [] }) {
+  if (!items.length) return null;
+  return (
+    <div className="rounded-xl border border-token bg-[var(--card-2)]/30 p-3">
+      <h4 className="font-extrabold text-[12px] mb-1.5">{title}</h4>
+      <ul className="space-y-1 text-[11px] opacity-85 leading-relaxed">
+        {items.map((item) => (
+          <li key={item} className="flex gap-1.5"><span className="text-aws-orange">□</span><span>{item}</span></li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1145,7 +1196,7 @@ function BuildPanel({ solution, onDeploy }) {
             <Row k="Resources" v={`${cov?.resourceCount ?? 0} AWS resources`} />
             <Row k="Mode" v={solution.mode === 'test' ? 'Test — Free Tier substitutions applied' : 'Client — exact specs'} />
             <Row k="Support status" v={(readiness?.classification || 'planning-only').replace(/-/g, ' ')} />
-            <Row k="Client-ready" v={readiness?.clientReady ? 'Yes — pre-deploy gates passed' : 'No — review the open gates below'} />
+            <Row k="Pre-deploy review" v={readiness?.clientReady ? 'Passed — AWS validation evidence still required' : 'Blocked — review the open gates below'} />
           </div>
 
           {readiness && (

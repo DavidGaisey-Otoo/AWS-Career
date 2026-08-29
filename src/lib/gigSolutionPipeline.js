@@ -134,7 +134,7 @@ export function assessDeliveryReadiness({ understanding, services, coverage, has
   let classification = 'verified-deployable';
   if (!hasTemplate || services.length === 0) classification = 'planning-only';
   else if (!fullCoverage) classification = 'partially-supported';
-  else if (blockers.length || confidence < 0.65) classification = 'review-required';
+  else if (assumptions.length || blockers.length || confidence < 0.65) classification = 'review-required';
 
   const evidenceGates = [
     { id: 'requirements', label: 'Client requirements confirmed', passed: assumptions.length === 0 },
@@ -155,7 +155,8 @@ export function assessDeliveryReadiness({ understanding, services, coverage, has
     fullCoverage,
     clientReady: classification === 'verified-deployable'
       && assumptions.length === 0 && blockers.length === 0 && highs.length === 0,
-    sandboxDeployable: classification === 'verified-deployable' && blockers.length === 0,
+    sandboxDeployable: classification === 'verified-deployable'
+      && assumptions.length === 0 && blockers.length === 0,
   };
 }
 
@@ -356,7 +357,7 @@ export function buildDeliveryPlan({ blueprint, services, approach, timeline, nam
       { title: 'Data layer',                       match: ['s3', 'rds', 'rds-multiaz', 'dynamodb', 'elasticache'] },
       { title: 'Compute + application',            match: ['ec2', 'ec2-autoscale', 'lambda', 'ecs', 'eks', 'alb', 'apigw'] },
       { title: 'Delivery + edge',                  match: ['cloudfront', 'route53', 'waf'] },
-      { title: 'Observability + operations',       match: ['cloudwatch', 'cloudwatch-logs', 'cloudtrail', 'sns', 'secrets-manager', 'ssm-parameter'] },
+      { title: 'Observability + operations',       match: ['cloudwatch', 'cloudwatch-logs', 'cloudtrail', 'sns', 'secrets-manager', 'ssm', 'ssm-parameter', 'backup'] },
     ];
     for (const g of groups) {
       const inGroup = services.filter((s) => g.match.includes(normaliseServiceId(s.id)));
@@ -382,14 +383,45 @@ export function buildDeliveryPlan({ blueprint, services, approach, timeline, nam
     ],
   });
 
+  phases.push({
+    id: 'phase-evidence-operations',
+    title: 'Evidence, recovery + hand over',
+    durationLabel: '1–2 days',
+    tasks: [
+      'Capture sanitized configuration, test results, logs, screenshots, and AWS resource identifiers',
+      'Run access-control, monitoring, backup, restore, rollback, and teardown validation',
+      'Write the operating guide, incident procedure, recovery runbook, and responsibility matrix',
+      'Package the editable architecture, decision log, acceptance record, and client handover bundle',
+    ],
+  });
+
   const totalTasks = phases.reduce((n, p) => n + p.tasks.length, 0);
+  const complexServices = services.filter((service) => [
+    'iam', 'kms', 'ssm', 'backup', 'rds', 'aurora', 'ecs', 'eks', 'cloudfront', 'waf',
+  ].includes(normaliseServiceId(service.id))).length;
+  const estimatedDays = Math.max(2, Math.ceil((2 + services.length * 0.6 + totalTasks * 0.08 + complexServices * 0.35) * 2) / 2);
 
   return {
     phases,
     totalTasks,
     timelineLabel: timeline?.label || null,
-    // Rough sizing: ~35 min per task, rounded to half-days
-    estimatedDays: Math.max(1, Math.round((totalTasks * 35) / 60 / 8 * 2) / 2),
+    // Includes discovery, review, evidence, recovery testing, documentation,
+    // and handover. Resource creation alone is never the full estimate.
+    estimatedDays,
+    evidenceChecklist: [
+      'Approved requirements and assumptions with approver and date',
+      'Architecture decision record and editable diagram',
+      'Infrastructure plan/change set reviewed before any write action',
+      'Access-control tests for administrator and standard-user paths',
+      'Monitoring, alert, backup, restore, rollback, and teardown evidence',
+      'AWS resource inventory plus post-destruction verification',
+    ],
+    handoverChecklist: [
+      'Implementation and configuration record',
+      'Operating, patching, backup, restore, and incident runbooks',
+      'Known limitations, cost assumptions, ownership, and escalation path',
+      'Client acceptance record and portfolio-safe evidence package',
+    ],
   };
 }
 
@@ -417,7 +449,7 @@ export function runPipeline(gig, options = {}) {
   const names = deriveNames(brief, { extracted, blueprint: blueprints.best, services });
 
   // ── 4. APPROACH ──────────────────────────────────────────────────
-  const approachRec = recommendApproach({
+  let approachRec = recommendApproach({
     brief,
     services: services.map((s) => s.id),
     freelance: true,
@@ -429,6 +461,7 @@ export function runPipeline(gig, options = {}) {
     region: region.primary,
     projectName: names.slug,
     environment: mode === 'test' ? 'test' : 'prod',
+    brief,
   };
 
   const artifacts = {};
@@ -439,6 +472,21 @@ export function runPipeline(gig, options = {}) {
     artifacts.cli       = generateCli(services, genOpts);
   } catch (err) {
     generationError = String(err?.message || err);
+  }
+
+  const generatedForApproach = {
+    terraform: artifacts.terraform,
+    cfn: artifacts.cfn,
+    cli: artifacts.cli,
+  };
+  const recommendedArtifact = generatedForApproach[approachRec.recommended];
+  if (recommendedArtifact && !recommendedArtifact.deployReady && artifacts.cfn?.deployReady) {
+    approachRec = {
+      ...approachRec,
+      recommended: 'cfn',
+      rationale: `CloudFormation is recommended for this solution because it has 100% generated coverage. ${getApproachById('cfn')?.fullBlurb || ''}`,
+      options: approachRec.options.map((option) => ({ ...option, recommended: option.id === 'cfn' })),
+    };
   }
 
   const plan = buildDeliveryPlan({

@@ -18,6 +18,10 @@ export function recommendPlanningDecisions(solution) {
     region,
     monthlyBudget,
     timelineWeeks,
+    dataClassification: 'Synthetic, non-sensitive learning data only',
+    backupRetentionDays: 7,
+    rpoHours: 24,
+    rtoHours: 4,
     regionReason: (solution?.region?.reasons || [])[0]
       || 'Suggested from the stated audience, compliance needs, and available AWS Regions.',
     budgetReason: priced
@@ -32,9 +36,17 @@ export function appendApprovedPlanningDecisions(brief, decisions) {
   const region = String(decisions?.region || '').trim();
   const budget = Number(decisions?.monthlyBudget);
   const weeks = Number(decisions?.timelineWeeks);
+  const dataClassification = String(decisions?.dataClassification || '').trim();
+  const retentionDays = Number(decisions?.backupRetentionDays);
+  const rpoHours = Number(decisions?.rpoHours);
+  const rtoHours = Number(decisions?.rtoHours);
   if (!/^([a-z]{2}(?:-gov)?-[a-z]+-\d)$/.test(region)) throw new Error('Enter a valid AWS Region, such as eu-west-2.');
   if (!Number.isFinite(budget) || budget <= 0) throw new Error('Enter a positive monthly AWS budget.');
   if (!Number.isInteger(weeks) || weeks <= 0) throw new Error('Enter a whole-number timeline in weeks.');
+  if (!dataClassification) throw new Error('Enter the approved data classification.');
+  if (!Number.isInteger(retentionDays) || retentionDays <= 0) throw new Error('Enter whole-number backup retention days.');
+  if (!Number.isFinite(rpoHours) || rpoHours <= 0) throw new Error('Enter a positive RPO in hours.');
+  if (!Number.isFinite(rtoHours) || rtoHours <= 0) throw new Error('Enter a positive RTO in hours.');
 
   const marker = 'Approved planning decisions:';
   const base = String(brief || '').split(`\n\n${marker}`)[0].trim();
@@ -42,6 +54,10 @@ export function appendApprovedPlanningDecisions(brief, decisions) {
 - AWS region: ${region}.
 - Maximum monthly AWS budget: AWS spend under $${budget}/month. Budget alerts are notifications, not a hard spending cap.
 - Target completion timeline: ${weeks} weeks.
+- Data classification: ${dataClassification}.
+- Backup retention: ${retentionDays} days.
+- Recovery point objective (RPO): ${rpoHours} hours.
+- Recovery time objective (RTO): ${rtoHours} hours.
 - These decisions were explicitly approved by the user for planning. They do not authorize deployment.
 - AWS write actions still require separate explicit human approval.`;
 }
