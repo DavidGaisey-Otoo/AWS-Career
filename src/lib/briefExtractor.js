@@ -34,7 +34,12 @@ export function extractProjectName(brief = '') {
   for (const p of patterns) {
     const m = text.match(p);
     if (m && m[1]) {
-      return titleCase(m[1].trim().replace(/[\.,;:]$/, ''));
+      const candidate = m[1].trim().replace(/[\.,;:]$/, '');
+      // These are workflow metadata headings appended by Solution Studio,
+      // never project titles. Continue looking instead of renaming a saved
+      // project after discovery or planning approval.
+      if (/^(?:client-approved discovery answers|approved planning decisions|assumptions requiring client confirmation|recommended planning decisions)$/i.test(candidate)) continue;
+      return titleCase(candidate);
     }
   }
 

@@ -63,6 +63,15 @@ export function runClientDiscoveryFormTests() {
     assert(isSimulatedLearningProject(solution), 'common simulated-lab wording was not recognized');
   });
 
+  test('discovery rebuild preserves simulated mode and the original project title', () => {
+    const original = runPipeline('Build a Windows Server training project. This is a simulated portfolio learning lab using synthetic data.');
+    const fields = buildClientDiscoveryForm(original);
+    const answers = buildSimulatedLearningAnswers(original, fields);
+    const rebuilt = runPipeline(appendClientDiscoveryAnswers(original.input.brief, fields, answers));
+    assert(isSimulatedLearningProject(rebuilt), 'discovery rebuild lost simulated-lab mode');
+    assert(!/client-approved discovery answers/i.test(rebuilt.input.title), 'workflow heading replaced the project title');
+  });
+
   test('real client work never receives invented discovery answers', () => {
     const solution = runPipeline('A real client needs an EC2-hosted production website.');
     const fields = buildClientDiscoveryForm(solution);

@@ -97,5 +97,8 @@ export function appendClientDiscoveryAnswers(brief, fields, answers) {
   const marker = 'Client-approved discovery answers:';
   const base = String(brief || '').split(`\n\n${marker}`)[0].trim();
   const answerLines = completed.map((field) => `- [${field.category}] ${field.question}\n  Confirmed answer: ${field.answer}`);
-  return `${base}\n\n${marker}\n${answerLines.join('\n')}\n- These answers are recorded as client/project-owner input, not independently verified deployment evidence.\n- No answer authorizes AWS deployment; AWS write actions still require separate explicit approval.`;
+  const simulatedMode = isSimulatedLearningProject({ input: { brief: base } })
+    ? '\n- Project mode: Simulated portfolio learning lab; these are editable project-owner decisions, not client claims.'
+    : '';
+  return `${base}\n\n${marker}${simulatedMode}\n${answerLines.join('\n')}\n- These answers are recorded as client/project-owner input, not independently verified deployment evidence.\n- No answer authorizes AWS deployment; AWS write actions still require separate explicit approval.`;
 }
