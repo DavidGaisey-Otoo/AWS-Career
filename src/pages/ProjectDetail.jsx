@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import {
   AlertOctagon, ArrowLeft, Award, Building2, Calendar, CheckCircle2, Cloud, ExternalLink,
-  Eye, FileText, Github, ImagePlus, Layers, Lightbulb, Link2, ListChecks, Megaphone,
+  Download, Eye, FileText, Github, ImagePlus, Layers, Lightbulb, Link2, ListChecks, Megaphone,
   Pencil, Sparkles, Star, Target, Trash2, Trophy, Video, X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -9,6 +9,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AccordionList } from '../components/portfolio/AccordionList.jsx';
 import { AppealScore } from '../components/portfolio/AppealScore.jsx';
 import { GitHubExportPanel } from '../components/portfolio/GitHubExportPanel.jsx';
+import { EvidenceCapture } from '../components/portfolio/EvidenceCapture.jsx';
 import { StepGuide } from '../components/portfolio/StepGuide.jsx';
 import { SAMPLE_S3_BUCKET, SmartMethodDetector } from '../components/common/SmartMethodDetector.jsx';
 import { ArchitectureDiagram } from '../components/portfolio/ArchitectureDiagram.jsx';
@@ -21,6 +22,7 @@ import { usePortfolio } from '../context/PortfolioContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { PRIORITY, STATUS, STATUS_ORDER } from '../data/projects.js';
 import { cn, formatDate } from '../lib/utils.js';
+import { buildEvidenceManifest, canAdvanceLifecycle, getProjectCompletionGate, PROJECT_LIFECYCLE, PROJECT_MODES } from '../lib/projectStandards.js';
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
@@ -28,7 +30,7 @@ export default function ProjectDetail() {
   const toast = useToast();
   const {
     getProjectState, updateProjectState, moveToStatus, toggleStep,
-    addScreenshot, removeScreenshot, projectStats, projects,
+    addScreenshot, removeScreenshot, updateEvidence, projectStats, projects,
   } = usePortfolio();
   // Custom projects live in PortfolioContext rather than the fixed catalogue.
   // Resolving from the merged list keeps generated projects usable after the
@@ -43,6 +45,7 @@ export default function ProjectDetail() {
     notes: ps.notes, lessons: ps.lessons, wouldDoDifferently: ps.wouldDoDifferently,
     github: ps.github, demoUrl: ps.demoUrl, videoUrl: ps.videoUrl,
   });
+  const [showCapture, setShowCapture] = useState(false);
   useEffect(() => {
     setDraft({
       notes: ps.notes, lessons: ps.lessons, wouldDoDifferently: ps.wouldDoDifferently,
@@ -67,9 +70,21 @@ export default function ProjectDetail() {
 
   const saveField = (key, value) => updateProjectState(projectId, { [key]: value });
 
-  const onUploadFiles = async (files) => {
+  const exportEvidenceManifest = () => {
+    const manifest = buildEvidenceManifest(project, ps);
+    const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${project.id}-evidence-manifest.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success('Evidence manifest exported. Images remain local unless you export them separately.');
+  };
+
+  const onUploadFiles = async (files, metadata = {}) => {
     if (!files || files.length === 0) return;
-    for (const f of files) await addScreenshot(projectId, f);
+    for (const f of files) await addScreenshot(projectId, f, metadata);
     toast.success(`${files.length} screenshot${files.length > 1 ? 's' : ''} added`);
   };
 
@@ -135,12 +150,39 @@ export default function ProjectDetail() {
               <select
                 value={ps.status}
                 onChange={(e) => {
+                  if (e.target.value === 'complete') {
+                    const gate = getProjectCompletionGate(project, ps);
+                    if (!gate.ready) {
+                      toast.error(`Completion blocked: ${gate.blockers.join('; ')}.`);
+                      return;
+                    }
+                  }
                   moveToStatus(projectId, e.target.value);
                   if (e.target.value === 'complete') fireConfetti({ origin: { y: 0.35 } });
                 }}
                 className="bg-[var(--card-2)] border border-token rounded-xl px-3 py-2 text-sm font-bold focus-ring focus:border-aws-orange"
               >
                 {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS[s].label}</option>)}
+              </select>
+              <select
+                value={ps.projectMode}
+                onChange={(e) => updateProjectState(projectId, { projectMode: e.target.value })}
+                className="bg-[var(--card-2)] border border-token rounded-xl px-3 py-2 text-sm font-bold focus-ring focus:border-aws-orange"
+                aria-label="Project operating mode"
+              >
+                {Object.entries(PROJECT_MODES).map(([id, mode]) => <option key={id} value={id}>{mode.label} mode</option>)}
+              </select>
+              <select
+                value={ps.lifecycleStage}
+                onChange={(e) => {
+                  const result = canAdvanceLifecycle(ps.lifecycleStage, e.target.value, ps);
+                  if (!result.allowed) { toast.error(result.reason); return; }
+                  updateProjectState(projectId, { lifecycleStage: e.target.value });
+                }}
+                className="bg-[var(--card-2)] border border-token rounded-xl px-3 py-2 text-sm font-bold focus-ring focus:border-aws-orange"
+                aria-label="Project lifecycle stage"
+              >
+                {PROJECT_LIFECYCLE.map((stage) => <option key={stage} value={stage}>{stage.replaceAll('-', ' ')}</option>)}
               </select>
               <select
                 value={ps.priority}
@@ -357,11 +399,26 @@ export default function ProjectDetail() {
           </div>
         </Section>
 
-        <Section title={`Screenshot gallery (${ps.screenshots.length})`} icon={ImagePlus}>
+        <Section title={`Evidence gallery (${ps.screenshots.length})`} icon={ImagePlus}>
+          <div className="mb-4 rounded-xl border border-token bg-[var(--card-2)]/50 p-3 text-xs">
+            <div className="font-extrabold">{PROJECT_MODES[ps.projectMode]?.label || 'Training'} · {ps.projectOwner}</div>
+            <div className="text-muted mt-1">Captured does not mean verified. Only reviewed, redaction-checked evidence may support a project claim.</div>
+          </div>
+          {showCapture && (
+            <div className="mb-4">
+              <EvidenceCapture
+                project={project}
+                projectState={ps}
+                onCancel={() => setShowCapture(false)}
+                onAdd={async (file, metadata) => { await onUploadFiles([file], metadata); setShowCapture(false); }}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {ps.screenshots.map((sh) => (
               <div key={sh.id} className="relative group rounded-xl overflow-hidden border border-token aspect-video">
                 <img src={sh.dataUrl} alt={sh.caption} className="w-full h-full object-cover" />
+                <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-bold text-white">{sh.status || 'legacy'}</span>
                 <button
                   onClick={() => removeScreenshot(projectId, sh.id)}
                   className="absolute top-1 right-1 grid place-items-center w-6 h-6 rounded-md bg-black/60 text-white opacity-0 group-hover:opacity-100 transition focus-ring"
@@ -370,12 +427,12 @@ export default function ProjectDetail() {
               </div>
             ))}
             <button
-              onClick={() => fileRef.current?.click()}
+              onClick={() => setShowCapture(true)}
               className="aspect-video rounded-xl border-2 border-dashed border-token grid place-items-center text-muted hover:border-aws-orange hover:text-aws-orange transition focus-ring"
             >
               <div className="text-center">
                 <ImagePlus size={20} className="mx-auto" />
-                <div className="text-[10px] font-bold mt-1">Add image</div>
+                <div className="text-[10px] font-bold mt-1">Capture evidence</div>
               </div>
             </button>
             <input
@@ -387,6 +444,14 @@ export default function ProjectDetail() {
               onChange={(e) => onUploadFiles(e.target.files)}
             />
           </div>
+          {(ps.evidence || []).some((item) => item.status !== 'reviewed') && (
+            <div className="mt-3 space-y-2">
+              {(ps.evidence || []).filter((item) => item.status !== 'reviewed').map((item) => (
+                <button key={item.id} onClick={() => updateEvidence(projectId, item.id, { status: 'reviewed', redactionReviewed: true, sensitiveDataConfirmedAbsent: true })} className="btn btn-ghost !text-xs">Review {item.title}</button>
+              ))}
+            </div>
+          )}
+          <button onClick={exportEvidenceManifest} className="btn btn-ghost !text-xs mt-3"><Download size={14} /> Export evidence manifest</button>
         </Section>
       </div>
 

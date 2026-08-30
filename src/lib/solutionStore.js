@@ -45,6 +45,27 @@ export function deleteSolution(id) {
   return writeSolutions(listSolutions().filter((s) => s.id !== id));
 }
 
+export function archiveSolution(id, archived = true) {
+  const all = listSolutions();
+  const index = all.findIndex((item) => item.id === id);
+  if (index < 0) return false;
+  if (all[index].liveStack && archived) return false;
+  all[index] = { ...all[index], archivedAt: archived ? new Date().toISOString() : null };
+  return writeSolutions(all);
+}
+
+export function exportSolutionRecord(id) {
+  const record = getSolution(id);
+  if (!record) return null;
+  const { deployments = [], ...safe } = record;
+  return {
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    warning: 'This local export does not prove deployment, acceptance, or AWS resource destruction.',
+    solution: { ...safe, deployments: deployments.map(({ detail, ...entry }) => ({ ...entry, detail: detail || null })) },
+  };
+}
+
 /**
  * Record a deploy/teardown so the user always knows what is live in their
  * account and can tear it down later.

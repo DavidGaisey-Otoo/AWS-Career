@@ -64,6 +64,7 @@ export function saveCustomProject(project) {
     const all = listCustomProjects().filter((p) => p.id !== project.id);
     const next = [project, ...all].slice(0, MAX_CUSTOM);
     localStorage.setItem(KEY, JSON.stringify(next));
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('awscl:custom-projects-changed', { detail: { action: 'save', id: project.id } }));
     return project;
   } catch (err) {
     console.warn('[customProjects] save failed:', err);
@@ -74,6 +75,7 @@ export function saveCustomProject(project) {
 export function deleteCustomProject(id) {
   try {
     localStorage.setItem(KEY, JSON.stringify(listCustomProjects().filter((p) => p.id !== id)));
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('awscl:custom-projects-changed', { detail: { action: 'delete', id } }));
     return true;
   } catch { return false; }
 }

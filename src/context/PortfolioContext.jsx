@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   PROJECTS, SERVICE_DOMAINS, DIFFICULTY, getServiceMeta, PORTFOLIO_DOMAIN_COVERAGE,
 } from '../data/projects.js';
@@ -7,6 +7,7 @@ import {
 } from '../lib/customProjects.js';
 import { useLocalStorage } from '../hooks/useLocalStorage.js';
 import { STORAGE_KEY } from '../lib/constants.js';
+import { createEvidenceRecord } from '../lib/projectStandards.js';
 
 const PortfolioContext = createContext(null);
 
@@ -21,6 +22,10 @@ const PROJECT_DEFAULTS = {
   demoUrl: '',
   videoUrl: '',
   screenshots: [],        // [{ id, dataUrl, caption }]
+  evidence: [],           // reviewed evidence records; screenshots remain for backwards compatibility
+  projectMode: 'training',
+  lifecycleStage: 'draft',
+  projectOwner: 'David Gaisey-Otoo',
   startedAt: null,
   finishedAt: null,
   actualMinutes: 0,
@@ -45,7 +50,23 @@ export function PortfolioProvider({ children }) {
   const [state, setState] = useLocalStorage(`${STORAGE_KEY}::portfolio`, DEFAULT_STATE);
 
   const getProjectState = useCallback((projectId) => {
-    return { ...PROJECT_DEFAULTS, ...(state.projects?.[projectId] || {}) };
+    const projectDefaults = listCustomProjects().find((project) => project.id === projectId);
+    const merged = {
+      ...PROJECT_DEFAULTS,
+      ...(projectDefaults?.projectMode ? { projectMode: projectDefaults.projectMode } : {}),
+      ...(state.projects?.[projectId] || {}),
+    };
+    if ((!merged.evidence || merged.evidence.length === 0) && merged.screenshots?.length) {
+      merged.evidence = merged.screenshots.map((shot) => createEvidenceRecord({
+        ...shot,
+        id: shot.id,
+        title: shot.title || shot.caption || 'Legacy screenshot',
+        status: 'captured',
+        redactionReviewed: false,
+        sensitiveDataConfirmedAbsent: false,
+      }));
+    }
+    return merged;
   }, [state.projects]);
 
   const updateProjectState = useCallback((projectId, patch) => {
@@ -86,7 +107,7 @@ export function PortfolioProvider({ children }) {
     });
   }, [setState]);
 
-  const addScreenshot = useCallback((projectId, file) => {
+  const addScreenshot = useCallback((projectId, file, metadata = {}) => {
     if (!file) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -94,16 +115,20 @@ export function PortfolioProvider({ children }) {
         const dataUrl = reader.result;
         setState((s) => {
           const cur = { ...PROJECT_DEFAULTS, ...(s.projects?.[projectId] || {}) };
-          const shot = {
-            id: Math.random().toString(36).slice(2),
-            dataUrl,
-            caption: file.name || '',
-          };
+          const shot = createEvidenceRecord({
+            ...metadata, projectId, dataUrl, filename: file.name || '',
+            title: metadata.title || file.name || 'Uploaded evidence',
+            source: metadata.source || 'upload',
+          });
           return {
             ...s,
             projects: {
               ...s.projects,
-              [projectId]: { ...cur, screenshots: [...cur.screenshots, shot] },
+              [projectId]: {
+                ...cur,
+                screenshots: [...cur.screenshots, { ...shot, caption: shot.title }],
+                evidence: [...(cur.evidence || []), shot],
+              },
             },
           };
         });
@@ -121,7 +146,11 @@ export function PortfolioProvider({ children }) {
         ...s,
         projects: {
           ...s.projects,
-          [projectId]: { ...cur, screenshots: cur.screenshots.filter((sh) => sh.id !== shotId) },
+          [projectId]: {
+            ...cur,
+            screenshots: cur.screenshots.filter((sh) => sh.id !== shotId),
+            evidence: (cur.evidence || []).filter((item) => item.id !== shotId),
+          },
         },
       };
     });
@@ -129,6 +158,26 @@ export function PortfolioProvider({ children }) {
 
   const togglePublicShare = useCallback(() => {
     setState((s) => ({ ...s, publicShareEnabled: !s.publicShareEnabled }));
+  }, [setState]);
+
+  const updateEvidence = useCallback((projectId, evidenceId, patch) => {
+    setState((s) => {
+      const cur = { ...PROJECT_DEFAULTS, ...(s.projects?.[projectId] || {}) };
+      const update = (item) => item.id === evidenceId
+        ? { ...item, ...patch, ...(patch.status === 'reviewed' ? { reviewedAt: new Date().toISOString() } : {}) }
+        : item;
+      return {
+        ...s,
+        projects: {
+          ...s.projects,
+          [projectId]: {
+            ...cur,
+            evidence: (cur.evidence || []).map(update),
+            screenshots: (cur.screenshots || []).map(update),
+          },
+        },
+      };
+    });
   }, [setState]);
 
   const updatePublishingTarget = useCallback((target, enabled) => {
@@ -157,6 +206,11 @@ export function PortfolioProvider({ children }) {
   // board, filters, stats, detail page and export already read from this
   // list and cannot tell the difference.
   const [customTick, setCustomTick] = useState(0);
+  useEffect(() => {
+    const refresh = () => setCustomTick((tick) => tick + 1);
+    window.addEventListener('awscl:custom-projects-changed', refresh);
+    return () => window.removeEventListener('awscl:custom-projects-changed', refresh);
+  }, []);
   const customProjects = useMemo(() => listCustomProjects(), [customTick]);
   const allProjects = useMemo(
     () => [...PROJECTS, ...customProjects],
@@ -305,6 +359,7 @@ export function PortfolioProvider({ children }) {
     toggleStep,
     addScreenshot,
     removeScreenshot,
+    updateEvidence,
     togglePublicShare,
     updatePublishingTarget,
     bumpVisitor,
@@ -317,7 +372,7 @@ export function PortfolioProvider({ children }) {
   }), [
     state, allProjects, projectStats, intelligence,
     getProjectState, updateProjectState, moveToStatus, toggleStep,
-    addScreenshot, removeScreenshot, togglePublicShare, updatePublishingTarget, bumpVisitor, resetPortfolio,
+    addScreenshot, removeScreenshot, updateEvidence, togglePublicShare, updatePublishingTarget, bumpVisitor, resetPortfolio,
     customProjects, addCustomProject, removeCustomProject,
   ]);
 

@@ -46,6 +46,7 @@ import { buildProfessionalBrief } from '../lib/professionalBriefBuilder.js';
 import { getDeliveryStatus } from '../lib/deliveryStatus.js';
 import { appendApprovedPlanningDecisions, recommendPlanningDecisions } from '../lib/planningRecommendations.js';
 import { appendClientDiscoveryAnswers, buildClientDiscoveryForm, buildSimulatedLearningAnswers, discoveryFormAsText, isSimulatedLearningProject } from '../lib/clientDiscoveryForm.js';
+import { deleteCustomProject, generateCustomProject, saveCustomProject } from '../lib/customProjects.js';
 
 /**
  * The four verdict tiers the pipeline can return, and how each one looks.
@@ -190,9 +191,21 @@ export default function SolutionStudio() {
     if (!solution) return;
     const rec = saveSolution(solution);
     if (rec) {
+      try {
+        const project = generateCustomProject({ brief: solution.input.brief, title: solution.names.projectName });
+        saveCustomProject({
+          ...project,
+          id: `custom-solution-${solution.id}`,
+          sourceSolutionId: solution.id,
+          projectMode: solution.deploy.environmentMode === 'aws-employer' ? 'employee'
+            : solution.deploy.environmentMode === 'aws-freelance' ? 'freelance' : 'training',
+        });
+      } catch (error) {
+        console.warn('[SolutionStudio] portfolio workspace creation failed:', error);
+      }
       setSaved(true);
       setSavedList(listSolutions());
-      toast?.success?.('Saved. Find it under "Your solutions" any time.');
+      toast?.success?.('Saved with a linked portfolio and evidence workspace.');
     } else {
       toast?.error?.('Could not save — browser storage may be full.');
     }
@@ -209,6 +222,7 @@ export default function SolutionStudio() {
       toast?.error?.('Could not delete the saved solution. Browser storage may be unavailable.');
       return;
     }
+    deleteCustomProject(`custom-solution-${record.id}`);
     setSavedList(listSolutions());
     if (solution?.id === record.id) setSaved(false);
     toast?.success?.('Saved solution deleted. No AWS resources were changed.');
@@ -1555,6 +1569,7 @@ function NextActions({ solution }) {
   const budget = encodeURIComponent(solution.input.budget || '');
   const services = encodeURIComponent((solution.services || []).map((service) => service.id).filter(Boolean).join(','));
   const region = encodeURIComponent(solution.input.region || solution.analysis?.region || 'us-east-1');
+  const evidenceProjectId = `custom-solution-${solution.id}`;
   const actions = [
     { n: 1, to: `/job-analyzer?prefill=${brief}`, icon: Target, label: 'Confirm scope and fit', hint: 'Review requirements, risks, missing facts, and rate before promising anything' },
     { n: 2, to: `/freelance?tab=proposals&sub=smart&prefill=${brief}`, icon: FileText, label: 'Draft the proposal', hint: 'Uses this exact client brief; review it before submitting manually' },
@@ -1565,7 +1580,7 @@ function NextActions({ solution }) {
     { n: 7, to: `/presentation?prefill=${brief}&title=${title}&services=${services}&budget=${budget}`, icon: FileText, label: 'Build the presentation', hint: 'Creates an editable client-facing deck from this same approved scope' },
     { n: 8, to: `/email?prefill=${brief}&title=${title}`, icon: FileText, label: 'Draft the client email', hint: 'Prepares a draft only; you review it and send from your own email account' },
     { n: 9, to: '/deploy', icon: Rocket, label: 'Validate in AWS', hint: 'Deploy only evidence-ready artifacts, then test and tear down' },
-    { n: 10, to: `/portfolio?prefill=${brief}&title=${title}`, icon: Briefcase, label: 'Package evidence', hint: 'Add real screenshots, repository, results, and client-approved case study' },
+    { n: 10, to: `/portfolio/${evidenceProjectId}`, icon: Briefcase, label: 'Open evidence workspace', hint: 'Save this solution first, then capture, review, export, and package evidence here' },
   ];
   return (
     <section className="surface rounded-2xl p-4">
