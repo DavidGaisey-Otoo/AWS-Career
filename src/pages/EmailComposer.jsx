@@ -5,7 +5,7 @@ import {
   Send, Shield, Sparkles, Star, Trash2, X, Wand2,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { EmailReviewPanel } from '../components/email-review/EmailReviewPanel.jsx';
 import { useApp } from '../context/AppContext.jsx';
@@ -26,6 +26,7 @@ const TABS = [
 ];
 
 export default function EmailComposer() {
+  const [params] = useSearchParams();
   const [tab, setTab] = useState('composer');
 
   return (
@@ -61,7 +62,7 @@ export default function EmailComposer() {
         })}
       </div>
 
-      {tab === 'composer' && <ComposerTab />}
+      {tab === 'composer' && <ComposerTab params={params} />}
       {tab === 'tracker'  && <TrackerTab />}
       {tab === 'library'  && <LibraryTab />}
     </div>
@@ -72,7 +73,7 @@ export default function EmailComposer() {
 // COMPOSER tab
 // =================================================================
 
-function ComposerTab() {
+function ComposerTab({ params }) {
   const toast = useToast();
   const { profile } = useApp();
   const { activeProfile: awsProfile } = useAWS();
@@ -81,8 +82,8 @@ function ComposerTab() {
 
   const [typeId, setTypeId] = useState('reply-inquiry');
   const [clientId, setClientId] = useState('');
-  const [projectId, setProjectId] = useState('');
-  const [notes, setNotes] = useState('');
+  const [projectId, setProjectId] = useState(() => params.get('title') || '');
+  const [notes, setNotes] = useState(() => params.get('prefill') || '');
   const [generated, setGenerated] = useState({ subject: '', body: '' });
   const [showReview, setShowReview] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -143,8 +144,10 @@ function ComposerTab() {
     toast.success('Saved to tracker as draft');
   };
 
-  const send = () => {
+  const markSent = async () => {
     if (!generated.body) { toast.error('Generate first.'); return; }
+    const confirmed = window.confirm('Confirm only after you have actually sent this email from Gmail, Outlook, or your mail app. Mark it as sent now?');
+    if (!confirmed) return;
     addEmail({
       to: client?.email || '',
       subject: generated.subject,
@@ -156,7 +159,7 @@ function ComposerTab() {
       sentAt: new Date().toISOString(),
       followUpAt: addDaysIso(new Date(), 5),
     });
-    toast.success('Logged as sent · follow-up reminder set for +5 days');
+    toast.success('Manually confirmed as sent · follow-up reminder set for +5 days');
   };
 
   const links = {
@@ -299,7 +302,7 @@ function ComposerTab() {
               </button>
               <div className="ml-auto flex items-center gap-1.5">
                 <button onClick={save} className="btn btn-ghost !text-xs"><Edit3 size={12} /> Save draft</button>
-                <button onClick={send} className="btn btn-primary !text-xs"><Send size={12} /> Mark sent</button>
+                <button onClick={markSent} className="btn btn-primary !text-xs"><Send size={12} /> Confirm actually sent</button>
               </div>
             </div>
 

@@ -5,7 +5,7 @@ import {
   Shield, Sparkles, Trash2, Wand2, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Markdown } from '../components/ai/Markdown.jsx';
 import { StudioIntelligence } from '../components/architecture/StudioIntelligence.jsx';
 import { FlowCanvas } from '../components/architecture/flow/FlowCanvas.jsx';
@@ -28,6 +28,7 @@ const CANVAS_W = 1200;
 const CANVAS_H = 700;
 
 export default function Architecture() {
+  const [params] = useSearchParams();
   const { state, saveDiagram, deleteDiagram, setCurrentDiagram, saveAINote } = useAI();
   const toast = useToast();
   const dialog = useDialog();
@@ -56,7 +57,21 @@ export default function Architecture() {
 
   // Load the most recently saved diagram on first mount
   useEffect(() => {
-    if (current) loadFromDiagram(current);
+    const handoffServices = (params.get('services') || '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (handoffServices.length > 0) {
+      const seededNodes = handoffServices.map((serviceId, index) => ({
+        id: uid(), serviceId,
+        x: 90 + (index % 4) * 230,
+        y: 100 + Math.floor(index / 4) * 150,
+        label: null,
+      }));
+      setNodes(seededNodes);
+      setEdges(seededNodes.slice(1).map((node, index) => ({ from: seededNodes[index].id, to: node.id, label: null, dashed: false })));
+      setName(params.get('title') || 'Solution architecture');
+      setRegion(params.get('region') || 'us-east-1');
+      setCurrentDiagram(null);
+      setDidMutate(true);
+    } else if (current) loadFromDiagram(current);
     else if (state.diagrams.length > 0) {
       setCurrentDiagram(state.diagrams[state.diagrams.length - 1].id);
     }

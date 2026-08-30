@@ -6,7 +6,7 @@ import {
   RefreshCw, Save, Sparkles, Trash2, X, Wand2,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { PresentationReviewPanel } from '../components/presentation-review/PresentationReviewPanel.jsx';
 import { useAI } from '../context/AIContext.jsx';
@@ -25,6 +25,7 @@ const NODE_W = 110;
 const NODE_H = 44;
 
 export default function PresentationGenerator() {
+  const [params] = useSearchParams();
   const toast = useToast();
   const dialog = useDialog();
   const { profile } = useApp();
@@ -35,7 +36,7 @@ export default function PresentationGenerator() {
   const activeDeck = earnState.decks.find((d) => d.id === activeDeckId) || null;
   const lastAnalysis = earnState.lastAnalysis;
 
-  const [brief, setBrief] = useState(() => seedBrief(profile, lastAnalysis));
+  const [brief, setBrief] = useState(() => seedBrief(profile, lastAnalysis, params));
   const [slides, setSlides] = useState([]);
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [presentMode, setPresentMode] = useState(false);
@@ -1001,9 +1002,13 @@ function PresentMode({ slides, brief, diagram, idx, setIdx, onExit }) {
 // Helpers
 // =================================================================
 
-function seedBrief(profile, lastAnalysis) {
+function seedBrief(profile, lastAnalysis, params) {
   const a = lastAnalysis?.analysis || null;
   const budgetKind = a?.budget?.kind === 'hourly' ? 'hourly' : 'fixed';
+  const handoffBrief = params?.get('prefill') || '';
+  const handoffTitle = params?.get('title') || '';
+  const handoffServices = (params?.get('services') || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const handoffBudget = Number(String(params?.get('budget') || '').replace(/[^0-9.]/g, ''));
   return {
     authorName:    profile?.name || '',
     authorEmail:   profile?.integrations?.upwork ? '' : '',
@@ -1015,19 +1020,19 @@ function seedBrief(profile, lastAnalysis) {
     availability:  'Available to start within 7 days',
     clientCompany: lastAnalysis?.suggestedClient || '',
     clientContact: '',
-    projectTitle:  lastAnalysis?.suggestedName || '',
-    problem:       '',
+    projectTitle:  handoffTitle || lastAnalysis?.suggestedName || '',
+    problem:       handoffBrief,
     painPoints:    [],
     businessImpact:'',
-    solution:      '',
+    solution:      handoffBrief ? 'Review the approved brief, architecture, implementation plan, validation evidence, rollback, and handover.' : '',
     benefits:      [],
     whyAWS:        '',
-    services:      (a?.services || []).map((s) => s.toUpperCase()),
+    services:      (handoffServices.length ? handoffServices : (a?.services || [])).map((s) => s.toUpperCase()),
     costSavings:   '',
     scaleTarget:   '',
     timelineDays:  estimateDays(a?.timeline) || 21,
     budgetKind,
-    budget:        a?.budget?.kind === 'fixed' ? a.budget.amount : 3000,
+    budget:        Number.isFinite(handoffBudget) && handoffBudget > 0 ? handoffBudget : (a?.budget?.kind === 'fixed' ? a.budget.amount : 3000),
     hourlyRate:    a?.budget?.kind === 'hourly' ? (a.budget.max || a.budget.min) : 85,
     estimatedHours:40,
     currency:      'USD',
