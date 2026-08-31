@@ -57,6 +57,8 @@ export default function AWSAccounts() {
 
       <ProfileSwitcher />
 
+      <AccountFactsCard profileId={state.activeProfile} />
+
       <FreeTierMonitor />
 
       <CredentialsCard profileId={state.activeProfile} />
@@ -83,6 +85,99 @@ export default function AWSAccounts() {
 
       <ApprovalModal />
     </div>
+  );
+}
+
+function AccountFactsCard({ profileId }) {
+  const { state, updateProfile } = useAWS();
+  const toast = useToast();
+  const profile = state.profiles[profileId];
+  const [draft, setDraft] = useState({});
+
+  useEffect(() => {
+    setDraft({
+      accountName: profile?.accountName || '',
+      accountId: profile?.accountId || '',
+      rootEmail: profile?.rootEmail || '',
+      accountPlan: profile?.accountPlan || '',
+      planExpiresAt: profile?.planExpiresAt ? String(profile.planExpiresAt).slice(0, 10) : '',
+      creditsInitial: profile?.creditsInitial ?? '',
+      creditsRemaining: profile?.creditsRemaining ?? '',
+      planEvidence: profile?.planEvidence || '',
+    });
+  }, [profileId, profile]);
+
+  const expiryMs = draft.planExpiresAt ? new Date(`${draft.planExpiresAt}T23:59:59Z`).getTime() : null;
+  const daysLeft = expiryMs == null || Number.isNaN(expiryMs)
+    ? null
+    : Math.max(0, Math.ceil((expiryMs - Date.now()) / 86400000));
+  const accountId = String(draft.accountId || '').replace(/\D/g, '').slice(0, 12);
+  const creditsRemaining = draft.creditsRemaining === '' ? null : Number(draft.creditsRemaining);
+  const creditsInitial = draft.creditsInitial === '' ? null : Number(draft.creditsInitial);
+
+  const save = () => {
+    if (accountId && accountId.length !== 12) {
+      toast.error('AWS Account ID must contain exactly 12 digits.');
+      return;
+    }
+    updateProfile(profileId, {
+      accountName: draft.accountName.trim(),
+      accountId,
+      rootEmail: draft.rootEmail.trim(),
+      accountPlan: draft.accountPlan || null,
+      planExpiresAt: draft.planExpiresAt ? `${draft.planExpiresAt}T23:59:59Z` : null,
+      creditsInitial: Number.isFinite(creditsInitial) ? creditsInitial : null,
+      creditsRemaining: Number.isFinite(creditsRemaining) ? creditsRemaining : null,
+      planVerifiedAt: new Date().toISOString(),
+      planEvidence: draft.planEvidence.trim(),
+    });
+    toast.success('Non-secret AWS account facts saved');
+  };
+
+  const set = (key) => (value) => setDraft((current) => ({ ...current, [key]: value }));
+
+  return (
+    <section className="surface rounded-2xl p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2">
+            <Shield size={14} className="text-success" />
+            <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Verified account facts</h3>
+          </div>
+          <p className="text-[11px] text-muted mt-1">Display-only metadata stored in this browser. Passwords, MFA secrets, cards, and AWS secret keys are never accepted here.</p>
+        </div>
+        {profile?.planVerifiedAt && (
+          <span className="text-[10px] text-muted">Last confirmed {new Date(profile.planVerifiedAt).toLocaleString()}</span>
+        )}
+      </div>
+
+      {draft.accountPlan === 'free-6-month' && (
+        <div className="grid sm:grid-cols-3 gap-2">
+          <MetaCell label="Plan" value="AWS Free Plan · 6 months" />
+          <MetaCell label="Credits remaining" value={creditsRemaining == null ? 'Confirm in AWS' : `$${creditsRemaining.toFixed(2)} USD`} />
+          <MetaCell label="Time remaining" value={daysLeft == null ? 'Set expiry date' : `${daysLeft} days`} />
+        </div>
+      )}
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Field label="AWS account name" value={draft.accountName || ''} onChange={set('accountName')} placeholder="Training Lab" />
+        <Field label="AWS Account ID (not a password)" value={draft.accountId || ''} onChange={set('accountId')} placeholder="12 digits" mono />
+        <Field label="Root email (display only)" value={draft.rootEmail || ''} onChange={set('rootEmail')} placeholder="name@example.com" />
+        <Field label="Account plan" as="select" value={draft.accountPlan || ''} onChange={set('accountPlan')}
+               options={[["", "Unknown — verify in AWS"], ["free-6-month", "AWS Free Plan — 6 months"], ["paid", "AWS Paid Plan"]]} />
+        <Field label="Plan expiry" value={draft.planExpiresAt || ''} onChange={set('planExpiresAt')} type="date" />
+        <Field label="Credits remaining (USD)" value={String(draft.creditsRemaining ?? '')} onChange={set('creditsRemaining')} type="number" placeholder="100" />
+        <Field label="Initial credits (USD)" value={String(draft.creditsInitial ?? '')} onChange={set('creditsInitial')} type="number" placeholder="100" />
+        <div className="sm:col-span-2">
+          <Field label="Evidence note" value={draft.planEvidence || ''} onChange={set('planEvidence')} placeholder="Verified in AWS Console · Free plan status" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={save} className="btn btn-primary !text-xs"><Check size={13} /> Save account facts</button>
+        <span className="text-[10px] text-muted">The countdown is calculated locally from the expiry date. Credit balance is a last-known value until rechecked in AWS.</span>
+      </div>
+    </section>
   );
 }
 
@@ -649,14 +744,15 @@ function SimulateModeBanner() {
 function FreeTierMonitor() {
   const { state, usagePct } = useAWS();
   if (state.activeProfile !== 'free') return null;
+  const profile = state.profiles[state.activeProfile];
   return (
     <section className="surface rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Sparkles size={14} className="text-aws-orange" />
-          <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Free-tier usage</h3>
+          <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Illustrative service usage</h3>
         </div>
-        <span className="text-[11px] text-muted">Current month, rough estimate</span>
+        <span className="text-[11px] text-muted">Demo data · not read from AWS</span>
       </div>
       <ul className="space-y-1.5">
         {Object.entries(usagePct).map(([k, v]) => {
@@ -675,6 +771,10 @@ function FreeTierMonitor() {
           );
         })}
       </ul>
+      <div className="mt-3 rounded-lg border border-warning/30 bg-warning/[0.04] p-2 text-[10px] text-muted">
+        These bars are training examples, not your live AWS usage. Check AWS Billing and Cost Management for authoritative credits and spend.
+        {profile?.planVerifiedAt && <> Last account facts confirmation: {new Date(profile.planVerifiedAt).toLocaleString()}.</>}
+      </div>
     </section>
   );
 }

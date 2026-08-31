@@ -30,6 +30,19 @@ export const PROFILE_COLORS = [
 const DEFAULT_PROFILE = {
   name: '',
   region: 'us-east-1',
+  // Non-secret account facts. These are entered manually from the AWS console
+  // (or refreshed by a future read-only billing integration). Never store a
+  // root password, card number, MFA seed, access key, or secret here.
+  accountName: '',
+  accountId: '',
+  rootEmail: '',
+  accountPlan: null,   // 'free-6-month' | 'paid' | null
+  planStartedAt: null,
+  planExpiresAt: null,
+  creditsInitial: null,
+  creditsRemaining: null,
+  planVerifiedAt: null,
+  planEvidence: '',
   connected: false,    // a previous ephemeral STS identity check succeeded
   identity: null,      // { account, arn, userId } from last successful test
   lastTestedAt: null,
@@ -396,7 +409,23 @@ export function AWSProvider({ children }) {
   const clearProfile = useCallback((id) => {
     setState((s) => ({
       ...s,
-      profiles: { ...s.profiles, [id]: { ...DEFAULT_PROFILE, name: s.profiles[id].name, color: s.profiles[id].color, gmailUserIndex: s.profiles[id].gmailUserIndex, gmailAddress: s.profiles[id].gmailAddress } },
+      profiles: { ...s.profiles, [id]: {
+        ...DEFAULT_PROFILE,
+        name: s.profiles[id].name,
+        color: s.profiles[id].color,
+        gmailUserIndex: s.profiles[id].gmailUserIndex,
+        gmailAddress: s.profiles[id].gmailAddress,
+        accountName: s.profiles[id].accountName,
+        accountId: s.profiles[id].accountId,
+        rootEmail: s.profiles[id].rootEmail,
+        accountPlan: s.profiles[id].accountPlan,
+        planStartedAt: s.profiles[id].planStartedAt,
+        planExpiresAt: s.profiles[id].planExpiresAt,
+        creditsInitial: s.profiles[id].creditsInitial,
+        creditsRemaining: s.profiles[id].creditsRemaining,
+        planVerifiedAt: s.profiles[id].planVerifiedAt,
+        planEvidence: s.profiles[id].planEvidence,
+      } },
     }));
   }, [setState]);
 
@@ -585,6 +614,22 @@ export function AWSProvider({ children }) {
   const effectiveTier = useMemo(() => {
     const p = activeProfile;
     if (!p) return { tier: 'unknown', reason: 'No active profile.' };
+    if (p.accountPlan === 'free-6-month') {
+      const expires = p.planExpiresAt ? new Date(p.planExpiresAt).getTime() : null;
+      const daysLeft = expires == null || Number.isNaN(expires)
+        ? null
+        : Math.max(0, Math.ceil((expires - Date.now()) / 86400000));
+      return {
+        tier: daysLeft === 0 ? 'paid' : 'free',
+        reason: daysLeft === 0
+          ? 'AWS Free Plan period has ended. Confirm closure or upgrade status in AWS before deploying.'
+          : `AWS Free Plan verified manually${daysLeft == null ? '' : ` — ${daysLeft} days remaining`}. Credits and service eligibility must still be checked in AWS.`,
+        daysLeft,
+        creditsRemaining: p.creditsRemaining,
+        planType: 'free-6-month',
+      };
+    }
+    if (p.accountPlan === 'paid') return { tier: 'paid', reason: 'AWS Paid Plan recorded for this profile.' };
     if (p.tierOverride === 'free') return { tier: 'free', reason: 'Manually set to Free Tier.' };
     if (p.tierOverride === 'paid') return { tier: 'paid', reason: 'Manually set to Paid (past Free Tier).' };
     if (p.tierInfo?.freeTier12mActive === true) {

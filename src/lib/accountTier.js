@@ -49,6 +49,30 @@ export function classifyAccount(profile) {
     return { type: 'UNKNOWN', meta: ACCOUNT_TYPES.UNKNOWN, reason: 'No active AWS profile.' };
   }
 
+  // AWS's current six-month Free Plan is authoritative when the user records
+  // it from the console. It is credits-based and must not be described as the
+  // legacy 12-month Free Tier.
+  if (profile.accountPlan === 'free-6-month') {
+    const expiry = profile.planExpiresAt ? new Date(profile.planExpiresAt).getTime() : null;
+    const daysLeft = expiry == null || Number.isNaN(expiry)
+      ? null
+      : Math.max(0, Math.ceil((expiry - Date.now()) / 86400000));
+    if (daysLeft === 0) {
+      return {
+        type: 'B', meta: ACCOUNT_TYPES.B, daysLeft: 0,
+        reason: 'Recorded six-month AWS Free Plan has ended; verify account closure or upgrade status in AWS.',
+      };
+    }
+    return {
+      type: 'C', meta: ACCOUNT_TYPES.C, daysLeft,
+      creditsRemaining: profile.creditsRemaining ?? null,
+      reason: `Six-month AWS Free Plan recorded from console${daysLeft == null ? '' : ` · ${daysLeft} days remaining`}.`,
+    };
+  }
+  if (profile.accountPlan === 'paid') {
+    return { type: 'B', meta: ACCOUNT_TYPES.B, reason: 'AWS Paid Plan recorded for this profile.' };
+  }
+
   // 0) Manual override always wins
   if (profile.tierOverride === 'free')     return { type: 'A', meta: ACCOUNT_TYPES.A, reason: 'Manually set to Free Tier Active.' };
   if (profile.tierOverride === 'paid')     return { type: 'B', meta: ACCOUNT_TYPES.B, reason: 'Manually set to Free Tier Expired.' };
