@@ -1,192 +1,69 @@
-/**
- * accountSetupChecklist.js — AC-01 data only.
- *
- * 9 AWS account best-practice items, each with:
- *   - id, label, category, severity
- *   - why (2-3 sentences on security/cost impact)
- *   - howTo[] (numbered Console steps)
- *   - cliVerify (a copy-pasteable AWS CLI command that proves it's done)
- *   - docsUrl (link to the canonical AWS doc)
- */
-
+/** Current, evidence-first AWS account setup controls. */
 export const ACCOUNT_SETUP_CHECKLIST = [
-  // ────────── Root account ──────────
   {
-    id: 'root-created',
-    label: 'Root account created',
-    category: 'Account',
-    severity: 'high',
-    icon: '🏛️',
-    why: 'The root account is your AWS identity — without it, nothing exists. You only need it once, and AWS sends the verification email here. Never use it for daily work after the IAM admin user is set up.',
-    howTo: [
-      'Go to aws.amazon.com → Create an AWS Account',
-      'Provide a root email address (use one with strong security)',
-      'Provide payment method + phone verification',
-      'Pick the Basic Support plan (free)',
-    ],
-    cliVerify: 'aws sts get-caller-identity   # shows the account number this confirms exists',
-    docsUrl: 'https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html',
+    id: 'free-plan-verified', label: 'Free Plan identity, credits, and expiry verified', category: 'Account', severity: 'high', icon: '🏛️',
+    why: 'New AWS accounts use a credits-based Free Plan that ends after six months or when credits are exhausted, whichever happens first. The console is the authority for plan state.',
+    howTo: ['Console Home → Cost and Usage widget', 'Confirm account name and 12-digit Account ID', 'Record credits remaining, days remaining, and expiry in Account Manager', 'Capture a redacted screenshot as evidence'],
+    cliVerify: 'aws account get-account-plan-state',
+    docsUrl: 'https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier-plans.html',
   },
-
-  // ────────── Root MFA ──────────
   {
-    id: 'root-mfa',
-    label: 'MFA enabled on root account',
-    category: 'Security',
-    severity: 'critical',
-    icon: '🔐',
-    why: 'Without MFA, a stolen root password = full account takeover with no recovery. AWS support cannot help you reclaim a hijacked account quickly. This is the single highest-leverage protection you can enable.',
-    howTo: [
-      'Sign in as root → top-right menu → Security credentials',
-      'Multi-factor authentication (MFA) → Assign MFA device',
-      'Pick Virtual MFA device → scan the QR code with Google Authenticator (or 1Password)',
-      'Enter two consecutive codes to activate',
-    ],
-    cliVerify: 'aws iam get-account-summary --query "SummaryMap.AccountMFAEnabled"   # returns 1 when on',
-    docsUrl: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable_virtual.html',
+    id: 'root-mfa', label: 'Root MFA enabled with a recovery path', category: 'Security', severity: 'critical', icon: '🔐',
+    why: 'Root can control the entire account. A phishing-resistant passkey plus a second independent MFA method reduces takeover and lockout risk.',
+    howTo: ['Root account menu → Security credentials', 'Confirm at least one passkey or security key is assigned', 'Add an authenticator app or second passkey as backup', 'Test the backup in a private window before ending the current session'],
+    cliVerify: 'aws iam get-account-summary --query "SummaryMap.AccountMFAEnabled"',
+    docsUrl: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/enable-mfa-for-root.html',
   },
-
-  // ────────── IAM admin user ──────────
   {
-    id: 'iam-admin-user',
-    label: 'IAM Admin user created (use this daily, not root)',
-    category: 'IAM',
-    severity: 'high',
-    icon: '👤',
-    why: 'Root has unrevocable powers (delete the account, change root email). An IAM admin user can do everything else, with full audit trail, and you can rotate its access keys without locking yourself out. Treat root the way a bank treats the master vault key.',
-    howTo: [
-      'IAM Console → Users → Create user → username e.g. "admin_user"',
-      'Provide console access → Custom password',
-      'Attach policy directly: AdministratorAccess',
-      'Save the sign-in URL (https://<account-id>.signin.aws.amazon.com/console)',
-      'Sign out as root → sign back in as the IAM admin user from now on',
-    ],
-    cliVerify: 'aws iam list-users --query "Users[?contains(UserName,\\\`admin\\\`)].UserName"',
-    docsUrl: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-set-up.html',
+    id: 'root-no-access-keys', label: 'No root access keys', category: 'Security', severity: 'critical', icon: '🗝️',
+    why: 'Root access keys are long-lived credentials with unrestricted power. This learning account does not need them.',
+    howTo: ['Root account menu → Security credentials', 'Open Access keys', 'Confirm the list is empty', 'Do not create a root access key for Career Launchpad'],
+    cliVerify: '# Console-only root credential check; do not create a key to test it',
+    docsUrl: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-best-practices.html',
   },
-
-  // ────────── IAM user MFA ──────────
   {
-    id: 'iam-user-mfa',
-    label: 'MFA enabled on IAM Admin user',
-    category: 'Security',
-    severity: 'critical',
-    icon: '🔐',
-    why: 'Same logic as root MFA — if your IAM admin password leaks (phishing, breach), MFA stops the attacker cold. Without MFA on the admin, your "never use root daily" hygiene loses 90% of its value.',
-    howTo: [
-      'IAM Console → Users → click your admin user → Security credentials tab',
-      'Multi-factor authentication → Assign MFA device',
-      'Virtual MFA device → scan QR with Google Authenticator',
-      'Enter two consecutive codes',
-    ],
-    cliVerify: 'aws iam list-mfa-devices --user-name admin_user   # should return at least one device',
-    docsUrl: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable.html',
+    id: 'recovery-verified', label: 'Root recovery email and phone verified', category: 'Account', severity: 'high', icon: '📨',
+    why: 'AWS uses the root email and phone when recovering access. Losing either can turn an MFA-device failure into an account lockout.',
+    howTo: ['Account menu → Account', 'Confirm the root email is accessible', 'Confirm the phone number and contact address are current', 'Keep Google recovery and two-step verification enabled for the root mailbox'],
+    cliVerify: '# Verify contact details in Account settings; never export them to CLI logs',
+    docsUrl: 'https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-update-contact.html',
   },
-
-  // ────────── Billing alerts ──────────
   {
-    id: 'billing-alerts',
-    label: 'Billing alerts configured',
-    category: 'Cost',
-    severity: 'high',
-    icon: '💸',
-    why: 'AWS surprise bills are real. A misconfigured Lambda or runaway EC2 can cost hundreds overnight. Billing alerts via CloudWatch + SNS email you the moment spend crosses thresholds — your only early warning.',
-    howTo: [
-      'Billing & Cost Management Console → Billing preferences',
-      'Enable "Receive Free Tier Usage Alerts" + "Receive Billing Alerts" — both ON',
-      'Switch to N. Virginia (us-east-1) region (billing metrics only live there)',
-      'CloudWatch → Alarms → Create alarm → metric: Billing > EstimatedCharges > USD',
-      'Threshold: $1 (yes really), action: SNS topic → your email → Confirm subscription',
-      'Repeat for $5, $10, $25 thresholds',
-    ],
-    cliVerify: 'aws cloudwatch describe-alarms --region us-east-1 --query "MetricAlarms[?Namespace==\\\`AWS/Billing\\\`].AlarmName"',
-    docsUrl: 'https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/monitor_estimated_charges_with_cloudwatch.html',
-  },
-
-  // ────────── Free Tier alerts ──────────
-  {
-    id: 'free-tier-alerts',
-    label: 'Free Tier usage alerts set',
-    category: 'Cost',
-    severity: 'medium',
-    icon: '🆓',
-    why: 'The Free Tier ends in 12 months OR when you exceed limits (S3 5GB, EC2 750h, etc.). Without alerts, you find out by surprise on month 13. Free Tier usage alerts email you at 85% consumption so you can react.',
-    howTo: [
-      'Billing Console → Billing preferences',
-      'Tick "Receive Free Tier Usage Alerts" + add an alert email address',
-      'AWS auto-sends emails when any tracked Free Tier service hits 85%',
-    ],
-    cliVerify: '# No CLI for this — confirm in Billing → Billing preferences',
-    docsUrl: 'https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/tracking-free-tier-usage.html',
-  },
-
-  // ────────── Budgets ──────────
-  {
-    id: 'budgets-set',
-    label: 'Budget created in AWS Budgets',
-    category: 'Cost',
-    severity: 'medium',
-    icon: '📊',
-    why: 'Billing alerts trigger after spend; AWS Budgets is forecast-based — it warns you the day a trend predicts you\'ll exceed budget by month-end. Faster react time = fewer surprise charges. Free tier includes 2 budgets.',
-    howTo: [
-      'Billing Console → Budgets → Create budget',
-      'Type: Cost budget → Monthly period',
-      'Amount: $5/mo (or your training cap)',
-      'Alert: 80% actual + 100% forecasted → email yourself',
-    ],
-    cliVerify: 'aws budgets describe-budgets --account-id $(aws sts get-caller-identity --query Account --output text)',
+    id: 'budgets-set', label: 'Zero-spend and $2 budget alerts created', category: 'Cost', severity: 'high', icon: '📊',
+    why: 'Budgets provide early warnings, but they do not stop services or cap spending. Use both a near-zero alert and a project ceiling.',
+    howTo: ['Billing and Cost Management → Budgets → Create budget', 'Create template: Zero spend budget', 'Create monthly cost budget: $2 USD', 'Send actual and forecast alerts to the lab email', 'Confirm the notification email'],
+    cliVerify: 'aws budgets describe-budgets --account-id 525426877687 --query "Budgets[].BudgetName"',
     docsUrl: 'https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-create.html',
   },
-
-  // ────────── CloudTrail ──────────
   {
-    id: 'cloudtrail',
-    label: 'CloudTrail enabled (audit log)',
-    category: 'Security',
-    severity: 'high',
-    icon: '🪵',
-    why: 'CloudTrail records every API call against your account — who did what, when, from where. Essential after a security incident (you cannot debug what you cannot see) and required for most compliance frameworks. First trail is FREE.',
-    howTo: [
-      'CloudTrail Console → Trails → Create trail',
-      'Name: "default-trail"',
-      'Storage: new S3 bucket (CloudTrail will create it)',
-      'Apply trail to all regions: ON',
-      'Log file SSE-KMS encryption: ON (optional but recommended)',
-      'Click Create — events start landing in S3 within ~5 minutes',
-    ],
-    cliVerify: 'aws cloudtrail describe-trails --query "trailList[].Name"',
-    docsUrl: 'https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail.html',
+    id: 'credit-monitoring', label: 'Free Plan credit monitoring recorded', category: 'Cost', severity: 'high', icon: '🆓',
+    why: 'The Free Plan ends when either its time or credits run out. Old 12-month Free Tier usage guidance does not describe this account.',
+    howTo: ['Billing and Cost Management → Credits', 'Confirm current balance and credit expiry', 'Check Console Home → Cost and Usage before every lab', 'Update Career Launchpad after each project session'],
+    cliVerify: 'aws account get-account-plan-state',
+    docsUrl: 'https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier-FAQ.html',
   },
-
-  // ────────── Default VPC reviewed ──────────
   {
-    id: 'default-vpc-reviewed',
-    label: 'Default VPC reviewed (or deleted)',
-    category: 'Network',
-    severity: 'medium',
-    icon: '🌐',
-    why: 'Every new AWS account ships with a default VPC in every region — wide-open security groups and a public subnet in every AZ. Fine for learning, dangerous for client work. Review it OR delete it OR replace its security group with a tightened one.',
-    howTo: [
-      'VPC Console → Your VPCs → look for one tagged "Default = Yes"',
-      'Subnets tab → confirm only the AZs you actually use have subnets',
-      'Security groups → check the "default" SG has been tightened (no 0.0.0.0/0 inbound except port 443 if intentional)',
-      'Optional: delete the default VPC entirely if you only use a custom-built one',
-    ],
+    id: 'daily-access', label: 'Daily access uses MFA and no access keys', category: 'IAM', severity: 'high', icon: '👤',
+    why: 'Human users should use temporary or federated credentials. If a standalone training account temporarily uses an IAM console user, require MFA and do not create programmatic access keys.',
+    howTo: ['Prefer federation or an IAM role that issues temporary credentials', 'For a temporary standalone-lab fallback, create one console-only IAM user', 'Require MFA before daily use', 'Do not create access keys', 'Move toward least privilege after initial setup'],
+    cliVerify: 'aws iam list-users --query "Users[].UserName"',
+    docsUrl: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html',
+  },
+  {
+    id: 'cloudtrail-history', label: 'CloudTrail 90-day Event history verified', category: 'Security', severity: 'medium', icon: '🪵',
+    why: 'AWS provides 90 days of management-event history without creating a trail. A new trail can add S3, KMS, data-event, or Insights costs, so it requires a separate cost decision.',
+    howTo: ['CloudTrail → Event history', 'Confirm recent ConsoleLogin and IAM events appear', 'Do not create CloudTrail Lake, Insights, or data-event trails for this short lab', 'Create an S3-backed trail only when retention beyond 90 days is approved'],
+    cliVerify: 'aws cloudtrail lookup-events --max-results 5',
+    docsUrl: 'https://docs.aws.amazon.com/awscloudtrail/latest/userguide/how-cloudtrail-works.html',
+  },
+  {
+    id: 'default-vpc-reviewed', label: 'Default VPC and security groups reviewed', category: 'Network', severity: 'medium', icon: '🌐',
+    why: 'Default VPC subnets are public by design, but the default security group does not allow inbound internet traffic. Review it accurately and create project-specific security groups.',
+    howTo: ['VPC → Your VPCs → identify Default = Yes', 'Security groups → default → confirm inbound is self-reference only', 'Do not add 0.0.0.0/0 RDP or SSH rules', 'Use a project VPC and Systems Manager for the Windows Server lab', 'Do not delete defaults until teardown dependencies are understood'],
     cliVerify: 'aws ec2 describe-vpcs --filters Name=is-default,Values=true --query "Vpcs[].VpcId"',
-    docsUrl: 'https://docs.aws.amazon.com/vpc/latest/userguide/default-vpc.html',
+    docsUrl: 'https://docs.aws.amazon.com/vpc/latest/userguide/default-security-group.html',
   },
 ];
 
-export const CATEGORY_TONES = {
-  Account:  'orange',
-  Security: 'danger',
-  IAM:      'sky',
-  Cost:     'success',
-  Network:  'violet',
-};
-
-export const SEVERITY_TONES = {
-  critical: 'danger',
-  high:     'warning',
-  medium:   'sky',
-};
+export const CATEGORY_TONES = { Account: 'orange', Security: 'danger', IAM: 'sky', Cost: 'success', Network: 'violet' };
+export const SEVERITY_TONES = { critical: 'danger', high: 'warning', medium: 'sky' };

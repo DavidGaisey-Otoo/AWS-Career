@@ -66,7 +66,7 @@ export default function AWSAccounts() {
       <TierStatusCard profileId={state.activeProfile} />
 
       {/* AC-01 — best-practice checklist + IAM teaching + report generator */}
-      <SetupDocumentation />
+      <SetupDocumentation profileId={state.activeProfile} />
 
       {/* ACCT-01 — Yusuf El-Sayed's hygiene audit */}
       <AccountHygieneReviewPanel
@@ -439,9 +439,10 @@ function CredentialsCard({ profileId }) {
 
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="AWS Access Key ID" value={accessKey} onChange={setAccessKey}
-                 placeholder="AKIA…" mono />
+                 placeholder="Temporary STS key only" mono name={`ephemeral-access-key-${profileId}`} />
           <Field label="AWS Secret Access Key" value={secret} onChange={setSecret}
                  placeholder="••••••••••••••••••••••••" mono type={showSecret ? 'text' : 'password'}
+                 name={`ephemeral-secret-${profileId}`} autoComplete="new-password"
                  right={
                    <button onClick={() => setShowSecret((v) => !v)} className="text-muted hover:text-current p-1"
                            aria-label={showSecret ? 'Hide' : 'Show'}>
@@ -449,7 +450,8 @@ function CredentialsCard({ profileId }) {
                    </button>
                  } />
           <Field label="Session token (recommended)" value={sessionToken} onChange={setSessionToken}
-                 placeholder="Required for temporary STS credentials" mono type="password" />
+                 placeholder="Required for temporary STS credentials" mono type="password"
+                 name={`ephemeral-session-token-${profileId}`} autoComplete="new-password" />
           <Field label="Default region" as="select" value={region} onChange={setRegion}
                  options={AWS_REGIONS.map((r) => [r.id, `${r.id} — ${r.label}`])} />
         </div>
@@ -1110,7 +1112,7 @@ resource "aws_instance" "web" {
 
 // ============================ shared ============================
 
-function Field({ label, value, onChange, type = 'text', as, options = [], mono, placeholder, right }) {
+function Field({ label, value, onChange, type = 'text', as, options = [], mono, placeholder, right, name, autoComplete = 'off' }) {
   return (
     <label className="block">
       <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted">{label}</span>
@@ -1125,7 +1127,8 @@ function Field({ label, value, onChange, type = 'text', as, options = [], mono, 
           </select>
         ) : (
           <input type={type} value={value || ''} onChange={(e) => onChange(e.target.value)}
-                 placeholder={placeholder}
+                 placeholder={placeholder} name={name || `awscl-${String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                 autoComplete={autoComplete} data-1p-ignore data-lpignore="true" data-form-type="other"
                  className={cn('flex-1 bg-[var(--card-2)] border border-token rounded-lg px-3 py-2 text-sm focus-ring focus:border-aws-orange',
                                mono && 'font-mono')} />
         )}

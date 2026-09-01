@@ -12,22 +12,22 @@ import { useMemo, useState } from 'react';
 import {
   ShieldCheck, CheckCircle2, Circle, ChevronDown, ChevronUp, FileText,
   Copy, ExternalLink, AlertTriangle, Terminal, BookOpen, Download,
-  X, RotateCcw, Sparkles, Eye,
+  X, RotateCcw, Eye,
 } from 'lucide-react';
 import {
   ACCOUNT_SETUP_CHECKLIST, CATEGORY_TONES, SEVERITY_TONES,
 } from '../../data/accountSetupChecklist.js';
 import { IAM_BEST_PRACTICES } from '../../data/iamBestPractices.js';
 import {
-  useSetupChecklist, toggleItem, markAllDone, clearAll,
+  useSetupChecklist, toggleItem, clearAll,
   getProgress, getCompletedItems,
 } from '../../lib/setupChecklistStore.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { cn } from '../../lib/utils.js';
 import { DocReviewPanel } from '../doc-review/DocReviewPanel.jsx';
 
-export function SetupDocumentation() {
-  const state = useSetupChecklist();
+export function SetupDocumentation({ profileId = 'default' }) {
+  const state = useSetupChecklist(profileId);
   const toast = useToast();
   const [openItem, setOpenItem] = useState(null);
   const [showReport, setShowReport] = useState(false);
@@ -49,7 +49,7 @@ export function SetupDocumentation() {
             AWS account best practices
           </h2>
           <p className="text-[12.5px] opacity-80 mt-1.5 leading-relaxed max-w-2xl">
-            9 things every AWS account should have configured. Tick them off as you complete each one — each has the WHY,
+            9 current controls for this specific AWS profile. Mark an item only after checking its evidence — each has the WHY,
             click-by-click instructions, and a CLI command to verify it's actually on. Generates a portable report you can
             share with auditors or save to your portfolio.
           </p>
@@ -62,13 +62,7 @@ export function SetupDocumentation() {
             <FileText size={12} /> Generate report
           </button>
           <button
-            onClick={() => { markAllDone(); toast?.success?.('All items marked done'); }}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
-          >
-            <CheckCircle2 size={12} /> Mark all
-          </button>
-          <button
-            onClick={() => { if (confirm('Clear all done states?')) clearAll(); }}
+            onClick={() => { if (confirm('Clear all verified states for this AWS profile?')) clearAll(profileId); }}
             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold border border-token hover:border-danger hover:text-danger transition"
           >
             <RotateCcw size={12} /> Reset
@@ -88,7 +82,7 @@ export function SetupDocumentation() {
             done={!!state[item.id]?.done}
             completedAt={state[item.id]?.completedAt}
             open={openItem === item.id}
-            onToggleDone={() => toggleItem(item.id)}
+            onToggleDone={() => toggleItem(item.id, profileId)}
             onToggleOpen={() => setOpenItem((cur) => cur === item.id ? null : item.id)}
           />
         ))}

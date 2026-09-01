@@ -12,44 +12,39 @@ import { ACCOUNT_SETUP_CHECKLIST } from '../data/accountSetupChecklist.js';
 const KEY = `${STORAGE_KEY}::setup-checklist`;
 const EVT = 'setup-checklist:change';
 
-function read() {
+function scopedKey(scope = 'default') {
+  return `${KEY}::${String(scope).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+}
+
+function read(scope = 'default') {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(scopedKey(scope));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch { return {}; }
 }
 
-function write(state) {
+function write(state, scope = 'default') {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(scopedKey(scope), JSON.stringify(state));
     window.dispatchEvent(new Event(EVT));
   } catch {}
 }
 
-export function toggleItem(id) {
-  const state = read();
+export function toggleItem(id, scope = 'default') {
+  const state = read(scope);
   const current = state[id];
   if (current?.done) {
     state[id] = { done: false, completedAt: null };
   } else {
     state[id] = { done: true, completedAt: new Date().toISOString() };
   }
-  write(state);
+  write(state, scope);
   return state[id];
 }
 
-export function markAllDone() {
-  const state = {};
-  const now = new Date().toISOString();
-  for (const it of ACCOUNT_SETUP_CHECKLIST) {
-    state[it.id] = { done: true, completedAt: now };
-  }
-  write(state);
-}
-
-export function clearAll() { write({}); }
+export function clearAll(scope = 'default') { write({}, scope); }
 
 export function getProgress(state) {
   state = state || read();
@@ -66,9 +61,9 @@ export function getCompletedItems(state) {
     .map((it) => ({ ...it, completedAt: state[it.id].completedAt }));
 }
 
-export function useSetupChecklist() {
-  const [state, setState] = useState(() => read());
-  const refresh = useCallback(() => setState(read()), []);
+export function useSetupChecklist(scope = 'default') {
+  const [state, setState] = useState(() => read(scope));
+  const refresh = useCallback(() => setState(read(scope)), [scope]);
   useEffect(() => {
     const onChange = () => refresh();
     window.addEventListener('storage', onChange);
