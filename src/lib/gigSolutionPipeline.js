@@ -54,6 +54,7 @@ import { scoreFromFindings, gradeFromScore } from './agentScoring.js';
 import { upsertSolution } from './solutionStore.js';
 import { PROJECTS } from '../data/projects.js';
 import { assessFreeTierCost } from './projectCostEstimator.js';
+import { buildDeliveryStandard } from './solutionDeliveryStandard.js';
 
 // ════════════════════════════════════════════════════════════════════
 // STAGE 1 — UNDERSTAND
@@ -604,7 +605,7 @@ export function runPipeline(gig, options = {}) {
                 : highs.length ? 'caution'
                 : 'ready';
 
-  return {
+  const solution = {
     id: `sol-${toSlug(names.slug)}-${Date.now().toString(36)}`,
     input: {
       brief,
@@ -662,6 +663,8 @@ export function runPipeline(gig, options = {}) {
     mode,
     generatedAt: new Date().toISOString(),
   };
+  solution.deliveryStandard = buildDeliveryStandard(solution);
+  return solution;
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -706,6 +709,7 @@ export function saveSolution(solution) {
         cli: solution.artifacts.cli?.code || null,
       },
       plan: solution.plan,
+      deliveryStandard: solution.deliveryStandard,
       deployments: [],
       savedAt: new Date().toISOString(),
     };

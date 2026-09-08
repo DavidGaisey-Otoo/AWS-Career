@@ -19,6 +19,48 @@
  */
 
 export const AWS_SERVICE_CATALOG = {
+  datasync: {
+    id: 'datasync', label: 'AWS DataSync', icon: '⇄', category: 'Migration',
+    what: 'Managed high-speed data transfer between on-premises storage and AWS storage services, with scheduling, verification and encryption in transit.',
+    freeTier: 'No general free tier; transfer and task usage can incur charges',
+    triggers: [{ pattern: /\b(data ?sync|file migration|nfs migration|smb migration)\b/i, reason: 'Brief requires managed file transfer between local storage and AWS.' }],
+    companions: ['s3', 'efs', 'cloudwatch', 'vpn'],
+  },
+  storagegateway: {
+    id: 'storagegateway', label: 'AWS Storage Gateway', icon: '▣', category: 'Hybrid',
+    what: 'Connects on-premises applications to cloud-backed file, volume or tape storage while keeping familiar local protocols.',
+    freeTier: 'Gateway software has no upfront charge; storage, requests and transfer are billed',
+    triggers: [{ pattern: /\b(storage gateway|file gateway|volume gateway|tape gateway|hybrid storage)\b/i, reason: 'Brief requires cloud-backed storage presented to an on-premises environment.' }],
+    companions: ['s3', 'cloudwatch', 'vpn'],
+  },
+  mgn: {
+    id: 'mgn', label: 'AWS Application Migration Service', icon: '↗', category: 'Migration',
+    what: 'Replicates source servers into AWS for lift-and-shift migration with test and cutover instances.',
+    freeTier: 'Free service period per source server is limited; replicated resources and transfer can cost money',
+    triggers: [{ pattern: /\b(application migration service|aws mgn|server migration|lift.?and.?shift)\b/i, reason: 'Brief requires migration of existing servers into AWS.' }],
+    companions: ['ec2', 'ebs', 'vpc', 'cloudwatch'],
+  },
+  dms: {
+    id: 'dms', label: 'AWS Database Migration Service', icon: '⇢', category: 'Migration',
+    what: 'Moves and continuously replicates databases to AWS with full-load and change-data-capture options.',
+    freeTier: 'Limited offers may apply; replication instances and storage can incur charges',
+    triggers: [{ pattern: /\b(database migration|aws dms|change data capture|cdc replication)\b/i, reason: 'Brief requires database migration or continuous replication.' }],
+    companions: ['rds', 'vpc', 'cloudwatch'],
+  },
+  route53resolver: {
+    id: 'route53resolver', label: 'Route 53 Resolver', icon: 'DNS', category: 'Networking',
+    what: 'Provides inbound and outbound DNS resolution between VPCs and on-premises DNS servers.',
+    freeTier: 'Resolver endpoints are billed hourly plus query processing',
+    triggers: [{ pattern: /\b(hybrid dns|dns forwarding|resolver endpoint|on.?prem dns)\b/i, reason: 'Brief requires DNS resolution across on-premises and AWS networks.' }],
+    companions: ['vpc', 'vpn'],
+  },
+  ad: {
+    id: 'ad', label: 'AWS Directory Service', icon: 'AD', category: 'Security',
+    what: 'Runs or connects Microsoft Active Directory for Windows authentication, domain join and directory-aware workloads.',
+    freeTier: 'No general free tier for managed Microsoft AD; hourly charges apply',
+    triggers: [{ pattern: /\b(active directory|domain join|domain controller|group policy|windows domain)\b/i, reason: 'Brief requires Microsoft identity or domain integration.' }],
+    companions: ['ec2', 'vpc', 'ssm'],
+  },
   // ════════ Compute ════════
   lambda: {
     id: 'lambda', label: 'AWS Lambda', icon: 'λ', category: 'Compute',

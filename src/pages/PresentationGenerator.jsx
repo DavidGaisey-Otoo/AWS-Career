@@ -42,12 +42,15 @@ export default function PresentationGenerator() {
   const [presentMode, setPresentMode] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
 
-  // Pick the most-recent diagram from AIContext to embed in slide 4.
+  // Bind the deck to its project diagram when a projectId is supplied. Only
+  // fall back to the most recent diagram for legacy/manual deck creation.
   const diagram = useMemo(() => {
     if (!aiState?.diagrams?.length) return null;
-    const d = aiState.diagrams[aiState.diagrams.length - 1];
+    const requestedProjectId = params.get('projectId');
+    const d = (requestedProjectId && aiState.diagrams.find((item) => item.projectId === requestedProjectId))
+      || aiState.diagrams[aiState.diagrams.length - 1];
     return { name: d.name, nodes: d.nodes, edges: d.edges };
-  }, [aiState]);
+  }, [aiState, params]);
 
   // Load saved deck
   useEffect(() => {

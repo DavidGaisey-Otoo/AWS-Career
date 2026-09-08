@@ -9,6 +9,7 @@
  */
 
 import { uid } from '../lib/utils.js';
+import { architectureToDrawioXml, validateDrawioXml } from '../lib/drawioBridge.js';
 
 const fmtDate = (d) =>
   new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -265,17 +266,95 @@ export function buildDeliveryPackage({ project = {}, client = {}, diagram = null
   const slug = (project.title || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const clientSlug = (client.company || client.name || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const root = `${clientSlug}_${slug}_delivery`;
+  const diagramXml = diagram
+    ? (validateDrawioXml(diagram.drawioXml).valid ? diagram.drawioXml : architectureToDrawioXml(diagram.nodes || [], diagram.edges || [], diagram.name || project.title || 'Architecture'))
+    : null;
+  const serviceLines = (project.services || []).map((service) => `- ${service.label || service.id}: ${service.what || 'Review its approved role in the architecture.'}`).join('\n');
+  const runbookLines = (project.consoleRunbook || []).flatMap((guide) => [
+    `## ${guide.service}`,
+    `Console path: ${guide.consolePath}`,
+    '',
+    ...guide.steps.map((step, index) => `${index + 1}. ${step}`),
+    '',
+  ]).join('\n');
+  const externalVerificationPrompt = `# Independent verification request — ${project.title || 'AWS project'}
+
+You are an independent senior cloud architect, security reviewer, SRE, cost reviewer, and technical-documentation auditor. Review the supplied delivery package. Treat generated claims as unverified until supported by configuration, test output, or redacted evidence.
+
+## Safety boundary
+- Never request or reproduce passwords, access keys, session tokens, MFA seeds, card details, private customer data, or unredacted account identifiers.
+- Do not execute deployment or deletion commands. Review only the supplied artifacts.
+- Distinguish design intent, generated code, actual deployment evidence, and client acceptance.
+
+## Review scope
+1. Requirements: identify ambiguity, missing acceptance criteria, assumptions, exclusions, owners, and approvals.
+2. Architecture: trace every request/data flow and check boundaries, protocols, availability, failure modes, hybrid dependencies, and single points of failure.
+3. Security: review IAM least privilege, MFA, network exposure, encryption, logging, secret handling, patching, backup, recovery, and evidence redaction.
+4. Reliability and operations: validate monitoring, alarms, runbooks, restore test, rollback, incident handling, maintenance, and teardown verification.
+5. Cost: flag unsupported estimates, costly defaults, free-plan assumptions, billing risks, and resources that can survive teardown.
+6. Implementation: compare Terraform, CloudFormation, console runbook, diagram, and documented services for contradictions or missing dependencies.
+7. Testing: assess whether each acceptance criterion has an expected result, actual result, evidence reference, reviewer, and date.
+8. Documentation: confirm a new operator can deploy, validate, operate, recover, escalate, and safely remove the system.
+
+## Required response format
+### Verdict
+Return one of: PASS, PASS WITH CONDITIONS, or FAIL. Explain why.
+
+### Blocking findings
+For each: ID, severity, affected artifact/service, evidence, risk, exact correction, and retest required.
+
+### Non-blocking improvements
+Prioritized improvements with expected benefit, effort, and recommended timing.
+
+### Contradictions and unsupported claims
+List any statement not proven by the supplied artifacts or evidence.
+
+### Test coverage assessment
+Map each requirement to its test and evidence; mark missing coverage explicitly.
+
+### Questions for the owner/client
+Ask only questions whose answers could change scope, architecture, security, cost, or acceptance.
+
+### Final checklist
+Provide a concise checklist for the next review cycle. Do not declare production readiness without reviewed deployment and operational evidence.
+`;
+  const externalReviewTemplate = `# External review response — ${project.title || 'AWS project'}
+
+Reviewer/tool:
+Review date:
+Verdict: NOT REVIEWED
+
+## Blocking findings
+- Paste the independent review findings here. Remove secrets and personal data first.
+
+## Non-blocking improvements
+- Record prioritized improvements, expected benefit, effort, and timing.
+
+## Owner response and changes made
+- Finding ID:
+- Decision:
+- Change made:
+- Evidence:
+- Retest result:
+
+## Remaining risks and acceptance
+- Residual risk:
+- Risk owner:
+- Approver:
+- Approval date:
+`;
   const files = [
-    { path: `${root}/README.md`,                            kind: 'md',   label: 'Overview + how to use this package' },
-    { path: `${root}/architecture-diagram.png`,             kind: 'image',label: 'Architecture diagram (raster)' },
-    { path: `${root}/architecture-diagram.pdf`,             kind: 'pdf',  label: 'Architecture diagram (print)' },
-    { path: `${root}/technical-documentation.md`,           kind: 'md',   label: 'Deep-dive technical doc' },
-    { path: `${root}/deployment-guide.md`,                  kind: 'md',   label: 'Step-by-step deploy' },
-    { path: `${root}/terraform/main.tf`,                    kind: 'code', label: 'Terraform — main config' },
+    { path: `${root}/README.md`,                            kind: 'md',   label: 'Overview + how to use this package', generated: true },
+    ...(diagramXml ? [{ path: `${root}/architecture-diagram.drawio`, kind: 'drawio', label: 'Editable project architecture', generated: true, content: diagramXml }] : []),
+    { path: `${root}/technical-documentation.md`,           kind: 'md',   label: 'Deep-dive technical doc', generated: true, content: `# ${project.title || 'Project'} technical documentation\n\n## Architecture services\n${serviceLines || '- Add the approved project services.'}\n\n## Evidence standard\n- Approved brief and assumptions\n- Project-bound architecture diagram\n- Cost approval\n- Implementation and validation screenshots\n- Audit events and teardown evidence\n- Client acceptance\n` },
+    { path: `${root}/deployment-guide.md`,                  kind: 'md',   label: 'Step-by-step deploy', generated: !!runbookLines, content: runbookLines ? `# ${project.title || 'Project'} deployment guide\n\n${runbookLines}` : '# Deployment guide\n\nGenerate and review the project console runbook before deployment.\n' },
+    { path: `${root}/terraform/main.tf`,                    kind: 'code', label: 'Terraform — main config', generated: !!project.templates?.terraform, content: project.templates?.terraform || undefined },
     { path: `${root}/terraform/variables.tf`,               kind: 'code', label: 'Terraform — variables' },
     { path: `${root}/terraform/outputs.tf`,                 kind: 'code', label: 'Terraform — outputs' },
-    { path: `${root}/cloudformation-template.yaml`,         kind: 'code', label: 'CloudFormation template' },
-    { path: `${root}/testing-results.md`,                   kind: 'md',   label: 'Test plan + results' },
+    { path: `${root}/cloudformation-template.yaml`,         kind: 'code', label: 'CloudFormation template', generated: !!project.templates?.cfn, content: project.templates?.cfn || undefined },
+    { path: `${root}/testing-results.md`,                   kind: 'md',   label: 'Test plan + results', generated: true, content: '# Testing results\n\nRecord each test, expected result, actual result, evidence filename, reviewer and date. Do not mark a test passed without evidence.\n' },
+    { path: `${root}/external-verification-prompt.md`,       kind: 'md',   label: 'Safe independent-review instructions for ChatGPT or Claude', generated: true, content: externalVerificationPrompt },
+    { path: `${root}/external-review-response.md`,          kind: 'md',   label: 'Reviewer findings, improvements and retest record', generated: true, content: externalReviewTemplate },
     { path: `${root}/production-cost-estimate.md`,          kind: 'md',   label: 'Monthly cost estimate' },
     { path: `${root}/maintenance-guide.md`,                 kind: 'md',   label: 'Day-2 runbook' },
     { path: `${root}/future-recommendations.md`,            kind: 'md',   label: 'Phase 2 ideas' },
@@ -286,8 +365,11 @@ export function buildDeliveryPackage({ project = {}, client = {}, diagram = null
 Prepared for **${client.company || client.name || 'the client'}**.
 Generated on ${fmtDate(new Date())}.
 
+## Overview
+This package is the controlled handover record for ${project.title || 'the AWS engagement'}. It links the approved architecture, reproducible infrastructure, console runbook, validation record, operating guidance, and teardown evidence. Generated content must still be reviewed against the real AWS account before acceptance.
+
 ## What's in this package
-${files.map((f) => `- \`${f.path}\` — ${f.label}`).join('\n')}
+${files.map((f) => `- \`${f.path}\` — ${f.label}${f.generated ? ' (generated)' : ' (requires reviewed project content)'}`).join('\n')}
 
 ## How to use it
 1. Read \`README.md\` first.
@@ -295,11 +377,42 @@ ${files.map((f) => `- \`${f.path}\` — ${f.label}`).join('\n')}
 3. Follow \`deployment-guide.md\` for the production cutover.
 4. Keep \`maintenance-guide.md\` open during the first week.
 
+## Prerequisites
+- An approved AWS account, target Region, cost ceiling, maintenance window, and named approver.
+- A federated or temporary least-privilege IAM role; never use root or copy permanent access keys into this package.
+- Reviewed Terraform/CloudFormation tooling and a non-production validation environment.
+
+## Architecture
+Open \`architecture-diagram.drawio\` in Draw.io and compare every boundary, service, connection, and protocol with the deployed resource inventory. The service roles and implementation sequence are documented in \`technical-documentation.md\` and \`deployment-guide.md\`.
+
+## Deployment
+Review the infrastructure plan or CloudFormation change set, obtain explicit approval, deploy first to the validation environment, and record resource identifiers and screenshots. Do not treat generated templates as proof of a successful deployment.
+
+## Credentials & Access
+Use the client-approved temporary role or IAM Identity Center permission set. MFA is required for privileged access. Store secrets only in the approved vault, document role names rather than secret values, and test credential rotation and access removal before handover.
+
+## Security
+Confirm least privilege, encrypted EBS and backups, blocked public RDP, Session Manager access, audit logging, and redaction of account identifiers or personal data in evidence.
+
+## Monitoring
+Verify CloudWatch metrics, logs, dashboard, alarm thresholds, notification routing, and an alarm test. Record the dashboard and alarm identifiers in \`testing-results.md\`.
+
+## Rollback / Recovery
+If validation fails, stop the change, preserve diagnostic evidence, restore the last approved infrastructure version, and test restoration from the approved backup or snapshot. Record actual RPO/RTO results and complete teardown verification before closing the change.
+
+## Known Issues & Troubleshooting
+Start with Systems Manager managed-node status, IAM role attachment, VPC endpoint or outbound connectivity, CloudWatch agent status, and backup-job history. Escalate unresolved account or service failures through the account's approved AWS Support channel.
+
 ## Cost
 Estimated monthly cost: **${costPerMonth != null ? fmtCurrency(costPerMonth) : '—'}** in us-east-1 at the planned scale.
+Confirm the authoritative estimate in AWS Pricing Calculator and configure AWS Budgets alerts. Alerts notify but do not cap spending; verify all billable resources after teardown.
+
+## Contacts & Escalation
+Primary owner: ${brief.authorEmail || 'record in the signed acceptance record'}.
+Backup owner and client approver: record in the signed acceptance record before handover. Use the account's current AWS Support plan and official Support Center for service incidents; never send credentials in a support case.
 
 ## Support
-14 days of post-delivery support included. Reach me at ${brief.authorEmail || '<your email>'} for any fixes.
+Post-delivery support is limited to the agreed engagement period and scope. Changes outside the accepted scope require a reviewed change request.
 `;
   return {
     id: uid(),
@@ -314,5 +427,6 @@ Estimated monthly cost: **${costPerMonth != null ? fmtCurrency(costPerMonth) : '
     summary,
     diagram: diagram || null,
     status: 'ready', // ready | sent
+    externalReview: { reviewer: '', verdict: 'not-reviewed', findings: '', updatedAt: null },
   };
 }

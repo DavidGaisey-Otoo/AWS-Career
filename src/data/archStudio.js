@@ -24,6 +24,7 @@ export const SERVICE_PALETTE = [
   svc('ebs',         'EBS',              '💽',  'storage', 4),
   svc('efs',         'EFS',              '📁',  'storage', 12),
   svc('glacier',     'Glacier',          '🧊',  'storage', 1),
+  svc('backup',      'AWS Backup',       '↶',   'storage', 2),
   // Database
   svc('rds',         'RDS',              '🗄',  'database', 32),
   svc('aurora',      'Aurora',           '🌌',  'database', 60),
@@ -71,11 +72,21 @@ export const SERVICE_PALETTE = [
   svc('codedeploy',  'CodeDeploy',       '📦',  'devops', 0),
   svc('codecommit',  'CodeCommit',       '📚',  'devops', 0),
   svc('ssm',         'Systems Manager',  '⚙',   'devops', 0),
+  // Hybrid and migration
+  svc('datasync',     'DataSync',          '⇄',   'integration', 8),
+  svc('storagegateway','Storage Gateway',  '▣',   'storage', 15),
+  svc('mgn',          'Application Migration Service','↗','integration', 0),
+  svc('dms',          'Database Migration Service','⇢','database', 25),
+  svc('route53resolver','Route 53 Resolver','DNS','network', 90),
+  svc('ad',           'Directory Service','AD',  'security', 72),
   // External
   svc('user',        'User',             '👤',  'external', 0),
   svc('onprem',      'On-Prem',          '🏢',  'external', 0),
   svc('client',      'Client App',       '📱',  'external', 0),
   svc('internet',    'Internet',         '🌐',  'external', 0),
+  svc('branch',      'Branch Office',    '⌂',   'external', 0),
+  svc('firewall',    'Firewall Router',  '▤',   'external', 0),
+  svc('switch',      'LAN Switch',       '⇆',   'external', 0),
 ];
 
 export const PALETTE_CATEGORIES = [
@@ -306,6 +317,66 @@ export const TEMPLATES = [
       edge('r', 'c'),
       edge('a', 'c', 'TLS', true),
       edge('c', 's'),
+    ],
+  },
+  {
+    id: 't-windows-managed',
+    name: 'Windows managed server lab',
+    description: 'Private Windows EC2 administration through Systems Manager with monitoring and backup.',
+    nodes: [
+      node('admin', 'user', 40, 150, 'Administrator'),
+      node('ssm', 'ssm', 210, 150, 'Session Manager'),
+      node('vpc', 'vpc', 380, 150, 'Training VPC'),
+      node('win', 'ec2', 550, 150, 'Windows Server'),
+      node('disk', 'ebs', 720, 80, 'Encrypted gp3'),
+      node('mon', 'cloudwatch', 720, 150, 'Logs and alarms'),
+      node('bak', 'backup', 720, 220, 'Recovery point'),
+    ],
+    edges: [
+      edge('admin', 'ssm', 'MFA console'), edge('ssm', 'win', 'HTTPS 443'),
+      edge('vpc', 'win', 'private subnet'), edge('win', 'disk'),
+      edge('win', 'mon', 'metrics logs', true), edge('disk', 'bak', 'backup', true),
+    ],
+  },
+  {
+    id: 't-hybrid-branch',
+    name: 'Hybrid branch to AWS',
+    description: 'Segmented branch network connects to AWS through redundant Site-to-Site VPN.',
+    nodes: [
+      node('users', 'user', 30, 180, 'Branch users'),
+      node('sw', 'switch', 170, 180, 'VLAN switch'),
+      node('fw', 'firewall', 310, 180, 'Customer gateway'),
+      node('vpn', 'vpn', 460, 180, 'Two tunnels'),
+      node('tgw', 'tgw', 610, 180, 'Transit Gateway'),
+      node('app', 'vpc', 770, 100, 'Application VPC'),
+      node('shared', 'vpc', 770, 260, 'Shared services VPC'),
+      node('dns', 'route53resolver', 930, 260, 'Hybrid DNS'),
+    ],
+    edges: [
+      edge('users', 'sw', 'VLANs'), edge('sw', 'fw', '802.1Q'), edge('fw', 'vpn', 'IPsec'),
+      edge('vpn', 'tgw', 'BGP'), edge('tgw', 'app', 'routes'), edge('tgw', 'shared', 'routes'),
+      edge('shared', 'dns', 'DNS', true),
+    ],
+  },
+  {
+    id: 't-migration',
+    name: 'On premises migration factory',
+    description: 'Assess and migrate servers, files and databases with test and cutover evidence.',
+    nodes: [
+      node('src', 'onprem', 40, 170, 'Source estate'),
+      node('conn', 'vpn', 200, 170, 'Secure connectivity'),
+      node('mgn', 'mgn', 370, 80, 'Server replication'),
+      node('ds', 'datasync', 370, 170, 'File transfer'),
+      node('dms', 'dms', 370, 260, 'Database replication'),
+      node('ec2', 'ec2', 560, 80, 'Test and cutover'),
+      node('s3', 's3', 560, 170, 'Landing storage'),
+      node('rds', 'rds', 560, 260, 'Target database'),
+      node('cw', 'cloudwatch', 740, 170, 'Validation evidence'),
+    ],
+    edges: [
+      edge('src', 'conn'), edge('conn', 'mgn'), edge('conn', 'ds'), edge('conn', 'dms'),
+      edge('mgn', 'ec2'), edge('ds', 's3'), edge('dms', 'rds'),
+      edge('ec2', 'cw', 'tests', true), edge('s3', 'cw', 'metrics', true), edge('rds', 'cw', 'metrics', true),
     ],
   },
   // ---- additional templates added in Stage 11 ----
@@ -715,4 +786,3 @@ export function antiPatterns(nodes, edges) {
 
   return out;
 }
-

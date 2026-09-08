@@ -20,6 +20,7 @@ import { runPlanningRecommendationTests } from '../src/lib/__tests__/planningRec
 import { runClientDiscoveryFormTests } from '../src/lib/__tests__/clientDiscoveryForm.test.js';
 import { runAwsEnvironmentPolicyTests } from '../src/lib/__tests__/awsEnvironmentPolicy.test.js';
 import { runProjectStandardsTests } from '../src/lib/__tests__/projectStandards.test.js';
+import { runSolutionDeliveryStandardTests } from '../src/lib/__tests__/solutionDeliveryStandard.test.js';
 
 const agents = runAllTests();
 console.log(printReport(agents));
@@ -37,6 +38,13 @@ console.log('══════════════════════�
 console.log('  AWS ENVIRONMENT POLICY TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of awsEnvironmentPolicy.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
+const solutionDeliveryStandard = runSolutionDeliveryStandardTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  SOLUTION DELIVERY STANDARD TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of solutionDeliveryStandard.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
 const pipeline = runPipelineTests();
 console.log('');
@@ -174,7 +182,7 @@ const deliveryStatusOk = deliveryStatus.allPassed;
 const planningRecommendationsOk = planningRecommendations.allPassed;
 const clientDiscoveryOk = clientDiscovery.allPassed;
 const awsEnvironmentPolicyOk = awsEnvironmentPolicy.allPassed;
-const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk;
+const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk;
 
 console.log('');
 console.log(allOk

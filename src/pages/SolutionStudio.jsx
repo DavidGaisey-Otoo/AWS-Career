@@ -29,7 +29,7 @@ import {
   Wand2, Sparkles, ChevronDown, Rocket, Trash2, Save, FileText, MapPin,
   ShieldCheck, AlertTriangle, CheckCircle2, Loader2, Copy, Download,
   Layers, ClipboardList, Target, Briefcase, Clock, DollarSign, Info,
-  RefreshCw, ExternalLink, Cloud, ArrowRight, Lightbulb,
+  RefreshCw, ExternalLink, Cloud, ArrowRight, Lightbulb, Package,
 } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -79,7 +79,7 @@ const VERDICT = {
 const EXAMPLES = [
   {
     label: 'Windows Server admin',
-    text: 'I want to start with a Windows Server administration project.',
+    text: 'Build a short-lived AWS training lab for Windows Server administration. Use one free-tier-eligible Windows EC2 instance in a VPC, Systems Manager Session Manager instead of public RDP, least-privilege IAM, encrypted EBS, CloudWatch monitoring and alarms, and AWS Backup with seven-day retention. Use synthetic data, document patching and recovery tests, capture redacted evidence, keep estimated spend below $5, and include verified teardown steps.',
   },
   {
     label: 'E-commerce migration',
@@ -1020,6 +1020,12 @@ function formatBudget(b) {
 // ════════════════════════════════════════════════════════════════════
 function BlueprintPanel({ solution }) {
   const { blueprints } = solution;
+  const architectureSearch = new URLSearchParams({
+    projectId: solution.id,
+    title: solution.names.projectName,
+    region: solution.region.primary,
+    services: solution.services.map((service) => service.id).join(','),
+  }).toString();
 
   return (
     <div className="space-y-3">
@@ -1086,7 +1092,7 @@ function BlueprintPanel({ solution }) {
         </details>
       )}
 
-      <Link to="/architecture" className="btn btn-ghost !text-[11.5px] tap-44 gap-1.5 w-full sm:w-auto">
+      <Link to={`/architecture?${architectureSearch}`} className="btn btn-ghost !text-[11.5px] tap-44 gap-1.5 w-full sm:w-auto">
         <Layers size={13} /> Open in Architecture Studio
       </Link>
     </div>
@@ -1214,6 +1220,54 @@ function PlanPanel({ solution }) {
       <Link to="/project-plan" className="btn btn-ghost !text-[11.5px] tap-44 gap-1.5">
         <ClipboardList size={13} /> Open full Project Plan tool
       </Link>
+      <DeliveryStandardPanel standard={solution.deliveryStandard} />
+    </div>
+  );
+}
+
+function DeliveryStandardPanel({ standard }) {
+  if (!standard) return null;
+  return (
+    <div className="space-y-2 pt-2">
+      <div className="rounded-xl border border-sky-400/30 bg-sky-400/5 p-3">
+        <h4 className="font-extrabold text-[12.5px]">Project journey and delivery standard</h4>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {standard.lifecycle.map((stage, index) => (
+            <span key={stage.id} title={stage.evidence} className="text-[10px] rounded-full border border-token px-2 py-1 bg-[var(--card-2)]/60">
+              {index + 1}. {stage.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <details className="rounded-xl border border-token bg-[var(--card-2)]/30 p-3">
+        <summary className="cursor-pointer font-extrabold text-[12px]">Service delivery capability</summary>
+        <div className="mt-2 space-y-1.5">
+          {standard.capabilities.map((service) => (
+            <div key={service.id} className="flex items-center justify-between gap-3 text-[11px]">
+              <span className="font-bold">{service.label}</span>
+              <span className={cn('rounded-full px-2 py-0.5 text-[9.5px] font-extrabold', service.deployable ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning')}>
+                {service.capabilityLabel}
+              </span>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      <details className="rounded-xl border border-token bg-[var(--card-2)]/30 p-3">
+        <summary className="cursor-pointer font-extrabold text-[12px]">Detailed AWS Console runbook ({standard.consoleRunbook.length} services)</summary>
+        <div className="mt-3 space-y-3">
+          {standard.consoleRunbook.map((guide) => (
+            <div key={guide.id} className="rounded-lg border border-token p-3">
+              <div className="font-extrabold text-[12px]">{guide.service}</div>
+              <div className="text-[10px] text-aws-orange mt-0.5">{guide.consolePath}</div>
+              <ol className="mt-2 pl-5 list-decimal space-y-1 text-[11px] opacity-85">
+                {guide.steps.map((step) => <li key={step}>{step}</li>)}
+              </ol>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }
@@ -1569,18 +1623,20 @@ function NextActions({ solution }) {
   const budget = encodeURIComponent(solution.input.budget || '');
   const services = encodeURIComponent((solution.services || []).map((service) => service.id).filter(Boolean).join(','));
   const region = encodeURIComponent(solution.input.region || solution.analysis?.region || 'us-east-1');
+  const projectId = encodeURIComponent(solution.id);
   const evidenceProjectId = `custom-solution-${solution.id}`;
   const actions = [
     { n: 1, to: `/job-analyzer?prefill=${brief}`, icon: Target, label: 'Confirm scope and fit', hint: 'Review requirements, risks, missing facts, and rate before promising anything' },
     { n: 2, to: `/freelance?tab=proposals&sub=smart&prefill=${brief}`, icon: FileText, label: 'Draft the proposal', hint: 'Uses this exact client brief; review it before submitting manually' },
     { n: 3, to: `/discovery-call?prefill=${brief}&title=${title}&budget=${budget}`, icon: Briefcase, label: 'Prepare discovery questions', hint: 'Confirm assumptions directly with the client before final scope' },
     { n: 4, to: `/project-plan?prefill=${brief}&title=${title}&budget=${budget}`, icon: ClipboardList, label: 'Create the project plan', hint: 'Milestones, dependencies, estimates, validation, and handover' },
-    { n: 5, to: `/documents?tab=contracts&prefill=${brief}&title=${title}&budget=${budget}`, icon: FileText, label: 'Draft the contract', hint: 'Same scope and price; legal review and client signature still required' },
-    { n: 6, to: `/architecture?prefill=${brief}&title=${title}&services=${services}&region=${region}`, icon: Layers, label: 'Create the client architecture', hint: 'Starts an editable diagram from this solution; review every connection before export' },
-    { n: 7, to: `/presentation?prefill=${brief}&title=${title}&services=${services}&budget=${budget}`, icon: FileText, label: 'Build the presentation', hint: 'Creates an editable client-facing deck from this same approved scope' },
+    { n: 5, to: `/documents?tab=contracts&projectId=${projectId}&prefill=${brief}&title=${title}&budget=${budget}`, icon: FileText, label: 'Draft the contract', hint: 'Same scope and price; legal review and client signature still required' },
+    { n: 6, to: `/architecture?projectId=${projectId}&prefill=${brief}&title=${title}&services=${services}&region=${region}`, icon: Layers, label: 'Create the client architecture', hint: 'Starts an editable diagram from this solution; review every connection before export' },
+    { n: 7, to: `/presentation?projectId=${projectId}&prefill=${brief}&title=${title}&services=${services}&budget=${budget}`, icon: FileText, label: 'Build the presentation', hint: 'Creates an editable client-facing deck from this same approved scope' },
     { n: 8, to: `/email?prefill=${brief}&title=${title}`, icon: FileText, label: 'Draft the client email', hint: 'Prepares a draft only; you review it and send from your own email account' },
     { n: 9, to: '/deploy', icon: Rocket, label: 'Validate in AWS', hint: 'Deploy only evidence-ready artifacts, then test and tear down' },
-    { n: 10, to: `/portfolio/${evidenceProjectId}`, icon: Briefcase, label: 'Open evidence workspace', hint: 'Save this solution first, then capture, review, export, and package evidence here' },
+    { n: 10, to: `/documents?tab=deliveries&projectId=${projectId}`, icon: Package, label: 'Build the handover package', hint: 'Uses this project’s diagram, runbook, templates, testing record, and teardown guidance' },
+    { n: 11, to: `/portfolio/${evidenceProjectId}`, icon: Briefcase, label: 'Open evidence workspace', hint: 'Capture, review, export, and package approved evidence here' },
   ];
   return (
     <section className="surface rounded-2xl p-4">

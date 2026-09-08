@@ -49,6 +49,7 @@ export default function Architecture() {
   const [drawioXml, setDrawioXml] = useState(null);
   const [didMutate, setDidMutate] = useState(false);
   const [region, setRegion] = useState('us-east-1');
+  const [projectId, setProjectId] = useState(null);
 
   const svgRef = useRef(null);
   const canvasWrapRef = useRef(null);
@@ -69,6 +70,7 @@ export default function Architecture() {
       setEdges(seededNodes.slice(1).map((node, index) => ({ from: seededNodes[index].id, to: node.id, label: null, dashed: false })));
       setName(params.get('title') || 'Solution architecture');
       setRegion(params.get('region') || 'us-east-1');
+      setProjectId(params.get('projectId') || null);
       setCurrentDiagram(null);
       setDidMutate(true);
     } else if (current) loadFromDiagram(current);
@@ -90,6 +92,7 @@ export default function Architecture() {
     setName(d.name || 'Untitled diagram');
     setDrawioXml(validateDrawioXml(d.drawioXml).valid ? d.drawioXml : null);
     setRegion(d.region || 'us-east-1');
+    setProjectId(d.projectId || null);
     setSelectedNodeId(null);
     setConnectingFrom(null);
     setDidMutate(false);
@@ -227,7 +230,7 @@ export default function Architecture() {
 
   const save = () => {
     const id = current?.id || uid();
-    saveDiagram({ id, name, nodes, edges, drawioXml, region });
+    saveDiagram({ id, projectId, name, nodes, edges, drawioXml, region });
     setDidMutate(false);
     toast.success(`Saved "${name}"`);
   };
@@ -745,7 +748,7 @@ img{max-width:100%;height:auto}
         onSaveXml={(xml) => {
           setDrawioXml(xml);
           const id = current?.id || uid();
-          saveDiagram({ id, name, nodes, edges, drawioXml: xml, region });
+          saveDiagram({ id, projectId, name, nodes, edges, drawioXml: xml, region });
           setDidMutate(false);
           toast.success('Saved draw.io edits with this diagram.');
         }}

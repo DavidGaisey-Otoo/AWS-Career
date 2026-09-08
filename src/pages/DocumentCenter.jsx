@@ -23,6 +23,7 @@ import { ContractReviewPanel } from '../components/contract-review/ContractRevie
 import { InvoiceReviewPanel } from '../components/invoice-review/InvoiceReviewPanel.jsx';
 import { DocReviewPanel } from '../components/doc-review/DocReviewPanel.jsx';
 import { analyzeJob } from '../data/jobAnalyzer.js';
+import { listSolutions } from '../lib/solutionStore.js';
 
 const TABS = [
   { id: 'overview',   label: 'Overview',   icon: FileText },
@@ -78,7 +79,7 @@ export default function DocumentCenter() {
       {tab === 'overview'   && <OverviewTab setTab={setTab} />}
       {tab === 'contracts'  && <ContractsTab linkedContext={linkedContext} />}
       {tab === 'invoices'   && <InvoicesTab />}
-      {tab === 'deliveries' && <DeliveriesTab />}
+      {tab === 'deliveries' && <DeliveriesTab requestedProjectId={params.get('projectId') || ''} />}
       {tab === 'library'    && <LibraryTab />}
     </div>
   );
@@ -726,7 +727,7 @@ function Row({ label, v, c, bold }) {
 // DELIVERY PACKAGES
 // =================================================================
 
-function DeliveriesTab() {
+function DeliveriesTab({ requestedProjectId = '' }) {
   const toast = useToast();
   const dialog = useDialog();
   const { profile } = useApp();
@@ -737,15 +738,50 @@ function DeliveriesTab() {
 
   const [activeId, setActiveId] = useState(null);
   const [draftProject, setDraftProject] = useState({ title: '' });
+  const [selectedSolutionId, setSelectedSolutionId] = useState('');
+  const savedSolutions = useMemo(() => listSolutions(), []);
   const [draftClient, setDraftClient] = useState({ name: '', company: '' });
+  const [externalDraft, setExternalDraft] = useState({ reviewer: '', verdict: 'not-reviewed', findings: '' });
 
   const active = earn.deliveries.find((d) => d.id === activeId) || earn.deliveries[0] || null;
 
-  const lastDiagram = useMemo(() => {
+  useEffect(() => {
+    setExternalDraft({
+      reviewer: active?.externalReview?.reviewer || '',
+      verdict: active?.externalReview?.verdict || 'not-reviewed',
+      findings: active?.externalReview?.findings || '',
+    });
+  }, [active?.id]);
+
+  const selectedDiagram = useMemo(() => {
     if (!ai?.diagrams?.length) return null;
-    const d = ai.diagrams[ai.diagrams.length - 1];
-    return { name: d.name, nodes: d.nodes, edges: d.edges };
-  }, [ai]);
+    const matching = selectedSolutionId
+      ? ai.diagrams.find((diagram) => diagram.projectId === selectedSolutionId)
+      : null;
+    const d = matching || ai.diagrams[ai.diagrams.length - 1];
+    return { projectId: d.projectId || null, name: d.name, nodes: d.nodes, edges: d.edges, drawioXml: d.drawioXml || null };
+  }, [ai, selectedSolutionId]);
+
+  const selectSolution = (id) => {
+    setSelectedSolutionId(id);
+    const solution = savedSolutions.find((item) => item.id === id);
+    if (!solution) return;
+    setDraftProject({
+      id: solution.id,
+      title: solution.title || solution.projectName,
+      services: (solution.serviceIds || []).map((serviceId, index) => ({ id: serviceId, label: solution.serviceLabels?.[index] || serviceId })),
+      consoleRunbook: solution.deliveryStandard?.consoleRunbook || [],
+      templates: solution.templates || {},
+    });
+  };
+
+  useEffect(() => {
+    if (requestedProjectId && savedSolutions.some((solution) => solution.id === requestedProjectId)) {
+      selectSolution(requestedProjectId);
+    }
+  // The saved solution list is a stable snapshot for this mounted tab.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedProjectId]);
 
   const completedProjects = useMemo(() =>
     (Object.entries(port?.projects || {}) || [])
@@ -756,7 +792,7 @@ function DeliveriesTab() {
     const pkg = buildDeliveryPackage({
       project: draftProject,
       client: draftClient,
-      diagram: lastDiagram,
+      diagram: selectedDiagram,
       brief: { authorEmail: profile.integrations?.upwork || '' },
     });
     saveDelivery(pkg);
@@ -782,6 +818,26 @@ function DeliveriesTab() {
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
+  const verificationPrompt = active?.files?.find((file) => file.path.endsWith('/external-verification-prompt.md'))?.content || '';
+
+  const copyVerificationPrompt = async () => {
+    if (!verificationPrompt) return;
+    await navigator.clipboard.writeText(verificationPrompt);
+    toast.success('External verification prompt copied');
+  };
+
+  const saveExternalReview = () => {
+    if (!active) return;
+    const externalReview = { ...externalDraft, updatedAt: new Date().toISOString() };
+    const response = `# External review response — ${active.projectTitle || 'AWS project'}\n\nReviewer/tool: ${externalReview.reviewer || 'Not recorded'}\nReview date: ${new Date().toISOString().slice(0, 10)}\nVerdict: ${(externalReview.verdict || 'not-reviewed').toUpperCase().replaceAll('-', ' ')}\n\n## Findings and improvement plan\n${externalReview.findings || 'No external findings pasted yet.'}\n\n## Owner response and retest\nRecord each accepted or rejected finding, the change made, evidence reference, and retest result before approval.\n`;
+    saveDelivery({
+      ...active,
+      externalReview,
+      files: active.files.map((file) => file.path.endsWith('/external-review-response.md') ? { ...file, content: response } : file),
+    });
+    toast.success('External review saved with the package');
+  };
+
   return (
     <div className="grid gap-3 lg:grid-cols-[320px_1fr]">
       <div className="space-y-3">
@@ -789,6 +845,16 @@ function DeliveriesTab() {
           <h3 className="text-sm font-extrabold flex items-center gap-2">
             <Plus size={14} className="text-aws-orange" /> Generate new package
           </h3>
+          {savedSolutions.length > 0 && (
+            <select
+              value={selectedSolutionId}
+              onChange={(e) => selectSolution(e.target.value)}
+              className="w-full bg-[var(--card-2)] border border-token rounded-md px-2 py-1.5 text-xs"
+            >
+              <option value="">Select a saved Solution Studio project</option>
+              {savedSolutions.map((solution) => <option key={solution.id} value={solution.id}>{solution.title || solution.projectName}</option>)}
+            </select>
+          )}
           <Field label="Project title" value={draftProject.title}
             onChange={(e) => setDraftProject({ ...draftProject, title: e.target.value })} />
           <Field label="Client name"   value={draftClient.name}
@@ -890,6 +956,59 @@ function DeliveriesTab() {
           <Group label="Package summary (README.md preview)">
             <pre className="rounded-lg bg-[var(--card-2)]/40 border border-token p-3 text-[11px] leading-relaxed overflow-x-auto whitespace-pre-wrap">{active.summary}</pre>
           </Group>
+
+          <section className="rounded-xl border border-cyan-400/30 bg-cyan-400/5 p-3 space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-extrabold">External verification and improvement loop</h3>
+                <p className="text-[11px] text-muted mt-1 max-w-3xl">
+                  Copy the safe review prompt and provide the package files to ChatGPT, Claude, or another independent reviewer. Remove secrets and personal data first. Paste the structured findings back here, make the corrections, and retest before acceptance.
+                </p>
+              </div>
+              <button onClick={copyVerificationPrompt} className="btn btn-ghost !text-xs" disabled={!verificationPrompt}>
+                <ClipboardCopy size={11} /> Copy review prompt
+              </button>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Field
+                label="Reviewer or tool"
+                value={externalDraft.reviewer}
+                onChange={(event) => setExternalDraft((current) => ({ ...current, reviewer: event.target.value }))}
+              />
+              <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                <span>Independent verdict</span>
+                <select
+                  aria-label="Independent verdict"
+                  value={externalDraft.verdict}
+                  onChange={(event) => setExternalDraft((current) => ({ ...current, verdict: event.target.value }))}
+                  className="w-full bg-[var(--card-2)] border border-token rounded-md px-2 py-2 text-xs normal-case tracking-normal"
+                >
+                  <option value="not-reviewed">Not reviewed</option>
+                  <option value="fail">Fail — blocking changes required</option>
+                  <option value="pass-with-conditions">Pass with conditions</option>
+                  <option value="pass">Pass — evidence reviewed</option>
+                </select>
+              </label>
+            </div>
+
+            <label className="block space-y-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+              <span>Findings, required fixes, improvements and retest evidence</span>
+              <textarea
+                aria-label="External review findings"
+                value={externalDraft.findings}
+                onChange={(event) => setExternalDraft((current) => ({ ...current, findings: event.target.value }))}
+                placeholder="Paste the reviewer’s structured response here after removing secrets and personal data…"
+                className="min-h-36 w-full resize-y rounded-md border border-token bg-[var(--card-2)] px-3 py-2 text-xs normal-case tracking-normal leading-relaxed"
+              />
+            </label>
+            <p className="text-[10px] text-muted">
+              Saved locally with this delivery package. The external response is exported as <code>external-review-response.md</code>; a pass does not replace deployment evidence or client approval.
+            </p>
+            <button onClick={saveExternalReview} className="btn btn-primary !text-xs">
+              <Save size={11} /> Save external review
+            </button>
+          </section>
 
           {/* DOC-01: Handover completeness review on the package summary */}
           <DocReviewPanel docText={active.summary || ''} docType="handover" />
@@ -1064,6 +1183,8 @@ function ListEditor({ items, onChange, placeholder }) {
 function buildZipBlob(pkg) {
   const files = pkg.files.map((f) => {
     if (f.path.endsWith('README.md')) return { name: f.path, content: pkg.summary };
+    if (typeof f.content === 'string') return { name: f.path, content: f.content };
+    if (f.kind === 'drawio') return { name: f.path, content: f.content || '' };
     if (f.kind === 'code')   return { name: f.path, content: `# Placeholder — replace with your real ${f.label}.\n# Generated for ${pkg.name}\n` };
     if (f.kind === 'md')     return { name: f.path, content: `# ${f.label}\n\nReplace this file with the real deliverable when ready.\n` };
     if (f.kind === 'pdf')    return { name: f.path, content: 'Placeholder — drop the real PDF here when exporting.' };
