@@ -509,7 +509,7 @@ const KEYWORD_SERVICES = [
   [/\b(load balancer|alb|elb)\b/i, ['alb']],
   [/\b(nlb|network load balancer)\b/i, ['nlb']],
   [/\b(cloudfront|cdn)\b/i, ['cloudfront']],
-  [/\b(route 53|dns|domain)\b/i, ['route53']],
+  [/\b(route 53|route53|dns|custom domain)\b/i, ['route53']],
   [/\b(api gateway|rest api|graphql)\b/i, ['apigateway']],
   [/\b(transit gateway|tgw|hub.and.spoke)\b/i, ['tgw']],
   [/\b(vpn|direct connect)\b/i, ['vpn']],
@@ -558,12 +558,25 @@ const KEYWORD_SERVICES = [
  * right roughly in flow order, plus a "user" entry node on the far left.
  */
 export function generateDiagramFromDescription(text) {
+  const source = String(text || '');
+  const negativeSpans = [...source.toLowerCase().matchAll(/\b(?:avoid|exclude|do not (?:use|add|include|deploy)|don't (?:use|add|include|deploy)|never use|without|no)\b([^.!;\n]*)/g)]
+    .map((match) => match[1].replace(/\bpublic\s+s3(?:\s+website)?\s+endpoint\b/g, ''));
+  const explicitlyExcluded = (id) => {
+    const names = {
+      route53: ['route 53', 'route53', 'dns'], rds: ['rds'], ec2: ['ec2'],
+      kms: ['kms'], vpc: ['vpc'], alb: ['alb', 'load balancer'],
+      cloudfront: ['cloudfront'], s3: ['s3'], cloudwatch: ['cloudwatch'], iam: ['iam'],
+    }[id] || [String(id).replace(/-/g, ' ')];
+    return negativeSpans.some((span) => names.some((name) =>
+      new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(span)
+    ));
+  };
   const found = new Set();
   const ordered = [];
   for (const [re, ids] of KEYWORD_SERVICES) {
-    if (re.test(text)) {
+    if (re.test(source)) {
       for (const id of ids) {
-        if (!found.has(id)) { found.add(id); ordered.push(id); }
+        if (!found.has(id) && !explicitlyExcluded(id)) { found.add(id); ordered.push(id); }
       }
     }
   }
