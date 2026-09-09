@@ -12,12 +12,12 @@ export const DEEP_WALKTHROUGHS = [
   // ════════════════════════════════════════════════════════════════════
   {
     id: 'static-website-s3',
-    title: 'Deploy a Static Website to S3 + CloudFront',
-    blurb: 'Take an HTML/CSS/JS site from local files to a globally cached HTTPS URL.',
-    estMinutes: 35,
-    services: ['s3', 'cloudfront', 'route53', 'acm'],
+    title: 'Secure Static Website with Private S3 + CloudFront',
+    blurb: 'Practise a low-cost static deployment using a private S3 origin, CloudFront OAC, verification, monitoring, and teardown.',
+    estMinutes: 45,
+    services: ['iam', 's3', 'cloudfront', 'cloudwatch'],
     difficulty: 'Beginner',
-    prereqs: ['AWS account with admin IAM user', 'A domain name (optional, for custom URL)', 'Static site files ready locally'],
+    prereqs: ['AWS account with the david-lab-operator IAM user and MFA', 'Root user signed out', 'Static site files ready locally', 'A $2 monthly AWS Budget already configured'],
     steps: [
       {
         number: 1,
@@ -242,8 +242,8 @@ Outputs:
       },
       {
         number: 5,
-        title: 'Point your custom domain at CloudFront (optional)',
-        what: 'Configure Route 53 (or your existing DNS) so https://yourdomain.com → CloudFront → S3.',
+        title: 'Optional extension: custom domain (skip for this lab)',
+        what: 'Reference-only extension for a future project. Skip every action in this step because this lab uses the free CloudFront domain and excludes Route 53 and ACM.',
         why: `CloudFront\'s default URL (d1234.cloudfront.net) works but isn\'t memorable. Pointing a real domain (yourdomain.com) gives you brand control + better SEO. You need: 1) an ACM cert for the domain (must be in us-east-1 for CloudFront), 2) DNS records pointing the apex + www to CloudFront, 3) the alternate-domain-name (CNAME) added to the distribution. Route 53 Alias records work at the apex (where CNAMEs aren\'t allowed) and auto-update when CloudFront\'s IPs change.`,
         analogy: 'Renaming "192.168.1.42" to "my-printer" on your home network — humans remember names, not addresses.',
         mistakes: [
@@ -328,6 +328,47 @@ resource "aws_route53_record" "apex" {
     evaluate_target_health = false
   }
 }`,
+        },
+      },
+      {
+        number: 6,
+        title: 'Verify security, monitoring, cost, and teardown',
+        what: 'Prove that S3 remains private, confirm CloudFront delivery, inspect CloudWatch, capture redacted evidence, and practise a clean teardown.',
+        why: `A successful page load does not prove the solution is secure or operable. Direct S3 access must fail while the same object succeeds through CloudFront OAC. CloudWatch and AWS Budgets provide operational and cost evidence. A documented teardown prevents forgotten distributions, objects, and buckets from creating avoidable charges.`,
+        analogy: 'It is the pre-flight and post-flight checklist: inspect the controls, read the instruments, record the result, and return the lab to a clean state.',
+        mistakes: [
+          'Making the S3 bucket public to fix a 403 instead of correcting the CloudFront OAC bucket policy.',
+          'Deleting the bucket before disabling and deleting CloudFront, or forgetting old versions in a versioned bucket.',
+        ],
+        how: {
+          console: [
+            'S3 → bucket → Permissions: confirm all four Block Public Access settings are On',
+            'Test a direct S3 object URL in a private window: access must be denied',
+            'Open the CloudFront distribution domain over HTTPS: the same object must load',
+            'CloudFront → Monitoring: inspect Requests, Error rate, and Bytes downloaded',
+            'Billing and Cost Management → Budgets: confirm the $2 monthly budget is healthy',
+            'Capture redacted screenshots of S3 access settings, CloudFront status, and monitoring',
+            'Teardown: disable CloudFront, wait for Deployed, delete it, empty every S3 object version, then delete the bucket',
+          ],
+          cli: `# Read-only verification using temporary operator credentials
+aws s3api get-public-access-block --bucket <bucket-name>
+aws cloudfront get-distribution --id <distribution-id> --query 'Distribution.Status'
+aws cloudwatch list-metrics --namespace AWS/CloudFront --dimensions Name=DistributionId,Value=<distribution-id>
+
+# Teardown is intentionally manual in this learning lab so every target is reviewed.`,
+          cfn: `Outputs:
+  CloudFrontDomain:
+    Value: !GetAtt Distribution.DomainName
+  PrivateBucketName:
+    Value: !Ref SiteBucket
+# Empty all versions before deleting a stack that owns a versioned bucket.`,
+          tf: `output "cloudfront_domain" {
+  value = aws_cloudfront_distribution.site.domain_name
+}
+output "private_bucket_name" {
+  value = aws_s3_bucket.site.id
+}
+# Empty all object versions, review the plan, then run terraform destroy.`,
         },
       },
     ],
