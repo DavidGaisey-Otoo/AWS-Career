@@ -49,6 +49,20 @@ export function runPlanningRecommendationTests() {
     assert(solution.review.readiness.evidenceGates.some((gate) => gate.stage === 'local-validation'), 'local evidence gates were not produced');
   });
 
+  test('static-site planning keeps the stated ceiling and uses S3-native recovery', () => {
+    const initial = runPipeline('Build a static portfolio website using S3 and CloudFront. Keep AWS spend under $2/month.');
+    const recommendation = recommendPlanningDecisions(initial);
+    assert(recommendation.monthlyBudget === 2, 'the stated $2 ceiling was silently raised');
+    const brief = appendApprovedPlanningDecisions(initial.input.brief, {
+      environmentMode: 'aws-training', labDurationHours: 2,
+      region: 'us-east-1', monthlyBudget: 2, timelineWeeks: 2,
+      dataClassification: 'Synthetic non-sensitive data', backupRetentionDays: 7, rpoHours: 24, rtoHours: 4,
+    });
+    const rebuilt = runPipeline(brief);
+    assert(!rebuilt.services.some((service) => service.id === 'backup'), 'AWS Backup leaked into the static-site design');
+    assert(brief.includes('S3 Versioning'), 'S3-native recovery was not recorded');
+  });
+
   test('invalid decisions cannot be approved', () => {
     let failed = false;
     try { appendApprovedPlanningDecisions('brief', { environmentMode: 'aws-short-lived', region: 'London', monthlyBudget: 0, timelineWeeks: 0 }); }

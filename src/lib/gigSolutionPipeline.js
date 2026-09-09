@@ -153,12 +153,13 @@ export function extractExplicitServiceConstraints(brief, services = []) {
     ecs: ['ecs'],
     alb: ['application load balancer', 'alb'],
     waf: ['aws waf', 'waf'],
+    backup: ['aws backup', 'backup service', 'backup'],
   };
   const known = new Set((services || []).map((service) => normaliseServiceId(service.id || service)));
   const excluded = new Set();
   const conditional = new Set();
 
-  const negativeSpans = [...text.matchAll(/\b(?:avoid|exclude|do not use|don't use|never use|without)\b([^.!;\n]*)/g)]
+  const negativeSpans = [...text.matchAll(/\b(?:avoid|exclude|do not (?:use|add|include|deploy)|don't (?:use|add|include|deploy)|never use|without|no separate)\b([^.!;\n]*)/g)]
     .map((match) => match[1]);
 
   for (const serviceId of known) {

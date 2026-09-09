@@ -10,9 +10,12 @@ export function recommendPlanningDecisions(solution) {
   const region = solution?.region?.primary || 'us-east-1';
   const cost = assessFreeTierCost(serviceIds, region);
   const priced = cost.unknownServices.length === 0;
+  const statedMonthlyBudget = Number(solution?.analysis?.budget?.awsMonthly || 0);
   // Training mode never silently raises the user's ceiling to fit an unsafe
   // design. If the estimate is above $20, the design must be simplified.
-  const monthlyBudget = priced ? Math.min(20, Math.max(5, roundUp(cost.afterFreeTier.max, 5))) : null;
+  const monthlyBudget = statedMonthlyBudget > 0
+    ? statedMonthlyBudget
+    : priced ? Math.min(20, Math.max(5, roundUp(cost.afterFreeTier.max, 5))) : null;
   const estimatedDays = Number(solution?.plan?.estimatedDays || 0);
   const timelineWeeks = estimatedDays <= 5 ? 2 : estimatedDays <= 10 ? 3 : Math.max(4, Math.ceil(estimatedDays / 5));
 
@@ -60,6 +63,10 @@ export function appendApprovedPlanningDecisions(brief, decisions) {
 
   const marker = 'Approved planning decisions:';
   const base = String(brief || '').split(`\n\n${marker}`)[0].trim();
+  const staticS3Lab = /\bstatic\s+(?:site|website|portfolio)\b/i.test(base) && /\bs3\b/i.test(base);
+  const retentionLine = staticS3Lab
+    ? `- Object-version retention: ${retentionDays} days using S3 Versioning and lifecycle rules; do not use AWS Backup for this static-site lab.`
+    : `- Backup retention: ${retentionDays} days.`;
   return `${base}\n\n${marker}
 - Execution environment: ${environmentMode === 'local-zero'
     ? 'Strict $0 Local Lab. AWS deployment is prohibited; create no AWS resources. Use a local virtual machine and local evidence only.'
@@ -70,7 +77,7 @@ export function appendApprovedPlanningDecisions(brief, decisions) {
     : `AWS spend under $${budget}/month. Budget alerts are notifications, not a hard spending cap.`}
 - Target completion timeline: ${weeks} weeks.
 - Data classification: ${dataClassification}.
-- Backup retention: ${retentionDays} days.
+${retentionLine}
 - Recovery point objective (RPO): ${rpoHours} hours.
 - Recovery time objective (RTO): ${rtoHours} hours.
 - These decisions were explicitly approved by the user for planning. They do not authorize deployment.
