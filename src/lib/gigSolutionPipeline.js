@@ -101,18 +101,85 @@ function understand(brief, options) {
     compliance: (analysis.compliance || []).map((c) => c.id),
   });
 
+  const constraints = extractExplicitServiceConstraints(brief, analysis.services || []);
+  const services = (analysis.services || []).filter((service) =>
+    !constraints.excluded.includes(normaliseServiceId(service.id))
+    && !constraints.conditional.includes(normaliseServiceId(service.id))
+  );
+  const conditionalQuestions = constraints.conditional.map((serviceId) =>
+    `Confirm the condition before adding ${serviceId}; it is optional and excluded from the base design.`
+  );
+  const constrainedAnalysis = {
+    ...analysis,
+    services,
+    missingQuestions: [...(analysis.missingQuestions || []), ...conditionalQuestions],
+  };
+
   return {
-    analysis,
+    analysis: constrainedAnalysis,
     extracted,
     suggested,
     region,
     // The service list the rest of the pipeline builds on. analyseProject
     // returns fully-resolved SERVICE_MATRIX entries, which is exactly what
     // scriptGenerator expects — so it is the source of truth here.
-    services: analysis.services || [],
+    services,
+    constraints,
     compliance: analysis.compliance || [],
     confidence: analysis.confidence || 0,
   };
+}
+
+/**
+ * Honour explicit negative and conditional service requirements before any
+ * blueprint, cost, IaC, or review stage runs. Keyword extraction alone cannot
+ * distinguish "use EC2" from "avoid EC2" and previously designed prohibited
+ * resources into the solution.
+ */
+export function extractExplicitServiceConstraints(brief, services = []) {
+  const text = String(brief || '').toLowerCase();
+  const aliases = {
+    'nat-gateway': ['nat gateway'],
+    route53: ['route 53', 'route53'],
+    cloudfront: ['cloudfront'],
+    cloudwatch: ['cloudwatch'],
+    acm: ['certificate manager', 'aws certificate manager', 'acm'],
+    ec2: ['ec2'],
+    rds: ['rds'],
+    s3: ['s3'],
+    lambda: ['lambda'],
+    dynamodb: ['dynamodb'],
+    eks: ['eks'],
+    ecs: ['ecs'],
+    alb: ['application load balancer', 'alb'],
+    waf: ['aws waf', 'waf'],
+  };
+  const known = new Set((services || []).map((service) => normaliseServiceId(service.id || service)));
+  const excluded = new Set();
+  const conditional = new Set();
+
+  const negativeSpans = [...text.matchAll(/\b(?:avoid|exclude|do not use|don't use|never use|without)\b([^.!;\n]*)/g)]
+    .map((match) => match[1]);
+
+  for (const serviceId of known) {
+    const names = aliases[serviceId] || [serviceId.replace(/-/g, ' ')];
+    for (const name of names) {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const namePattern = new RegExp(`\\b${escaped}\\b`, 'i');
+      if (negativeSpans.some((span) => {
+        if (!namePattern.test(span)) return false;
+        // "avoid public S3 buckets" is a configuration constraint, not a
+        // request to remove S3 from a private-origin design.
+        return !(serviceId === 's3' && /\bpublic(?:ly accessible)?\s+s3\b/i.test(span));
+      })) excluded.add(serviceId);
+
+      const conditionalPattern = new RegExp(`\\b${escaped}\\b[^.!;\\n]{0,35}\\b(?:only\\s+if|if|optional)\\b`, 'i');
+      if (conditionalPattern.test(text)) conditional.add(serviceId);
+    }
+  }
+
+  for (const serviceId of excluded) conditional.delete(serviceId);
+  return { excluded: [...excluded], conditional: [...conditional] };
 }
 
 /** Turn detector uncertainty into explicit, reviewable facts. */

@@ -15,7 +15,7 @@
  * Pure functions only — no network, no AWS, no browser APIs.
  */
 
-import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness, extractBudgetFromBrief } from '../gigSolutionPipeline.js';
+import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness, extractBudgetFromBrief, extractExplicitServiceConstraints } from '../gigSolutionPipeline.js';
 import { assessFreeTierCost } from '../projectCostEstimator.js';
 
 // ════════════════════════════════════════════════════════════════════
@@ -43,6 +43,26 @@ const GIGS = {
 // Assertions
 // ════════════════════════════════════════════════════════════════════
 const CHECKS = [
+  {
+    name: 'explicit exclusions and optional services constrain the architecture',
+    run: () => {
+      const brief = 'Build a private S3 static website with CloudFront. Route 53 only if a custom domain is available. Avoid public S3 buckets, NAT Gateway, RDS, EC2, and other paid services.';
+      const services = ['s3', 'cloudfront', 'route53', 'nat-gateway', 'rds', 'ec2'].map((id) => ({ id }));
+      const constraints = extractExplicitServiceConstraints(brief, services);
+      assert(constraints.excluded.includes('nat-gateway'), 'NAT Gateway exclusion was ignored');
+      assert(constraints.excluded.includes('rds'), 'RDS exclusion was ignored');
+      assert(constraints.excluded.includes('ec2'), 'EC2 exclusion was ignored');
+      assert(!constraints.excluded.includes('s3'), 'private-S3 constraint incorrectly removed S3');
+      assert(constraints.conditional.includes('route53'), 'conditional Route 53 was treated as required');
+
+      const solution = runPipeline(brief);
+      const selected = new Set(solution.services.map((service) => service.id));
+      for (const id of ['nat-gateway', 'rds', 'ec2', 'route53']) {
+        assert(!selected.has(id), `${id} leaked into the constrained architecture`);
+      }
+      assert(selected.has('s3') && selected.has('cloudfront'), 'required static-site services were removed');
+    },
+  },
   // ── Structural integrity ──────────────────────────────────────────
   {
     name: 'every gig produces a complete solution object',
