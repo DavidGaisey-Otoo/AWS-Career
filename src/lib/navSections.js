@@ -120,7 +120,7 @@ export const SECTIONS = [
       { id: 'project-plan',   label: 'Project Plan',          icon: GanttChart,   path: '/project-plan' },
       { id: 'presentation',   label: 'Presentation Generator',icon: Presentation, path: '/presentation' },
       { id: 'email',          label: 'Email System (also in Freelance Hub)', icon: Mail, path: '/email' },        // FR-03 cross-link callout
-      { id: 'documents',      label: 'Document Center',       icon: FileText,     path: '/documents' },
+      { id: 'documents',      label: 'Documents & Portfolio', icon: FileText,     path: '/documents' },
       { id: 'content-queue',  label: 'Content Queue',         icon: Inbox,        path: '/content-queue' },
       // ── Career + market context ──
       { id: 'ai-coach',       label: 'AI Career Coach',       icon: Sparkles,     path: '/ai/coach' },

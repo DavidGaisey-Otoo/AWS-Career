@@ -1,7 +1,7 @@
 import {
-  Archive, ChevronLeft, ClipboardCopy, Copy, Download, Edit3, FileSignature,
-  FileText, Filter, Mail, MailPlus, Package, Plus, Receipt, Save, Search,
-  Send, Trash2, X,
+  Archive, BriefcaseBusiness, ChevronLeft, ClipboardCopy, Copy, Download, Edit3,
+  FileSignature, FileText, FolderLock, FolderOpen, Mail, MailPlus, Package,
+  Plus, Receipt, Save, Search, Send, Trash2, Upload, User, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -24,9 +24,13 @@ import { InvoiceReviewPanel } from '../components/invoice-review/InvoiceReviewPa
 import { DocReviewPanel } from '../components/doc-review/DocReviewPanel.jsx';
 import { analyzeJob } from '../data/jobAnalyzer.js';
 import { listSolutions } from '../lib/solutionStore.js';
+import {
+  deleteVaultDocument, downloadVaultDocument, listVaultDocuments, saveVaultDocument,
+} from '../lib/documentVault.js';
 
 const TABS = [
   { id: 'overview',   label: 'Overview',   icon: FileText },
+  { id: 'vault',      label: 'My document vault', icon: FolderLock },
   { id: 'contracts',  label: 'Contracts',  icon: FileSignature },
   { id: 'invoices',   label: 'Invoices',   icon: Receipt },
   { id: 'deliveries', label: 'Deliveries', icon: Package },
@@ -77,6 +81,7 @@ export default function DocumentCenter() {
       </div>
 
       {tab === 'overview'   && <OverviewTab setTab={setTab} />}
+      {tab === 'vault'      && <DocumentVaultTab />}
       {tab === 'contracts'  && <ContractsTab linkedContext={linkedContext} />}
       {tab === 'invoices'   && <InvoicesTab />}
       {tab === 'deliveries' && <DeliveriesTab requestedProjectId={params.get('projectId') || ''} />}
@@ -93,6 +98,11 @@ function OverviewTab({ setTab }) {
   const { state: earn } = useEarn();
   const { state: fre } = useFreelance();
   const cards = [
+    {
+      id: 'vault', label: 'My document vault', icon: FolderLock,
+      blurb: 'Keep personal, work, and freelance files together in clearly separated folders.',
+      count: '3 categories',
+    },
     {
       id: 'contracts',  label: 'Contracts',  icon: FileSignature,
       blurb: 'Generate from a job brief, edit line-by-line, export PDF.',
@@ -132,7 +142,7 @@ function OverviewTab({ setTab }) {
               <h3 className="text-base font-extrabold">{c.label}</h3>
               <p className="text-[11px] text-muted leading-relaxed">{c.blurb}</p>
               <div className="text-[10px] font-bold text-aws-orange uppercase tracking-widest">
-                {c.count} saved
+                {typeof c.count === 'number' ? `${c.count} saved` : c.count}
               </div>
             </div>
           </button>
@@ -140,6 +150,114 @@ function OverviewTab({ setTab }) {
       })}
     </section>
   );
+}
+
+const VAULT_CATEGORIES = [
+  { id: 'personal', label: 'Personal', icon: User, description: 'Certificates, CVs, identity-safe records, and learning documents.' },
+  { id: 'work', label: 'Work', icon: BriefcaseBusiness, description: 'Project runbooks, architecture diagrams, evidence, and reports.' },
+  { id: 'freelance', label: 'Freelance', icon: Package, description: 'Proposals, contracts, invoices, client handovers, and case studies.' },
+];
+
+const DOCUMENT_TYPES = ['Runbook', 'Portfolio', 'Architecture', 'Certificate', 'CV / Resume', 'Proposal', 'Contract', 'Invoice', 'Evidence', 'Other'];
+
+function DocumentVaultTab() {
+  const toast = useToast();
+  const dialog = useDialog();
+  const [documents, setDocuments] = useState([]);
+  const [category, setCategory] = useState('all');
+  const [search, setSearch] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [file, setFile] = useState(null);
+  const [draft, setDraft] = useState({ title: '', category: 'work', documentType: 'Runbook', notes: '' });
+
+  const refresh = async () => {
+    try { setDocuments(await listVaultDocuments()); }
+    catch { toast.error('The document vault could not be opened in this browser.'); }
+  };
+  useEffect(() => { refresh(); }, []);
+
+  const filtered = documents.filter((item) => {
+    if (category !== 'all' && item.category !== category) return false;
+    const q = search.trim().toLowerCase();
+    return !q || `${item.title} ${item.fileName} ${item.documentType} ${item.notes}`.toLowerCase().includes(q);
+  });
+
+  const addDocument = async () => {
+    if (!file) { toast.error('Choose a file first.'); return; }
+    try {
+      await saveVaultDocument({ file, ...draft });
+      setFile(null);
+      setDraft({ title: '', category: 'work', documentType: 'Runbook', notes: '' });
+      setShowAdd(false);
+      await refresh();
+      toast.success('Document saved in your vault.');
+    } catch { toast.error('Document could not be saved. Check browser storage permissions.'); }
+  };
+
+  const removeDocument = async (item) => {
+    const ok = await dialog.confirm({ title: 'Delete document?', description: `${item.title} will be removed from this browser.`, danger: true });
+    if (!ok) return;
+    await deleteVaultDocument(item.id);
+    await refresh();
+    toast.success('Document deleted.');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-electric/25 bg-electric/5 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-extrabold flex items-center gap-2"><FolderLock size={16} className="text-electric" /> Private document workspace</div>
+          <p className="text-[11px] text-muted mt-1">Files stay in this browser on this device. Do not upload passwords, access keys, MFA secrets, or unredacted client secrets.</p>
+        </div>
+        <button onClick={() => setShowAdd((value) => !value)} className="btn btn-primary !text-xs"><Upload size={12} /> Add document</button>
+      </div>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        {VAULT_CATEGORIES.map((item) => {
+          const Icon = item.icon;
+          const count = documents.filter((doc) => doc.category === item.id).length;
+          return (
+            <button key={item.id} onClick={() => setCategory(item.id)} className={cn('surface rounded-2xl p-4 text-left transition', category === item.id && 'border-aws-orange/50 ring-1 ring-aws-orange/20')}>
+              <div className="flex items-center justify-between"><Icon size={18} className="text-aws-orange" /><span className="chip text-[10px] font-bold">{count} files</span></div>
+              <h3 className="font-extrabold mt-3">{item.label}</h3>
+              <p className="text-[11px] text-muted mt-1 leading-relaxed">{item.description}</p>
+            </button>
+          );
+        })}
+      </section>
+
+      {showAdd && (
+        <section className="surface rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between"><h3 className="font-extrabold">Add to document vault</h3><button onClick={() => setShowAdd(false)} className="text-muted hover:text-current"><X size={16} /></button></div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label="Display title" value={draft.title} placeholder="e.g. Secure Static Website Runbook" onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+            <label className="block space-y-0.5"><span className="text-[10px] font-bold text-muted">Choose file</span><input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-xs bg-[var(--card-2)] border border-token rounded-md px-2 py-1.5" /></label>
+            <label className="block space-y-0.5"><span className="text-[10px] font-bold text-muted">Category</span><select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className="w-full bg-[var(--card-2)] border border-token rounded-md px-2 py-1.5 text-xs">{VAULT_CATEGORIES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
+            <label className="block space-y-0.5"><span className="text-[10px] font-bold text-muted">Document type</span><select value={draft.documentType} onChange={(e) => setDraft({ ...draft, documentType: e.target.value })} className="w-full bg-[var(--card-2)] border border-token rounded-md px-2 py-1.5 text-xs">{DOCUMENT_TYPES.map((x) => <option key={x}>{x}</option>)}</select></label>
+          </div>
+          <label className="block space-y-0.5"><span className="text-[10px] font-bold text-muted">Notes</span><textarea rows={2} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} className="w-full bg-[var(--card-2)] border border-token rounded-md px-2 py-1.5 text-xs" placeholder="What this document proves or when to use it…" /></label>
+          <button onClick={addDocument} className="btn btn-primary !text-xs" disabled={!file}><Save size={12} /> Save document</button>
+        </section>
+      )}
+
+      <div className="surface rounded-2xl p-3 flex flex-wrap items-center gap-2">
+        <button onClick={() => setCategory('all')} className={cn('rounded-md px-2 py-1 text-[10px] font-bold border', category === 'all' ? 'bg-aws-orange/15 text-aws-orange border-aws-orange/40' : 'border-token text-muted')}>All categories</button>
+        <div className="flex items-center gap-1.5 bg-[var(--card-2)] rounded-md px-2 py-1.5 flex-1 min-w-[220px]"><Search size={12} className="text-muted" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search title, type, filename, or notes…" className="bg-transparent text-xs flex-1 focus:outline-none" /></div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="surface rounded-2xl p-10 text-center text-muted"><FolderOpen size={30} className="mx-auto mb-2 text-aws-orange/60" /><div className="font-bold">No documents in this view</div><p className="text-xs mt-1">Select Add document to store your first file.</p></div>
+      ) : (
+        <div className="surface rounded-2xl overflow-x-auto"><table className="w-full text-xs min-w-[760px]"><thead className="bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest text-muted"><tr><th className="text-left px-3 py-2">Document</th><th className="text-left px-3 py-2">Category</th><th className="text-left px-3 py-2">Type</th><th className="text-left px-3 py-2">Added</th><th className="text-right px-3 py-2">Actions</th></tr></thead><tbody>{filtered.map((item) => (<tr key={item.id} className="border-t border-token"><td className="px-3 py-2"><div className="font-bold">{item.title}</div><div className="text-[10px] text-muted">{item.fileName} · {formatFileSize(item.size)}{item.notes ? ` · ${item.notes}` : ''}</div></td><td className="px-3 py-2 capitalize">{item.category}</td><td className="px-3 py-2">{item.documentType}</td><td className="px-3 py-2 whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString()}</td><td className="px-3 py-2"><div className="flex justify-end gap-1"><button onClick={() => downloadVaultDocument(item)} className="btn btn-ghost !text-[10px]"><Download size={11} /> Download</button><button onClick={() => removeDocument(item)} className="btn btn-ghost !text-[10px] hover:!text-danger"><Trash2 size={11} /> Delete</button></div></td></tr>))}</tbody></table></div>
+      )}
+    </div>
+  );
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // =================================================================
