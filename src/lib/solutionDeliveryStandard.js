@@ -77,7 +77,42 @@ export function buildConsoleRunbook(services = [], region = 'us-east-1') {
   });
 }
 
+export function buildLocalWindowsRunbook() {
+  const tasks = [
+    ['Host readiness', ['Confirm virtualization support is enabled.', 'Confirm sufficient free RAM, CPU and disk.', 'Create a dedicated lab folder and record the host baseline.'], 'Host readiness screenshot with personal identifiers hidden.', 'Remove only the dedicated lab folder after exporting approved evidence.'],
+    ['Virtual network', ['Create an isolated internal or private virtual switch.', 'Record the lab subnet and confirm it does not overlap an active network.', 'Keep the lab disconnected from production and client networks.'], 'Virtual switch and non-overlapping lab address plan.', 'Remove the isolated virtual switch after all lab VMs are deleted.'],
+    ['Windows Server VM', ['Create the virtual machine from approved evaluation media.', 'Use a dynamically expanding virtual disk and an appropriate memory limit.', 'Install Windows Server, apply updates, set the lab hostname and create a clean checkpoint.'], 'VM settings, Windows version and successful update status.', 'Restore the clean checkpoint or delete the VM after evidence export.'],
+    ['AD DS and DNS', ['Install the AD DS and DNS roles.', 'Create a lab-only forest using a non-public test namespace.', 'Verify DNS resolution, directory health and time synchronization.'], 'Role installation, domain health and DNS tests.', 'Demote the lab domain controller before deleting it when practicing a controlled teardown.'],
+    ['DHCP, users and Group Policy', ['Create an isolated DHCP scope only when the virtual switch has no other DHCP server.', 'Create synthetic organizational units, users and groups.', 'Create and test a reversible Group Policy using a test account.'], 'DHCP lease, synthetic directory objects and policy-result output.', 'Remove the test policy, accounts and DHCP scope in dependency order.'],
+    ['Patching, backup and recovery', ['Record the pre-change checkpoint or backup.', 'Install approved updates and verify service health.', 'Create a controlled failure, restore from the local checkpoint or backup, and record elapsed recovery time.'], 'Before-and-after patch state plus successful restore evidence.', 'Retain only the evidence package; remove temporary checkpoints and backups when no longer required.'],
+    ['Validation and portfolio handover', ['Run authentication, DNS, DHCP, Group Policy and connectivity tests.', 'Redact screenshots and export configuration evidence.', 'Complete the external-review checklist, runbook, architecture diagram and portfolio case study without claiming production experience.'], 'Signed validation checklist and redacted portfolio evidence.', 'Record the teardown result and confirm the host returned to its original state.'],
+  ];
+  return tasks.map(([service, steps, screenshot, teardown], index) => ({
+    id: `local-${index + 1}`,
+    serviceId: `local-${index + 1}`,
+    service,
+    region: 'Local',
+    consolePath: 'Local Windows / Hyper-V administration',
+    steps,
+    expected: steps.at(-1),
+    screenshot,
+    teardown,
+  }));
+}
+
 export function buildArchitectureBrief(solution = {}) {
+  const localOnly = solution.deploy?.localOnly || solution.deploy?.environmentMode === 'local-zero';
+  if (localOnly) {
+    return {
+      projectId: solution.id,
+      title: solution.names?.projectName || solution.input?.title || 'Local Windows Server lab',
+      region: 'Local only',
+      boundaries: ['Learner workstation', 'Local hypervisor', 'Isolated virtual network', 'Windows Server virtual machine', 'Local evidence folder'],
+      panels: ['Administration flow', 'Virtual network', 'Identity and DNS', 'Security controls', 'Backup and recovery', 'Testing, evidence and teardown'],
+      hybrid: false,
+      localOnly: true,
+    };
+  }
   const services = solution.services || [];
   const ids = new Set(services.map((s) => s.id));
   const hybrid = ['onprem', 'vpn', 'dx', 'tgw', 'datasync', 'storagegateway', 'mgn', 'dms'].some((id) => ids.has(id));
@@ -93,13 +128,18 @@ export function buildArchitectureBrief(solution = {}) {
 
 export function buildDeliveryStandard(solution = {}) {
   const services = solution.services || [];
+  const localOnly = solution.deploy?.localOnly || solution.deploy?.environmentMode === 'local-zero';
   return {
     version: 1,
     projectId: solution.id,
     lifecycle: PROJECT_LIFECYCLE,
     architecture: buildArchitectureBrief(solution),
-    capabilities: services.map((service) => ({ ...service, ...serviceCapability(service.id, solution.deploy?.coverage) })),
-    consoleRunbook: buildConsoleRunbook(services, solution.region?.primary),
-    evidenceRequired: ['Approved brief', 'Project-bound diagram', 'Cost approval', 'Implementation screenshots', 'Validation results', 'CloudTrail events', 'Teardown evidence', 'Client acceptance'],
+    capabilities: services.map((service) => localOnly
+      ? { ...service, level: 'reference', capabilityLabel: 'Reference only — no AWS resource', deployable: false }
+      : { ...service, ...serviceCapability(service.id, solution.deploy?.coverage) }),
+    consoleRunbook: localOnly ? buildLocalWindowsRunbook() : buildConsoleRunbook(services, solution.region?.primary),
+    evidenceRequired: localOnly
+      ? ['Approved local-lab brief', 'Project-bound local architecture diagram', '$0 AWS mode confirmation', 'Implementation screenshots', 'Local validation results', 'Backup and restore evidence', 'Teardown evidence', 'Portfolio review record']
+      : ['Approved brief', 'Project-bound diagram', 'Cost approval', 'Implementation screenshots', 'Validation results', 'CloudTrail events', 'Teardown evidence', 'Client acceptance'],
   };
 }
