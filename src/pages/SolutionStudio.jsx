@@ -78,6 +78,10 @@ const VERDICT = {
 
 const EXAMPLES = [
   {
+    label: 'AWS security audit ($0-resource)',
+    text: 'Create a real AWS portfolio project for a read-only IAM and account security assessment. Work in my existing AWS training account with temporary authenticated console or CloudShell access. Do not create, modify, or deploy AWS resources. Use STS get-caller-identity, IAM credential report and account summary, IAM users roles policies and MFA review, S3 and CloudFront inventory checks, CloudTrail event history review, and Billing or Cost Explorer verification where my permissions allow. Produce an A-to-Z console runbook, exact read-only CLI commands, architecture and trust-boundary diagram, expected versus actual test table, redacted evidence checklist, findings and remediation plan, external-review prompt, portfolio case study, and a final proof that no billable resources were created. Treat access denied as a documented finding rather than requesting administrator access.',
+  },
+  {
     label: 'Windows Server admin',
     text: 'Build a short-lived AWS training lab for Windows Server administration. Use one free-tier-eligible Windows EC2 instance in a VPC, Systems Manager Session Manager instead of public RDP, least-privilege IAM, encrypted EBS, CloudWatch monitoring and alarms, and AWS Backup with seven-day retention. Use synthetic data, document patching and recovery tests, capture redacted evidence, keep estimated spend below $5, and include verified teardown steps.',
   },

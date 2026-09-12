@@ -27,6 +27,7 @@ import { listSolutions } from '../lib/solutionStore.js';
 import {
   deleteVaultDocument, downloadVaultDocument, listVaultDocuments, saveVaultDocument,
 } from '../lib/documentVault.js';
+import { COMPLETED_CASE_STUDIES } from '../data/completedCaseStudies.js';
 
 const TABS = [
   { id: 'overview',   label: 'Overview',   icon: FileText },
@@ -124,7 +125,19 @@ function OverviewTab({ setTab }) {
       count: earn.contracts.length + fre.invoices.length + earn.deliveries.length,
     },
   ];
+  const downloadCaseStudy = (study) => {
+    const blob = new Blob([study.markdown], { type: 'text/markdown;charset=utf-8' });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = 'aws-static-application-hosting-case-study.md';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(href);
+  };
   return (
+    <>
     <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((c) => {
         const I = c.icon;
@@ -149,6 +162,21 @@ function OverviewTab({ setTab }) {
         );
       })}
     </section>
+    <section className="surface rounded-2xl p-5 mt-3 space-y-3">
+      <div>
+        <div className="text-[10px] font-extrabold uppercase tracking-widest text-success">Completed AWS case study</div>
+        <h3 className="text-base font-extrabold mt-1">{COMPLETED_CASE_STUDIES[0].title}</h3>
+        <p className="text-xs text-muted mt-1 max-w-4xl">{COMPLETED_CASE_STUDIES[0].summary}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => downloadCaseStudy(COMPLETED_CASE_STUDIES[0])} className="btn btn-primary !text-xs">
+          <Download size={12} /> Download case study
+        </button>
+        <Link to="/portfolio/p-s3-cf" className="btn btn-ghost !text-xs"><BriefcaseBusiness size={12} /> Open portfolio project</Link>
+      </div>
+      <p className="text-[10px] text-muted">Verified teardown: 0 CloudFront distributions and 0 S3 buckets. The AWS copy is no longer live.</p>
+    </section>
+    </>
   );
 }
 
