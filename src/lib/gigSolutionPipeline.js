@@ -506,7 +506,7 @@ export function buildDeliveryPlan({ blueprint, services, approach, timeline, nam
  */
 export function runPipeline(gig, options = {}) {
   const brief = gigToBrief(gig);
-  const localOnly = /Execution environment:\s*Strict \$0 Local Lab/i.test(brief);
+  const localOnly = isExplicitLocalZeroBrief(brief);
   const environmentMode = localOnly ? 'local-zero'
     : /Execution environment:\s*AWS Employer Change/i.test(brief) ? 'aws-employer'
     : /Execution environment:\s*AWS Freelance Delivery/i.test(brief) ? 'aws-freelance'
@@ -583,6 +583,7 @@ export function runPipeline(gig, options = {}) {
   let expert = null;
   let deployReview = null;
   try {
+    if (localOnly) throw new Error('skip-aws-review-for-local-zero');
     expert = runExpertReview({
       brief,
       services: services.map((s) => s.id),
@@ -591,10 +592,12 @@ export function runPipeline(gig, options = {}) {
       solutionText,
     });
   } catch (err) {
+    if (err?.message !== 'skip-aws-review-for-local-zero') {
     console.warn('[gigSolutionPipeline] expert review failed:', err);
+    }
   }
   try {
-    if (artifacts.cfn?.code) {
+    if (!localOnly && artifacts.cfn?.code) {
       deployReview = runDeployReview({
         template: artifacts.cfn.code,
         format: 'cfn',
@@ -733,6 +736,23 @@ export function runPipeline(gig, options = {}) {
   };
   solution.deliveryStandard = buildDeliveryStandard(solution);
   return solution;
+}
+
+/**
+ * Honour an explicit no-cost/no-AWS instruction on the first pipeline pass.
+ * Previously local mode was recognized only after the planning UI appended a
+ * machine-formatted line, so plain-language briefs could misleadingly propose
+ * billable AWS resources before the user had a chance to approve anything.
+ */
+export function isExplicitLocalZeroBrief(brief = '') {
+  const text = String(brief);
+  if (/Execution environment:\s*Strict \$0 Local Lab/i.test(text)) return true;
+  if (/\bStrict\s*\$?0\s*(?:cost\s*)?Local Lab\b/i.test(text)) return true;
+
+  const saysLocal = /\b(?:local[- ]only|local (?:lab|environment)|build locally)\b/i.test(text);
+  const prohibitsAws = /\b(?:no|without) AWS resources\b|\bdo not (?:create|deploy|provision|use) (?:any )?AWS resources\b|\bAWS deployment is prohibited\b/i.test(text);
+  const zeroBudget = /(?:budget|cost|spend)(?:\s+is|\s*[:=])?\s*\$?0\b|\bzero[- ]cost\b/i.test(text);
+  return saysLocal && prohibitsAws && zeroBudget;
 }
 
 // ════════════════════════════════════════════════════════════════════

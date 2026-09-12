@@ -610,6 +610,7 @@ function AnalysingCard() {
 // ════════════════════════════════════════════════════════════════════
 function SolutionHeader({ solution, gigMeta, saved, onSave }) {
   const v = VERDICT[solution.review.verdict] || VERDICT.blocked;
+  const localOnly = solution.deploy.localOnly || solution.deploy.environmentMode === 'local-zero';
   const cost = assessFreeTierCost(solution.services.map((service) => service.id), solution.region.primary);
   const costTone = cost.classification === 'not-free-safe' || cost.classification === 'unverified'
     ? 'border-warning/40 bg-warning/5 text-warning' : 'border-success/40 bg-success/5 text-success';
@@ -642,8 +643,8 @@ function SolutionHeader({ solution, gigMeta, saved, onSave }) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-        <Stat label="Requested services" value={solution.services.length} />
-        <Stat label="Region" value={solution.region.primary} mono />
+        <Stat label={localOnly ? 'Reference services' : 'Requested services'} value={solution.services.length} />
+        <Stat label={localOnly ? 'Execution' : 'Region'} value={localOnly ? 'Local only' : solution.region.primary} mono />
         <Stat label="Est. effort" value={`${solution.plan.estimatedDays}d`} />
         <Stat
           label="Delivery readiness"
@@ -659,14 +660,19 @@ function SolutionHeader({ solution, gigMeta, saved, onSave }) {
         {!solution.review.blockers.length && solution.review.highs.length > 0
           && ` — ${solution.review.highs.length} thing${solution.review.highs.length > 1 ? 's' : ''} worth checking`}
       </div>
-      <div className={cn('mt-3 rounded-lg border p-3 text-[11.5px]', costTone)}>
+      {localOnly ? (
+        <div className="mt-3 rounded-lg border border-success/40 bg-success/5 text-success p-3 text-[11.5px]">
+          <div className="font-extrabold flex items-center gap-1.5"><DollarSign size={13} /> $0 AWS execution mode</div>
+          <div className="mt-1 opacity-90">AWS deployment is mechanically disabled. Complete this project with existing local hardware and software only; optional local electricity, storage, or licensing costs are outside the AWS estimate.</div>
+        </div>
+      ) : <div className={cn('mt-3 rounded-lg border p-3 text-[11.5px]', costTone)}>
         <div className="font-extrabold flex items-center gap-1.5"><DollarSign size={13} /> {cost.label}</div>
         <div className="mt-1 opacity-90">After allowances or credits: {formatPriceRange(cost.afterFreeTier)}. This is an estimate, not a guaranteed bill.</div>
         {cost.noFreeTier.length > 0 && <div className="mt-1">No free offer detected: <strong>{cost.noFreeTier.map((item) => item.label).join(', ')}</strong>.</div>}
         {cost.timeLimited.length > 0 && <div className="mt-1">Time-limited eligibility: <strong>{cost.timeLimited.map((item) => item.label).join(', ')}</strong>.</div>}
         {cost.unknownServices.length > 0 && <div className="mt-1">Pricing coverage missing: <strong>{cost.unknownServices.join(', ')}</strong>. Treat cost as unverified.</div>}
         <div className="mt-1">Before deployment: confirm Billing eligibility, choose an approved budget threshold at or above the estimate, remember alerts do not cap spend, and verify teardown.</div>
-      </div>
+      </div>}
     </section>
   );
 }

@@ -15,7 +15,7 @@
  * Pure functions only — no network, no AWS, no browser APIs.
  */
 
-import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness, extractBudgetFromBrief, extractExplicitServiceConstraints } from '../gigSolutionPipeline.js';
+import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness, extractBudgetFromBrief, extractExplicitServiceConstraints, isExplicitLocalZeroBrief } from '../gigSolutionPipeline.js';
 import { assessFreeTierCost } from '../projectCostEstimator.js';
 
 // ════════════════════════════════════════════════════════════════════
@@ -43,6 +43,18 @@ const GIGS = {
 // Assertions
 // ════════════════════════════════════════════════════════════════════
 const CHECKS = [
+  {
+    name: 'plain-language strict zero-cost local briefs disable AWS immediately',
+    run: () => {
+      const brief = 'Strict $0 Local Lab only. Build locally. Do not create or deploy any AWS resources. Budget is $0.';
+      assert(isExplicitLocalZeroBrief(brief), 'plain-language local-zero instruction was not detected');
+      const solution = runPipeline(brief);
+      assert(solution.deploy.localOnly, 'AWS was not disabled on the first pipeline pass');
+      assert(solution.deploy.environmentMode === 'local-zero', 'local execution mode was not retained');
+      assert(!solution.deploy.canOneClick, 'local-only project exposed AWS one-click deployment');
+      assert(solution.review.blockers.length === 0, 'AWS-only critical findings leaked into the local project');
+    },
+  },
   {
     name: 'explicit exclusions and optional services constrain the architecture',
     run: () => {
