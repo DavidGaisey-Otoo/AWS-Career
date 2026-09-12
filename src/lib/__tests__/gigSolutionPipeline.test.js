@@ -15,7 +15,7 @@
  * Pure functions only — no network, no AWS, no browser APIs.
  */
 
-import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness, extractBudgetFromBrief, extractExplicitServiceConstraints, isExplicitLocalZeroBrief } from '../gigSolutionPipeline.js';
+import { runPipeline, matchBlueprints, deriveNames, gigToBrief, assessDeliveryReadiness, extractBudgetFromBrief, extractExplicitServiceConstraints, isExplicitLocalZeroBrief, isReadOnlyAssessmentBrief } from '../gigSolutionPipeline.js';
 import { assessFreeTierCost } from '../projectCostEstimator.js';
 
 // ════════════════════════════════════════════════════════════════════
@@ -53,6 +53,21 @@ const CHECKS = [
       assert(solution.deploy.environmentMode === 'local-zero', 'local execution mode was not retained');
       assert(!solution.deploy.canOneClick, 'local-only project exposed AWS one-click deployment');
       assert(solution.review.blockers.length === 0, 'AWS-only critical findings leaked into the local project');
+    },
+  },
+  {
+    name: 'read-only AWS assessments never generate deployment actions',
+    run: () => {
+      const brief = 'Create a read-only AWS IAM security assessment. Do not create, modify, deploy, or provision AWS resources.';
+      assert(isReadOnlyAssessmentBrief(brief), 'read-only assessment was not detected');
+      const solution = runPipeline(brief);
+      assert(solution.deploy.environmentMode === 'aws-read-only', 'read-only AWS mode was not retained');
+      assert(solution.deploy.readOnlyAssessment, 'assessment safety flag is missing');
+      assert(!solution.deploy.canOneClick, 'assessment exposed one-click deployment');
+      assert(!solution.artifacts.cfn.code, 'assessment generated CloudFormation writes');
+      assert(/aws sts get-caller-identity/.test(solution.artifacts.cli.code), 'safe caller identity query is missing');
+      assert(!/create-role|delete-role|attach-role-policy/i.test(solution.artifacts.cli.code), 'write action leaked into assessment CLI');
+      assert(solution.deliveryStandard.consoleRunbook.every((item) => /query only|No teardown|Remove temporary|Delete only local/i.test(item.teardown)), 'assessment runbook contains an AWS teardown action');
     },
   },
   {

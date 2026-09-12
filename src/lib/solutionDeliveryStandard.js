@@ -100,6 +100,18 @@ export function buildLocalWindowsRunbook() {
   }));
 }
 
+export function buildReadOnlyAssessmentRunbook(region = 'us-east-1') {
+  const checks = [
+    ['Caller identity', 'CloudShell', ['Run aws sts get-caller-identity.', 'Confirm the expected operator or assumed role.', 'Redact the account number before saving evidence.'], 'Expected authenticated identity is returned.', 'No teardown: query only.'],
+    ['IAM account baseline', 'IAM > Dashboard and Credential report', ['Record the root MFA indicator.', 'Generate and download the credential report.', 'Review users, roles, groups and customer-managed policies without changing them.'], 'Account controls and credential risks are recorded with evidence.', 'Delete only local unredacted report copies after producing the approved evidence.'],
+    ['Hosting inventory', 'S3 > Buckets and CloudFront > Distributions', ['Confirm the current bucket inventory.', 'Confirm the current distribution inventory.', 'Record the result without creating a resource.'], 'Inventory matches the expected post-teardown state.', 'No teardown: query only.'],
+    ['Audit trail', 'CloudTrail > Event history', ['Filter recent management events by the operator where permitted.', 'Record successful deletions and any AccessDenied result.', 'Do not enable a new trail for this assessment.'], 'Recent activity or the permission limitation is documented.', 'No teardown: query only.'],
+    ['Cost verification', 'Billing and Cost Management', ['Review current-month charges and credits where permitted.', 'Filter for S3, CloudFront and EC2.', 'Record that Budgets alerts notify but do not cap spending.'], 'Current usage and any residual charge are documented.', 'No teardown: query only.'],
+    ['Final attestation', 'Resource inventory evidence', ['Confirm no command used a create, update, put, attach or delete action.', 'Complete expected-versus-actual tests.', 'Export the consolidated AI review package and redact it before sharing.'], 'The evidence supports that the assessment created no AWS resources.', 'Remove temporary local evidence containing identifiers.'],
+  ];
+  return checks.map(([service, consolePath, steps, expected, teardown], index) => ({ id: `audit-${index + 1}`, serviceId: `audit-${index + 1}`, service, region, consolePath, steps, expected, screenshot: `${service} result with credentials, account numbers and personal data redacted.`, teardown }));
+}
+
 export function buildArchitectureBrief(solution = {}) {
   const localOnly = solution.deploy?.localOnly || solution.deploy?.environmentMode === 'local-zero';
   if (localOnly) {
@@ -129,6 +141,7 @@ export function buildArchitectureBrief(solution = {}) {
 export function buildDeliveryStandard(solution = {}) {
   const services = solution.services || [];
   const localOnly = solution.deploy?.localOnly || solution.deploy?.environmentMode === 'local-zero';
+  const readOnlyAssessment = solution.deploy?.readOnlyAssessment || solution.deploy?.environmentMode === 'aws-read-only';
   return {
     version: 1,
     projectId: solution.id,
@@ -136,8 +149,9 @@ export function buildDeliveryStandard(solution = {}) {
     architecture: buildArchitectureBrief(solution),
     capabilities: services.map((service) => localOnly
       ? { ...service, level: 'reference', capabilityLabel: 'Reference only — no AWS resource', deployable: false }
+      : readOnlyAssessment ? { ...service, level: 'assessment', capabilityLabel: 'Read-only verification — no resource creation', deployable: false }
       : { ...service, ...serviceCapability(service.id, solution.deploy?.coverage) }),
-    consoleRunbook: localOnly ? buildLocalWindowsRunbook() : buildConsoleRunbook(services, solution.region?.primary),
+    consoleRunbook: localOnly ? buildLocalWindowsRunbook() : readOnlyAssessment ? buildReadOnlyAssessmentRunbook(solution.region?.primary) : buildConsoleRunbook(services, solution.region?.primary),
     evidenceRequired: localOnly
       ? ['Approved local-lab brief', 'Project-bound local architecture diagram', '$0 AWS mode confirmation', 'Implementation screenshots', 'Local validation results', 'Backup and restore evidence', 'Teardown evidence', 'Portfolio review record']
       : ['Approved brief', 'Project-bound diagram', 'Cost approval', 'Implementation screenshots', 'Validation results', 'CloudTrail events', 'Teardown evidence', 'Client acceptance'],

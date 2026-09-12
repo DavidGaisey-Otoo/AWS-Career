@@ -500,6 +500,7 @@ export default function SolutionStudio() {
 
           {/* Next actions */}
           <NextActions solution={solution} />
+          <AIReviewPackage solution={solution} />
         </div>
       )}
 
@@ -1669,6 +1670,90 @@ function NextActions({ solution }) {
             <ArrowRight size={13} className="opacity-30 group-hover:opacity-100 group-hover:text-aws-orange transition shrink-0" />
           </Link>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function buildAIReviewText(solution) {
+  const lines = [];
+  const services = (solution.services || []).map((s) => s.label || s.id).join(', ') || 'None detected';
+  const architecture = solution.deliveryStandard?.architecture || {};
+  const findings = solution.review?.expert?.findings || [];
+  lines.push(`# Independent AI verification package — ${solution.names.projectName}`);
+  lines.push('', '## Reviewer instructions', 'Act as an independent AWS solutions architect, security reviewer, FinOps reviewer and technical-documentation auditor. Do not trust generated claims without evidence. Never request credentials, secret keys, session tokens, passwords or MFA codes. Return PASS, PASS WITH CONDITIONS, or FAIL; list blocking findings, corrections, retests and prioritized improvements.');
+  lines.push('', '## Original brief', solution.input.brief);
+  lines.push('', '## Scope summary', solution.analysis.summary, `Region: ${solution.region.primary}`, `Services: ${services}`, `Execution mode: ${solution.deploy.environmentMode}`, `One-click AWS deployment enabled: ${solution.deploy.canOneClick ? 'Yes' : 'No'}`);
+  lines.push('', '## Proposal and delivery lifecycle');
+  for (const item of solution.deliveryStandard?.lifecycle || []) lines.push(`- ${item.label}: ${item.evidence}`);
+  lines.push('', '## Architecture', `Boundaries: ${(architecture.boundaries || []).join(' → ')}`, `Required diagram panels: ${(architecture.panels || []).join('; ')}`);
+  lines.push('', '## Implementation plan');
+  for (const phase of solution.plan?.phases || []) {
+    lines.push(`### ${phase.title}`);
+    for (const task of phase.tasks || []) lines.push(`- ${task}`);
+  }
+  lines.push('', '## Practical console and CLI runbook');
+  for (const step of solution.deliveryStandard?.consoleRunbook || []) {
+    lines.push(`### ${step.service} — ${step.consolePath}`);
+    for (const action of step.steps || []) lines.push(`- ${action}`);
+    lines.push(`Expected result: ${step.expected}`, `Evidence: ${step.screenshot}`, `Teardown: ${step.teardown}`);
+  }
+  if (solution.artifacts?.cli?.code) lines.push('', '## Generated CLI', '```bash', solution.artifacts.cli.code, '```');
+  lines.push('', '## Internal expert findings');
+  if (!findings.length) lines.push('- No rule-based finding was generated; this is not proof of correctness.');
+  for (const finding of findings) lines.push(`- [${String(finding.severity || 'info').toUpperCase()}] ${finding.title}: ${finding.body || ''} Correction: ${finding.fix || 'Review required.'}`);
+  lines.push('', '## Readiness gates');
+  for (const gate of solution.review?.readiness?.evidenceGates || []) lines.push(`- ${gate.passed ? 'PASS' : 'OPEN'} — ${gate.label}`);
+  lines.push('', '## Evidence and tests required');
+  for (const item of solution.deliveryStandard?.evidenceRequired || []) lines.push(`- ${item}`);
+  lines.push('', '## Cost and teardown', `Cost statement: ${solution.deploy.readOnlyAssessment ? 'This workflow is query-only and intentionally creates no AWS resources. Existing account usage may still have charges.' : 'Validate all estimates against the account before deployment.'}`, 'Do not accept completion until the final inventory and teardown evidence match the approved scope.');
+  lines.push('', '## Portfolio claim to verify', `Designed and documented ${solution.names.projectName} using ${services}. Performed only the actions supported by attached redacted evidence; do not describe generated plans as completed deployment experience.`);
+  lines.push('', '## Required reviewer response', '### Verdict', '### Blocking findings', '### Non-blocking improvements', '### Contradictions or unsupported claims', '### Requirement-to-test-to-evidence coverage', '### Exact corrections', '### Retests required', '### Final next-action checklist');
+  return lines.join('\n');
+}
+
+function AIReviewPackage({ solution }) {
+  const storageKey = `awscl::ai-review::${solution.id}`;
+  const generated = useMemo(() => buildAIReviewText(solution), [solution]);
+  const [packageText, setPackageText] = useState(generated);
+  const [reviewResponse, setReviewResponse] = useState('');
+  useEffect(() => {
+    setPackageText(generated);
+    try { setReviewResponse(localStorage.getItem(storageKey) || ''); } catch { setReviewResponse(''); }
+  }, [generated, storageKey]);
+  const copy = async () => {
+    await navigator.clipboard.writeText(packageText);
+  };
+  const download = () => {
+    const blob = new Blob([packageText], { type: 'text/markdown;charset=utf-8' });
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href; a.download = `${solution.names.slug}-ai-verification.md`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(href);
+  };
+  const saveReview = () => {
+    try { localStorage.setItem(storageKey, reviewResponse); } catch { /* browser storage unavailable */ }
+  };
+  return (
+    <section className="surface rounded-2xl p-4 space-y-3 border-l-4 border-l-electric">
+      <div>
+        <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-electric">One-form independent verification</div>
+        <h3 className="text-base font-black mt-1">AI review, corrections and retest</h3>
+        <p className="text-[11px] text-muted mt-1">Everything generated for this solution is consolidated below. Edit it, remove secrets and identifiers, then copy it to an independent AI reviewer.</p>
+      </div>
+      <textarea aria-label="Consolidated AI verification package" value={packageText} onChange={(e) => setPackageText(e.target.value)} className="min-h-80 w-full resize-y rounded-xl border border-token bg-[var(--card-2)] p-3 font-mono text-[11px] leading-relaxed" />
+      <div className="flex flex-wrap gap-2">
+        <button onClick={copy} className="btn btn-primary !text-xs"><Copy size={12} /> Copy complete package</button>
+        <button onClick={download} className="btn btn-ghost !text-xs"><Download size={12} /> Download Markdown</button>
+        <button onClick={() => setPackageText(generated)} className="btn btn-ghost !text-xs"><RefreshCw size={12} /> Restore generated version</button>
+      </div>
+      <label className="block space-y-1">
+        <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted">Paste the independent reviewer response here</span>
+        <textarea aria-label="Independent AI review response" value={reviewResponse} onChange={(e) => setReviewResponse(e.target.value)} placeholder="Paste verdict, findings, corrections and retests…" className="min-h-44 w-full resize-y rounded-xl border border-token bg-[var(--card-2)] p-3 text-xs leading-relaxed" />
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={saveReview} className="btn btn-primary !text-xs"><Save size={12} /> Save findings</button>
+        <span className="text-[10px] text-muted">Apply corrections to the editable package, rerun the required tests, replace unsupported claims, and submit the revised package for another review.</span>
       </div>
     </section>
   );

@@ -395,7 +395,16 @@ function toSlug(s) {
  * themselves. Built from the blueprint's own build steps when one matched,
  * else synthesised from the detected services.
  */
-export function buildDeliveryPlan({ blueprint, services, approach, timeline, names }) {
+export function buildDeliveryPlan({ blueprint, services, approach, timeline, names, readOnlyAssessment = false }) {
+  if (readOnlyAssessment) {
+    const phases = [
+      { id: 'audit-scope', title: 'Scope and safe access', durationLabel: '0.5 day', tasks: ['Confirm the assessment is read-only and creates no resources', 'Verify the caller identity and MFA-protected operator', 'Record permitted checks and treat AccessDenied as evidence', 'Remove account IDs, credentials and personal data from screenshots'] },
+      { id: 'audit-inventory', title: 'Identity and resource inventory', durationLabel: '0.5 day', tasks: ['Review IAM account summary and credential report', 'Inventory users, groups, roles and customer-managed policies', 'Confirm S3 bucket and CloudFront distribution inventories', 'Review recent CloudTrail event history where permitted'] },
+      { id: 'audit-validate', title: 'Security and cost validation', durationLabel: '0.5 day', tasks: ['Check root MFA evidence without exposing MFA secrets', 'Identify unused or long-lived credentials and excessive permissions', 'Review Billing or Cost Explorer for current usage where permitted', 'Confirm that the assessment created no AWS resources'] },
+      { id: 'audit-report', title: 'Report, external review and portfolio', durationLabel: '0.5 day', tasks: ['Complete expected-versus-actual tests and evidence references', 'Prioritize findings without applying changes', 'Export the consolidated AI verification package', 'Publish only redacted, evidence-supported portfolio claims'] },
+    ];
+    return { phases, totalTasks: phases.reduce((n, p) => n + p.tasks.length, 0), timelineLabel: timeline?.label || '1–2 days', estimatedDays: 2, evidenceChecklist: ['Caller identity with account number redacted', 'IAM account summary and credential-report findings', 'S3 and CloudFront inventory results', 'CloudTrail review result or documented AccessDenied', 'Billing review result', 'Final no-resources-created attestation'], handoverChecklist: ['Read-only command log', 'Findings and remediation backlog', 'Consolidated external-review package', 'Redacted portfolio case study'] };
+  }
   const phases = [];
 
   phases.push({
@@ -507,7 +516,9 @@ export function buildDeliveryPlan({ blueprint, services, approach, timeline, nam
 export function runPipeline(gig, options = {}) {
   const brief = gigToBrief(gig);
   const localOnly = isExplicitLocalZeroBrief(brief);
+  const readOnlyAssessment = isReadOnlyAssessmentBrief(brief);
   const environmentMode = localOnly ? 'local-zero'
+    : readOnlyAssessment ? 'aws-read-only'
     : /Execution environment:\s*AWS Employer Change/i.test(brief) ? 'aws-employer'
     : /Execution environment:\s*AWS Freelance Delivery/i.test(brief) ? 'aws-freelance'
     : /Execution environment:\s*Short-lived AWS Lab/i.test(brief) ? 'aws-short-lived'
@@ -530,6 +541,14 @@ export function runPipeline(gig, options = {}) {
     services: services.map((s) => s.id),
     freelance: true,
   });
+  if (readOnlyAssessment) {
+    approachRec = {
+      ...approachRec,
+      recommended: 'cli',
+      rationale: 'AWS CLI and console read-only queries are recommended. This assessment must not deploy CloudFormation, Terraform, or create resources.',
+      options: approachRec.options.map((option) => ({ ...option, recommended: option.id === 'cli' })),
+    };
+  }
 
   // ── 5. GENERATE ──────────────────────────────────────────────────
   const genOpts = {
@@ -548,6 +567,15 @@ export function runPipeline(gig, options = {}) {
     artifacts.cli       = generateCli(services, genOpts);
   } catch (err) {
     generationError = String(err?.message || err);
+  }
+  if (readOnlyAssessment) {
+    artifacts.terraform = { code: '', deployReady: false, blockedReason: 'Read-only assessment: Terraform deployment is intentionally disabled.' };
+    artifacts.cfn = { code: '', deployReady: false, blockedReason: 'Read-only assessment: CloudFormation deployment is intentionally disabled.', coverage: { resourceCount: 0, services: [] } };
+    artifacts.cli = {
+      code: `# Run in AWS CloudShell. These commands query existing account state only.\naws sts get-caller-identity\naws iam get-account-summary\naws iam generate-credential-report\naws iam get-credential-report --query Content --output text\naws iam list-users\naws iam list-roles\naws iam list-policies --scope Local\naws s3api list-buckets --query 'Buckets[].Name'\naws cloudfront list-distributions --query 'DistributionList.Items[].{Id:Id,Domain:DomainName,Enabled:Enabled}'\naws cloudtrail lookup-events --max-results 20\naws ce get-cost-and-usage --time-period Start=$(date -u +%Y-%m-01),End=$(date -u -d tomorrow +%Y-%m-%d) --granularity MONTHLY --metrics UnblendedCost`,
+      deployReady: false,
+      blockedReason: 'Query-only evidence script; review output and do not paste credentials into documentation.',
+    };
   }
 
   const generatedForApproach = {
@@ -571,6 +599,7 @@ export function runPipeline(gig, options = {}) {
     approach: approachRec.recommended,
     timeline: extracted.timeline,
     names,
+    readOnlyAssessment,
   });
 
   // ── 6. REVIEW ────────────────────────────────────────────────────
@@ -597,7 +626,7 @@ export function runPipeline(gig, options = {}) {
     }
   }
   try {
-    if (!localOnly && artifacts.cfn?.code) {
+    if (!localOnly && !readOnlyAssessment && artifacts.cfn?.code) {
       deployReview = runDeployReview({
         template: artifacts.cfn.code,
         format: 'cfn',
@@ -715,9 +744,10 @@ export function runPipeline(gig, options = {}) {
       readiness,
     },
     deploy: {
-      canOneClick: !localOnly && readiness.sandboxDeployable,
+      canOneClick: !localOnly && !readOnlyAssessment && readiness.sandboxDeployable,
       environmentMode,
       localOnly,
+      readOnlyAssessment,
       clientReady: readiness.clientReady,
       classification: readiness.classification,
       coverage,
@@ -753,6 +783,13 @@ export function isExplicitLocalZeroBrief(brief = '') {
   const prohibitsAws = /\b(?:no|without) AWS resources\b|\bdo not (?:create|deploy|provision|use) (?:any )?AWS resources\b|\bAWS deployment is prohibited\b/i.test(text);
   const zeroBudget = /(?:budget|cost|spend)(?:\s+is|\s*[:=])?\s*\$?0\b|\bzero[- ]cost\b/i.test(text);
   return saysLocal && prohibitsAws && zeroBudget;
+}
+
+export function isReadOnlyAssessmentBrief(brief = '') {
+  const text = String(brief);
+  const assessment = /\b(?:read-only|read only)\b[\s\S]{0,120}\b(?:audit|assessment|review|inventory)\b|\b(?:audit|assessment|review|inventory)\b[\s\S]{0,120}\b(?:read-only|read only)\b/i.test(text);
+  const noWrites = /\bdo not (?:create|modify|deploy|provision)\b|\bno (?:AWS )?resource creation\b|\bcreates? no (?:running )?resources\b/i.test(text);
+  return assessment && noWrites;
 }
 
 // ════════════════════════════════════════════════════════════════════
