@@ -64,3 +64,23 @@ Designed and deployed a secure AWS static-application delivery path using Amazon
 `,
   },
 ];
+
+export const ASSESSMENT_DOCUMENTS = [
+  {
+    id: 'iam-assessment-dossier',
+    title: 'AWS Identity and Account Security Assessment',
+    description: 'Proposal, scope agreement, architecture, project plan, console runbook, test matrix, screenshot standard, findings form, AI verification and portfolio handover.',
+    file: 'documents/David-Gaisey-Otoo-AWS-Identity-and-Account-Security-Assessment.docx',
+    category: 'Work',
+    status: 'Ready for evidence',
+  },
+  {
+    id: 'iam-assessment-challenges',
+    title: 'AWS Assessment Challenges and Improvements',
+    description: 'Private working register for defects, limitations, decisions, future improvements and retest evidence. Keep separate from the public portfolio.',
+    file: null,
+    localPath: 'documentation\\David Gaisey-Otoo AWS Assessment Challenges and Improvements.docx',
+    category: 'Personal',
+    status: 'Private local register',
+  },
+];
