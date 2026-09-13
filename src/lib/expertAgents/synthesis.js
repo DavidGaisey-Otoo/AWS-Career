@@ -75,7 +75,12 @@ const COMPOUND_RULES = [
   },
   {
     id: 'SYN-SPOT-SINGLE-AZ',
-    when: (f, ctx) => (ctx.has('spot') || has(f, /spot/i))
+    // A cost reviewer may mention Spot as an optional saving. That advice is
+    // not evidence that the generated architecture actually uses Spot.
+    // Escalate only when the service list or deployable configuration proves
+    // interruptible capacity is selected.
+    when: (f, ctx) => (ctx.has('spot')
+      || /InstanceMarketOptions\s*:|MarketType\s*:\s*spot|SpotPrice\s*:|spot[- ]fleet/i.test(ctx.solutionText || ''))
       && (has(f, /single[- ]az|one availability zone|multi[- ]az/i) || !ctx.has('asg')),
     build: (f) => finding({
       severity: 'critical',

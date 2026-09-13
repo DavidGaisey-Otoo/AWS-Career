@@ -161,6 +161,14 @@ Use secure remote administration, patching, monitoring, backup, and a controlled
       assert(cost.noFreeTier.some((item) => item.id === 'backup'), 'AWS Backup was incorrectly presented as free');
     },
   },
+  {
+    name: 'Windows training labs do not treat optional Spot advice as deployed Spot capacity',
+    run() {
+      const s = runPipeline('Build a short-lived AWS training lab for Windows Server administration. Use one Windows EC2 instance with Systems Manager, CloudWatch, encrypted EBS, IAM, and AWS Backup. Keep spend below $5 and tear down within two hours.');
+      assert(!s.review.blockers.some((finding) => finding.ruleId === 'SYN-SPOT-SINGLE-AZ'),
+        'optional cost advice incorrectly became a critical deployed-Spot finding');
+    },
+  },
 
   // ── grade must be a renderable string, never an object ────────────
   {
