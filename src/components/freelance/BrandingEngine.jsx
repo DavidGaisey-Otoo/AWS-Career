@@ -250,9 +250,9 @@ function GitHubOptimizer() {
 I'm an AWS Cloud Engineer focused on **networking, serverless, and cost optimization**.
 
 ## 🛠 What I'm working on
-- ☁ Building production-grade AWS environments (Terraform + CDK)
-- 🌐 Designing hybrid networks with Transit Gateway + Direct Connect
-- 💰 Cutting AWS bills with measurable outcomes
+- ☁ Planning and documenting secure AWS solutions
+- 🧪 Validating infrastructure in supervised sandbox environments
+- 💰 Designing cost-aware architectures with approval and teardown controls
 
 ## 🏆 Certifications
 - AWS Certified Cloud Practitioner

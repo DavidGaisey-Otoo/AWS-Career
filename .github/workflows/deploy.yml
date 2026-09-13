@@ -48,11 +48,10 @@ jobs:
         env:
           DEPLOY_TARGET: github-pages   # tells vite.config.js to set base: '/AWS-Career/'
 
-      - name: SPA fallback — copy index.html to 404.html
-        # GitHub Pages doesn't have rewrites like Vercel, so direct
-        # navigation to /freelance returns a 404. Trick: make 404.html
-        # be a copy of index.html so Pages serves the same SPA either
-        # way, then React Router takes over from window.location.
+      - name: Legacy route fallback
+        # New links use hash routing and return HTTP 200. Keep a copy as the
+        # 404 document so old BrowserRouter bookmarks can load the migration
+        # redirect in main.jsx and land on the corresponding hash URL.
         run: cp dist/index.html dist/404.html
 
       - name: Configure Pages

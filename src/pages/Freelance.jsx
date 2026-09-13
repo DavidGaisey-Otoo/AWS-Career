@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import {
-  Award, Briefcase, Calculator, DollarSign, FileText, Mail, Megaphone, Radio, Trophy, Users, Wand2,
+  Award, Briefcase, Calculator, DollarSign, FileText, Mail, Megaphone, Radio, ShieldCheck, Trophy, Users, Wand2,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -91,10 +91,21 @@ export default function Freelance() {
     <div className="space-y-4">
       <PageHeader
         eyebrow="Freelance business center"
-        title="Land paid AWS work, faster."
-        subtitle="Proposals, CRM, finance, contracts, branding. Everything you need to run cloud freelancing like a real business."
+        title="Deliver supervised AWS work professionally."
+        subtitle="Plan solutions, prepare evidence-first proposals, manage clients, and control approved implementation work from one place."
         icon={Briefcase}
       />
+
+      <div className="card p-4 border border-success/30 bg-success/5 flex items-start gap-3">
+        <ShieldCheck size={20} className="text-success shrink-0 mt-0.5" />
+        <div>
+          <div className="text-sm font-extrabold">Verified service position</div>
+          <p className="text-xs text-muted mt-1 leading-relaxed">
+            AWS solution planning, documentation, and supervised implementation support. Automation prepares and validates work;
+            a human must approve client scope, credentials, cost, deployment, evidence, and teardown. Never promise autonomous production operation.
+          </p>
+        </div>
+      </div>
 
       <OverviewStrip />
 
