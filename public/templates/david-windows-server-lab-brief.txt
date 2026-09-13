@@ -1,0 +1,91 @@
+Project title:
+Windows Server Administration — Secure Managed Server
+
+Original request:
+Build a temporary Windows Server administration lab on AWS for David Gaisey-Otoo to practise secure server access, user administration, patching, monitoring, backup, restore, evidence capture, and verified teardown. Hard maximum actual session spend is USD 5.
+
+Project type:
+Portfolio learning project treated as a simulated client gig.
+
+Client situation:
+The client needs the outcome described above, but the current environment, users, data, dependencies, budget, and acceptance criteria have not yet been verified. The first phase is discovery—not deployment.
+
+Requested outcome:
+Create a secure, supportable, documented solution for the original request. Explain each decision in beginner-friendly language and preserve evidence suitable for a portfolio and client handover.
+
+Proposed components to validate:
+- Windows Server 2022
+- PowerShell
+- Windows Defender Firewall
+- Event Viewer
+- AWS EC2
+- AWS Systems Manager
+- Amazon CloudWatch
+- AWS Backup
+- IAM
+
+Initial requirements:
+- Create separate administrator and standard-user access paths.
+- Use secure remote administration; do not expose RDP to the entire internet.
+- Apply operating-system updates, host firewall rules, logging, monitoring, backup, and restore procedures.
+- Document account creation, password reset, access removal, incident response, and handover.
+- Produce an editable Draw.io diagram, architecture proposal, implementation plan, test plan, operating guide, and handover record.
+- Record assumptions, decisions, commands or infrastructure code, screenshots or logs, and lessons learned.
+
+Cost and AWS constraints:
+- Prefer AWS Free Tier or the lowest-cost safe option, but never promise zero cost without a current account-specific estimate.
+- Identify every potentially billable service, pricing assumption, quota, and data-transfer risk.
+- Require explicit human approval before any AWS write action.
+- Provide rollback, teardown, and post-destruction verification steps.
+
+Security constraints:
+- Use least privilege and short-lived or role-based access; never place credentials in code, documents, or synced state.
+- Do not use genuine client, employee, health, payment, or other sensitive data in a learning environment.
+- Define encryption, logging, patching, backup, recovery, and incident-response expectations where applicable.
+- Stop and ask questions when a requirement is unknown; do not fabricate experience, client facts, deployment results, or test evidence.
+
+Acceptance tests:
+- Approved administrator access works through the selected secure method.
+- Standard users cannot perform administrative actions.
+- Firewall, updates, monitoring, backup, and a controlled restore are evidenced.
+- Every claimed result links to actual evidence.
+- All created cloud resources are inventoried and can be safely removed.
+- Destruction is verified through AWS evidence, not only local application state.
+
+Generate these sections before implementation:
+1. Missing client questions grouped by business, users, technical environment, security, cost, operations, and acceptance.
+2. Assumptions requiring explicit approval.
+3. Architecture proposal with alternatives and trade-offs.
+4. Required AWS services and non-AWS components, with a reason for each.
+5. Free Tier and cost-risk assessment using current pricing assumptions.
+6. Security, identity, data-protection, backup, and recovery plan.
+7. Milestones, dependencies, responsibilities, and realistic estimates.
+8. Validation and evidence checklist.
+9. Rollback, teardown, and destruction-verification plan.
+10. Portfolio case-study and client-handover evidence plan.
+
+Approval gate:
+Do not generate runnable deployment actions or claim readiness until the questions, assumptions, architecture coverage, cost position, and acceptance tests have been reviewed. Do not execute deployment until I approve the final plan.
+
+Client-approved discovery answers:
+- Project mode: Simulated portfolio learning lab; these are editable project-owner decisions, not client claims.
+- [Cost & residency] Which AWS region and data-residency boundary are approved?
+  Confirmed answer: Project owner approves us-east-1 for this synthetic learning lab. No client, regulated, or residency-controlled data will be used.
+- [Business] What delivery date and business outcome define success?
+  Confirmed answer: Complete Windows Server Administration — Secure Managed Server within 3 weeks. Success means the approved design is deployed in a short-lived lab, tested with evidence, documented, and fully torn down with AWS-side verification.
+- [Security & recovery] What data classification, compliance, retention, RPO, and RTO requirements apply?
+  Confirmed answer: Synthetic, non-sensitive learning data only; no regulated data or external compliance scope. Backup retention 7 days, RPO 24 hours, RTO 4 hours, with restore and teardown evidence.
+- These answers are recorded as client/project-owner input, not independently verified deployment evidence.
+- No answer authorizes AWS deployment; AWS write actions still require separate explicit approval.
+
+Approved planning decisions:
+- Execution environment: Short-lived AWS Lab. Real AWS resources and charges are possible; target teardown within 2 hours and verify state in AWS.
+- AWS region: eu-north-1.
+- Maximum monthly AWS budget: AWS spend under $30/month. Budget alerts are notifications, not a hard spending cap.
+- Target completion timeline: 1 weeks.
+- Data classification: Synthetic, non-sensitive learning data only.
+- Backup retention: 7 days.
+- Recovery point objective (RPO): 24 hours.
+- Recovery time objective (RTO): 4 hours.
+- These decisions were explicitly approved by the user for planning. They do not authorize deployment.
+- AWS write actions still require separate explicit human approval.

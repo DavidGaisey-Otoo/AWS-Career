@@ -1586,6 +1586,8 @@ function yamlStringify(obj, indent = 0) {
     if (entries.length === 0) return '{}';
     return entries.map(([k, v]) => {
       const valStr = yamlStringify(v, indent + 2);
+      if (Array.isArray(v) && v.length === 0) return `${pad}${k}: []`;
+      if (typeof v === 'object' && v !== null && !Array.isArray(v) && Object.keys(v).length === 0) return `${pad}${k}: {}`;
       if (typeof v === 'object' && v !== null) return `${pad}${k}:\n${valStr}`;
       return `${pad}${k}: ${valStr}`;
     }).join('\n');
