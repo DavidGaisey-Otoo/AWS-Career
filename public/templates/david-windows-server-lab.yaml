@@ -246,18 +246,6 @@ Resources:
             ConditionKey: Project
             ConditionValue:
               Ref: ProjectName
-  CostBudget:
-    Type: "AWS::Budgets::Budget"
-    Properties:
-      Budget:
-        BudgetName:
-          Fn::Sub: "${ProjectName}-monthly-cost"
-        BudgetType: COST
-        TimeUnit: MONTHLY
-        BudgetLimit:
-          Amount:
-            Ref: MonthlyBudget
-          Unit: USD
   InstanceStatusAlarm:
     Type: "AWS::CloudWatch::Alarm"
     Properties:

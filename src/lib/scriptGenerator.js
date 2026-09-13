@@ -1456,7 +1456,11 @@ const CFN_PER_SERVICE = {
   }),
 
   cloudwatch: (spec, mode, opts) => ({
-    CostBudget: {
+    // AWS Budgets is account-global and its CloudFormation resource is not
+    // accepted by regional stacks such as eu-north-1. Keep it with the
+    // us-east-1 billing controls; other regions retain the application-level
+    // approval ceiling and workload alarms.
+    ...(opts?.region === 'us-east-1' ? { CostBudget: {
       Type: 'AWS::Budgets::Budget',
       Properties: {
         Budget: {
@@ -1465,7 +1469,7 @@ const CFN_PER_SERVICE = {
           BudgetLimit: { Amount: { Ref: 'MonthlyBudget' }, Unit: 'USD' },
         },
       },
-    },
+    } } : {}),
     ...(opts?.region === 'us-east-1' ? { BillingAlarm: {
       Type: 'AWS::CloudWatch::Alarm',
       Properties: {
