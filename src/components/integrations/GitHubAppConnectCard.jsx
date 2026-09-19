@@ -3,13 +3,10 @@ import { Github } from '../common/BrandIcons.jsx';
 import { useEffect, useState } from 'react';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
-  clearGithubAppSession, fetchGithubIdentity, hasGithubAppSession,
-  pollGithubDeviceFlow, readGithubAppSession, startGithubDeviceFlow,
+  clearGithubAppSession, fetchGithubIdentity, hasGithubAppSession, readGithubAppSession,
 } from '../../lib/githubAppAuth.js';
 import { useApp } from '../../context/AppContext.jsx';
-import { pullSnapshot, restoreLocalStorage, setSyncEnabled } from '../../lib/gistSync.js';
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+import { connectGithubAndRestore } from '../../lib/githubRestore.js';
 
 export function GitHubAppConnectCard() {
   const toast = useToast();
@@ -31,48 +28,31 @@ export function GitHubAppConnectCard() {
     setConnecting(true);
     setConnectionError('');
     try {
-      const flow = await startGithubDeviceFlow();
-      setCode(flow.user_code || '');
-      setCopied(false);
-      setVerifyUrl(flow.verification_uri || 'https://github.com/login/device');
-      if (flow.user_code && navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(flow.user_code).then(() => setCopied(true)).catch(() => {});
-      }
-      const interval = Math.max(Number(flow.interval || 5), 5) * 1000;
-      const deadline = Date.now() + Number(flow.expires_in || 900) * 1000;
-      while (Date.now() < deadline) {
-        await sleep(interval);
-        const result = await pollGithubDeviceFlow(flow.device_code);
-        if (result.ok) {
-          setConnected(true);
-          setCode('');
-          // A newly approved browser should become useful immediately: locate the
-          // deterministic private sync repository, restore it, and enable future sync.
-          try {
-            const remote = await pullSnapshot();
-            if (remote?.snapshot) {
-              restoreLocalStorage(remote.snapshot, { mergeStrategy: 'replace' });
-              setSyncEnabled(true);
-              toast.success('GitHub connected. Your synced data is restored.');
-              setTimeout(() => window.location.reload(), 500);
-            } else {
-              // No snapshot to restore, so this device names itself. Take the
-              // full name from the GitHub account rather than leaving a blank
-              // field for each browser to fill in differently.
-              await adoptGithubName();
-              toast.success('GitHub connected. Future access tokens renew automatically.');
-            }
-          } catch (syncError) {
-            // Authentication succeeded and must stay connected even when repository
-            // discovery/restore needs separate attention.
-            setConnectionError(`GitHub connected, but sync restore needs attention: ${syncError.message || syncError}`);
-            toast.success('GitHub connected. Open the sync panel to finish restoring data.');
+      // Shared with the onboarding "restore my account" panel — one
+      // implementation of connect-and-restore, so the two cannot drift.
+      const result = await connectGithubAndRestore({
+        onCode: ({ userCode, verificationUri }) => {
+          setCode(userCode);
+          setCopied(false);
+          setVerifyUrl(verificationUri);
+          if (userCode && navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(userCode).then(() => setCopied(true)).catch(() => {});
           }
-          return;
-        }
-        if (!result.pending && result.error !== 'slow_down') throw new Error(result.error_description || result.error);
+        },
+      });
+
+      setConnected(true);
+      setCode('');
+
+      if (result.restored) {
+        toast.success('GitHub connected. Your synced data is restored.');
+        setTimeout(() => window.location.reload(), 500);
+      } else {
+        // Nothing stored yet: name this device from the GitHub account
+        // rather than leaving a blank field for each browser to fill in.
+        await adoptGithubName();
+        toast.success('GitHub connected. This device is now your first synced copy.');
       }
-      throw new Error('GitHub authorization expired. Please try again.');
     } catch (err) {
       const message = err.message || 'Could not connect GitHub.';
       setConnectionError(message);

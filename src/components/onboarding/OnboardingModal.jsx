@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { AWS_LEVELS, GOALS, HOURS_OPTIONS } from '../../lib/constants.js';
 import { cn, formatCurrency } from '../../lib/utils.js';
 import { Button } from '../ui/Button.jsx';
+import { RestoreAccountPanel } from './RestoreAccountPanel.jsx';
 import { fireConfetti, sideCannons } from '../ui/Confetti.js';
 
 const STEPS = [
@@ -22,6 +23,11 @@ const STEPS = [
 export function OnboardingModal() {
   const { completeOnboarding, addNotification } = useApp();
   const toast = useToast();
+  // Returning users get asked FIRST, before anything invites them to
+  // invent a second profile. Opening a new device or origin used to offer
+  // only "create an account", which is how the same person ended up with
+  // two sets of progress that could never be reconciled.
+  const [mode, setMode] = useState('choose');
   const [step, setStep] = useState(0);
   const [data, setData] = useState({
     name: '',
@@ -103,14 +109,22 @@ export function OnboardingModal() {
                 </div>
                 <div>
                   <div className="text-[11px] font-bold tracking-widest uppercase text-muted">
-                    Step {step + 1} of {STEPS.length}
+                    {mode === 'choose' ? 'Welcome back' : `Step ${step + 1} of ${STEPS.length}`}
                   </div>
-                  <div id="onboarding-title" className="text-xl font-extrabold tracking-tight">{STEPS[step].title}</div>
+                  <div id="onboarding-title" className="text-xl font-extrabold tracking-tight">
+                    {mode === 'choose' ? 'AWS Career Launchpad Pro' : STEPS[step].title}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
+          {mode === 'choose' && (
+            <RestoreAccountPanel onStartFresh={() => setMode('setup')} />
+          )}
+
+          {mode === 'setup' && (
+          <>
           {/* Progress dots */}
           <div className="px-6 pt-4 flex items-center gap-1.5">
             {STEPS.map((_, i) => (
@@ -289,7 +303,12 @@ export function OnboardingModal() {
 
           {/* Footer */}
           <div className="px-6 py-4 border-t border-token flex items-center justify-between bg-[var(--card-2)]/40">
-            <Button variant="ghost" size="md" onClick={back} icon={ChevronLeft} className={cn(step === 0 && 'invisible')}>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={step === 0 ? () => setMode('choose') : back}
+              icon={ChevronLeft}
+            >
               Back
             </Button>
             <Button
@@ -302,6 +321,8 @@ export function OnboardingModal() {
               {step === STEPS.length - 1 ? 'Launch dashboard' : 'Continue'}
             </Button>
           </div>
+          </>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
