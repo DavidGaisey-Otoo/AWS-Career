@@ -12,11 +12,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw, ShieldCheck,
-  Cloud, Github, KeyRound, FolderOpen, Settings, Wrench, Download, Printer,
-  ExternalLink, ChevronRight, Sparkles,
-} from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw, ShieldCheck, Cloud, KeyRound, FolderOpen, Settings, Wrench, Download, Printer, ExternalLink, ChevronRight, Sparkles } from 'lucide-react';
+import { Github } from '../components/common/BrandIcons.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { useAWS } from '../context/AWSContext.jsx';
 import { useDeploy } from '../context/DeployContext.jsx';
@@ -43,7 +40,7 @@ function Header() {
         <ShieldCheck size={18} className="text-[var(--brand)]" />
         <h1 className="text-2xl font-bold tracking-tight">Readiness Dashboard</h1>
       </div>
-      <p className="text-sm opacity-70 max-w-2xl">
+      <p className="text-sm text-muted max-w-2xl">
         Live health check that runs from inside the browser — so it can see things terminal scans
         can't (your GitHub token, your AWS profile, your encrypted vault, etc.). One screen, every check.
       </p>
@@ -236,7 +233,7 @@ function ChecklistGrid() {
         if (!items.length) return null;
         return (
           <div key={g} className="rounded-2xl border border-token bg-[var(--card)] overflow-hidden">
-            <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-extrabold opacity-70">
+            <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-extrabold text-muted">
               {g}
             </div>
             <ul className="divide-y divide-[var(--border)]">
@@ -264,7 +261,7 @@ function CheckRow({ check }) {
       <Icon size={14} className={`shrink-0 ${tone.iconCls}`} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-bold">{check.title}</div>
-        <div className="text-xs opacity-80 mt-0.5">{check.message}</div>
+        <div className="text-xs text-muted mt-0.5">{check.message}</div>
       </div>
       {check.fix && (
         check.fix.href
@@ -291,7 +288,7 @@ function Pill({ icon: Icon, label, value, tone }) {
     <div className="flex items-center gap-1.5">
       <Icon size={12} className={cls} />
       <span className="text-xs font-bold">{value}</span>
-      <span className="text-[10px] uppercase tracking-widest opacity-60">{label}</span>
+      <span className="text-[10px] uppercase tracking-widest text-muted">{label}</span>
     </div>
   );
 }
@@ -405,7 +402,7 @@ function DocumentationExporter() {
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-bold">Master setup report</h3>
-          <p className="text-sm opacity-80 mt-1">
+          <p className="text-sm text-muted mt-1">
             One document with everything: AWS hardening, deploy audit, walkthrough progress, GitHub status,
             and all 96+ shipped features. Pick your format — all four are real downloads.
           </p>
@@ -425,7 +422,7 @@ function DocumentationExporter() {
           {busy === 'print' ? 'Opening…' : 'Print preview'}
         </Button>
       </div>
-      <div className="text-[10px] opacity-60 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="text-[10px] text-muted mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
         <span>⭐ <strong>PDF</strong>: real .pdf, lands in Downloads</span>
         <span><strong>Markdown</strong>: .md — open in Notion / GitHub</span>
         <span><strong>HTML</strong>: .html — open in browser to view</span>

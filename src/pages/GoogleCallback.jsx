@@ -64,24 +64,24 @@ export default function GoogleCallback() {
           <>
             <Loader2 size={32} className="mx-auto mb-3 animate-spin text-aws-orange" />
             <h2 className="text-lg font-extrabold">Connecting Google Calendar…</h2>
-            <p className="text-sm opacity-70 mt-1">Exchanging your authorization code for tokens.</p>
+            <p className="text-sm text-muted mt-1">Exchanging your authorization code for tokens.</p>
           </>
         )}
         {status === 'ok' && (
           <>
             <CheckCircle2 size={32} className="mx-auto mb-3 text-success" />
             <h2 className="text-lg font-extrabold">Connected!</h2>
-            <p className="text-sm opacity-80 mt-1">
+            <p className="text-sm text-muted mt-1">
               {email ? <>Linked to <strong>{email}</strong>.</> : 'Your Google Calendar is linked.'}
             </p>
-            <p className="text-[12px] opacity-60 mt-3">Redirecting back to Settings…</p>
+            <p className="text-[12px] text-muted mt-3">Redirecting back to Settings…</p>
           </>
         )}
         {status === 'error' && (
           <>
             <AlertCircle size={32} className="mx-auto mb-3 text-danger" />
             <h2 className="text-lg font-extrabold">Couldn't complete the connection</h2>
-            <p className="text-[13px] opacity-80 mt-2 leading-relaxed text-left bg-[var(--card-2)] rounded-lg p-3 border border-token break-words">
+            <p className="text-[13px] text-muted mt-2 leading-relaxed text-left bg-[var(--card-2)] rounded-lg p-3 border border-token break-words">
               {error}
             </p>
             <Link

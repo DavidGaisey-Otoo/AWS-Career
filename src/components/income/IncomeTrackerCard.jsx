@@ -50,7 +50,7 @@ export function IncomeTrackerCard() {
           <Target size={18} className="text-aws-orange" />
           {stats.monthLabel} progress
         </h2>
-        <p className="text-[12.5px] opacity-80 mt-1.5">
+        <p className="text-[12.5px] text-muted mt-1.5">
           Set a monthly income target, log payments as they hit your account, and watch your progress in real time. Resets at the start of each month — old totals stay in the chart.
         </p>
       </div>
@@ -67,7 +67,7 @@ export function IncomeTrackerCard() {
           </div>
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12.5px] opacity-60 font-bold pointer-events-none">$</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12.5px] text-muted font-bold pointer-events-none">$</span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -85,7 +85,7 @@ export function IncomeTrackerCard() {
             </button>
           </div>
           {state.goal?.setAt && (
-            <div className="text-[10.5px] opacity-60">
+            <div className="text-[10.5px] text-muted">
               Last updated {new Date(state.goal.setAt).toLocaleDateString('en-GB')}
             </div>
           )}
@@ -96,7 +96,7 @@ export function IncomeTrackerCard() {
           <div className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange flex items-center gap-1.5">
             <Plus size={11} /> Log a payment
           </div>
-          <p className="text-[11.5px] opacity-75 flex-1">
+          <p className="text-[11.5px] text-muted flex-1">
             Manual entry — gig name, amount, date, platform. Lands in the totals immediately.
           </p>
           <button
@@ -118,7 +118,7 @@ export function IncomeTrackerCard() {
           {stats.monthLabel} payments ({stats.count})
         </h3>
         {stats.payments.length === 0 ? (
-          <div className="text-center py-6 opacity-60 text-[12.5px]">
+          <div className="text-center py-6 text-muted text-[12.5px]">
             No payments logged for this month yet — hit <strong>Add payment</strong> above to get started.
           </div>
         ) : (
@@ -227,15 +227,15 @@ function ProgressPanel({ stats, summary }) {
     <div className={cn('surface rounded-2xl border p-5', toneClass)}>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
         <div>
-          <div className="text-[10.5px] font-bold opacity-70 mb-0.5">EARNED THIS MONTH</div>
+          <div className="text-[10.5px] font-bold text-muted mb-0.5">EARNED THIS MONTH</div>
           <div className="text-3xl font-extrabold text-success">
             ${stats.total.toLocaleString()}
-            <span className="text-[14px] opacity-60 font-bold"> / ${stats.goal.toLocaleString()}</span>
+            <span className="text-[14px] text-muted font-bold"> / ${stats.goal.toLocaleString()}</span>
           </div>
-          <div className="text-[11.5px] opacity-75 mt-0.5">{summary}</div>
+          <div className="text-[11.5px] text-muted mt-0.5">{summary}</div>
         </div>
         <div className="text-right">
-          <div className="text-[10.5px] font-bold opacity-70 mb-0.5">PROGRESS</div>
+          <div className="text-[10.5px] font-bold text-muted mb-0.5">PROGRESS</div>
           <div className={cn(
             'text-3xl font-extrabold',
             stats.status === 'red' && 'text-danger',
@@ -353,7 +353,7 @@ function PaymentRow({ payment, onDelete }) {
       <div className="flex-1 min-w-0">
         <div className="text-[13px] font-bold truncate flex items-center gap-2">
           {payment.gigName}
-          <span className="text-[10px] opacity-60 font-normal">
+          <span className="text-[10px] text-muted font-normal">
             {payment.platform && payment.platform !== 'direct' && (
               <span className="inline-flex items-center gap-0.5">
                 <Tag size={9} /> {PLATFORMS.find((p) => p.id === payment.platform)?.label || payment.platform}
@@ -426,7 +426,7 @@ function LogPaymentModal({ onClose, onSaved }) {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <label className="block">
-            <span className="text-[10.5px] font-bold opacity-75">GIG NAME</span>
+            <span className="text-[10.5px] font-bold text-muted">GIG NAME</span>
             <input
               type="text"
               value={gigName}
@@ -438,9 +438,9 @@ function LogPaymentModal({ onClose, onSaved }) {
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-[10.5px] font-bold opacity-75">AMOUNT</span>
+              <span className="text-[10.5px] font-bold text-muted">AMOUNT</span>
               <div className="relative mt-1">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12.5px] opacity-60 font-bold pointer-events-none">$</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12.5px] text-muted font-bold pointer-events-none">$</span>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -455,7 +455,7 @@ function LogPaymentModal({ onClose, onSaved }) {
               </div>
             </label>
             <label className="block">
-              <span className="text-[10.5px] font-bold opacity-75">DATE</span>
+              <span className="text-[10.5px] font-bold text-muted">DATE</span>
               <input
                 type="date"
                 value={date}
@@ -466,7 +466,7 @@ function LogPaymentModal({ onClose, onSaved }) {
           </div>
 
           <label className="block">
-            <span className="text-[10.5px] font-bold opacity-75">PLATFORM</span>
+            <span className="text-[10.5px] font-bold text-muted">PLATFORM</span>
             <div className="mt-1 flex flex-wrap gap-1">
               {PLATFORMS.map((p) => (
                 <button
@@ -487,7 +487,7 @@ function LogPaymentModal({ onClose, onSaved }) {
           </label>
 
           <label className="block">
-            <span className="text-[10.5px] font-bold opacity-75">NOTES (optional)</span>
+            <span className="text-[10.5px] font-bold text-muted">NOTES (optional)</span>
             <input
               type="text"
               value={notes}

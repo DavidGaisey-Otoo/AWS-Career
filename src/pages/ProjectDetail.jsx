@@ -1,9 +1,6 @@
 import { motion } from 'framer-motion';
-import {
-  AlertOctagon, ArrowLeft, Award, Building2, Calendar, CheckCircle2, Cloud, ExternalLink,
-  Download, Eye, FileText, Github, ImagePlus, Layers, Lightbulb, Link2, ListChecks, Megaphone,
-  Pencil, Sparkles, Star, Target, Trash2, Trophy, Video, X,
-} from 'lucide-react';
+import { AlertOctagon, ArrowLeft, Award, Building2, Calendar, CheckCircle2, Cloud, ExternalLink, Download, Eye, FileText, ImagePlus, Layers, Lightbulb, Link2, ListChecks, Megaphone, Pencil, Sparkles, Star, Target, Trash2, Trophy, Video, X } from 'lucide-react';
+import { Github } from '../components/common/BrandIcons.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AccordionList } from '../components/portfolio/AccordionList.jsx';

@@ -1,9 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  Award, Bookmark, BookOpen, CheckCircle2, ChevronLeft, ChevronRight,
-  ExternalLink, FileText, FlaskConical, Layers, Maximize, Minus, Plus,
-  Printer, Sparkles, Target, Youtube,
-} from 'lucide-react';
+import { Award, Bookmark, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, FileText, FlaskConical, Layers, Maximize, Minus, Plus, Printer, Sparkles, Target } from 'lucide-react';
+import { Youtube } from '../common/BrandIcons.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLearning } from '../../context/LearningContext.jsx';

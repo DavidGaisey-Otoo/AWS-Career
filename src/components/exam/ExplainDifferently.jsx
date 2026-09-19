@@ -100,7 +100,7 @@ export function ExplainDifferently({ question }) {
                 </p>
               )
               : (
-                <div className="flex items-center gap-2 text-[12px] opacity-80 py-2">
+                <div className="flex items-center gap-2 text-[12px] text-muted py-2">
                   <Loader2 size={14} className="animate-spin text-electric" />
                   Loading the model… the first answer after a restart is the slowest.
                 </div>

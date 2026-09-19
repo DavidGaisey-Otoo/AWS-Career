@@ -11,3 +11,11 @@ question-imports/**/raw/*.pdf
 
 # Claude Code local settings (per-developer)
 .claude/settings.local.json
+
+# Scratch/working dirs from local tooling — not part of the app
+.docdeps/
+.task-docdeps/
+.tmp-vc-health/
+.tmp-vital-check/
+.tmp_doc_render/
+tmp/

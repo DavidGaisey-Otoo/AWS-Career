@@ -149,7 +149,7 @@ function AddToCalendarModal({ defaultTitle, defaultDescription, defaultAttendee,
             <h3 className="text-lg font-extrabold flex items-center gap-2">
               <Calendar size={16} className="text-aws-orange" /> Add to Calendar
             </h3>
-            <p className="text-[11.5px] opacity-70 mt-0.5">
+            <p className="text-[11.5px] text-muted mt-0.5">
               Works with Apple Calendar, Outlook, Google Calendar, Thunderbird — anything.
             </p>
           </div>
@@ -241,7 +241,7 @@ function AddToCalendarModal({ defaultTitle, defaultDescription, defaultAttendee,
                 <ExternalLink size={11} /> Outlook
               </button>
             </div>
-            <p className="text-[10.5px] opacity-60 italic">
+            <p className="text-[10.5px] text-muted italic">
               Google/Outlook open their web compose pre-filled — no login needed if you&apos;re already signed in.
             </p>
           </div>
@@ -254,7 +254,7 @@ function AddToCalendarModal({ defaultTitle, defaultDescription, defaultAttendee,
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="text-[10.5px] font-bold opacity-75 mb-1 block">{label}</span>
+      <span className="text-[10.5px] font-bold text-muted mb-1 block">{label}</span>
       {children}
     </label>
   );

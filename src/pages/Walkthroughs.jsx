@@ -68,11 +68,11 @@ function Header() {
           🛠 Deep Walkthroughs →
         </Link>
       </div>
-      <p className="text-sm opacity-70 max-w-2xl">
+      <p className="text-sm text-muted max-w-2xl">
         Atomic, step-by-step procedures for everything AWS. Each step is one click or one form,
         with a direct console link, a checkpoint to verify, and progress that persists across sessions.
       </p>
-      <p className="text-[12px] opacity-60 mt-1.5 italic">
+      <p className="text-[12px] text-muted mt-1.5 italic">
         Want more depth? Try <strong>Deep Walkthroughs</strong> — every step explained with WHY, real-world analogy, common mistakes, and HOW in all 4 formats (Console / CLI / CloudFormation / Terraform).
       </p>
     </div>
@@ -84,7 +84,7 @@ function Sidebar({ groups, activeId }) {
     <aside className="rounded-2xl border border-token bg-[var(--card)] overflow-hidden lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
       {Object.entries(groups).map(([cat, items]) => (
         <div key={cat}>
-          <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold opacity-60">
+          <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold text-muted">
             {cat}
           </div>
           <ul className="divide-y divide-[var(--border)]">
@@ -108,7 +108,7 @@ function SidebarItem({ w, active }) {
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold truncate">{w.title}</div>
-            <div className="text-[10px] opacity-60 flex items-center gap-2 mt-0.5">
+            <div className="text-[10px] text-muted flex items-center gap-2 mt-0.5">
               <Clock size={9} /> {w.estimateMin}m · {w.steps.length} steps
             </div>
           </div>
@@ -130,7 +130,7 @@ function EmptyState({ groups }) {
     <div className="rounded-2xl border border-token bg-[var(--card)] p-8 text-center">
       <BookOpen size={32} className="mx-auto opacity-30 mb-3" />
       <h2 className="text-lg font-bold">Pick a walkthrough on the left</h2>
-      <p className="text-sm opacity-70 max-w-md mx-auto mt-1">
+      <p className="text-sm text-muted max-w-md mx-auto mt-1">
         {all.length} walkthroughs available. Start with "Create a brand new AWS account" if you're new, or jump straight to the project guides.
       </p>
     </div>

@@ -50,9 +50,9 @@ export function PresentationReviewPanel({
             <Presentation size={15} className="text-aws-orange" />
             2 presentation experts reviewed your deck
           </h3>
-          <p className="text-[11.5px] opacity-70 mt-0.5">
+          <p className="text-[11.5px] text-muted mt-0.5">
             Liam O&apos;Brien (Narrative) · Maya Lindqvist (Visual Clarity)
-            <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] opacity-60 italic">
+            <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] text-muted italic">
               · Rule-engine mode
             </span>
           </p>
@@ -62,7 +62,7 @@ export function PresentationReviewPanel({
           GRADE_TONE[review.grade.tone]
         )}>
           <div className="text-2xl font-extrabold leading-none">{review.grade.letter}</div>
-          <div className="text-[10px] font-bold opacity-80 mt-0.5">{review.score}/100</div>
+          <div className="text-[10px] font-bold text-muted mt-0.5">{review.score}/100</div>
         </div>
       </div>
 
@@ -120,7 +120,7 @@ export function PresentationReviewPanel({
                     {score}/100
                   </div>
                 </div>
-                <div className="text-[10.5px] opacity-70 mb-1">{role} · {yearsExperience}+ years</div>
+                <div className="text-[10.5px] text-muted mb-1">{role} · {yearsExperience}+ years</div>
                 <div className="text-[11px]">
                   {findings.length === 0
                     ? <span className="text-success">✓ No issues raised</span>

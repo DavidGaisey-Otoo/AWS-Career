@@ -248,7 +248,7 @@ export function EmailOutreach() {
               <Mail size={18} className="text-aws-orange" />
               Send the email that wins the gig
             </h2>
-            <p className="text-[12.5px] opacity-80 mt-1.5 leading-relaxed max-w-2xl">
+            <p className="text-[12.5px] text-muted mt-1.5 leading-relaxed max-w-2xl">
               A focused composer for the 3 emails that move freelance work forward:
               <strong> follow-up</strong>, <strong>cold outreach</strong>, and <strong>thank you</strong>.
               Use this for quick sends; jump to the full system for tracker + 10 templates + library.
@@ -287,7 +287,7 @@ export function EmailOutreach() {
                     {m.label}
                   </span>
                 </div>
-                <div className="text-[11px] opacity-75 leading-snug">{m.blurb}</div>
+                <div className="text-[11px] text-muted leading-snug">{m.blurb}</div>
               </button>
             );
           })}
@@ -301,7 +301,7 @@ export function EmailOutreach() {
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <div className="text-[10.5px] font-bold opacity-75 mb-1">Gig / project title</div>
+            <div className="text-[10.5px] font-bold text-muted mb-1">Gig / project title</div>
             <input
               type="text"
               value={gigTitle}
@@ -311,7 +311,7 @@ export function EmailOutreach() {
             />
           </div>
           <div>
-            <div className="text-[10.5px] font-bold opacity-75 mb-1">Recipient first name</div>
+            <div className="text-[10.5px] font-bold text-muted mb-1">Recipient first name</div>
             <input
               type="text"
               value={recipientName}
@@ -321,7 +321,7 @@ export function EmailOutreach() {
             />
           </div>
           <div>
-            <div className="text-[10.5px] font-bold opacity-75 mb-1">To (email address)</div>
+            <div className="text-[10.5px] font-bold text-muted mb-1">To (email address)</div>
             <input
               type="email"
               value={to}
@@ -386,7 +386,7 @@ export function EmailOutreach() {
           <label className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange">
             Email body
           </label>
-          <span className="text-[10.5px] opacity-60">
+          <span className="text-[10.5px] text-muted">
             {body ? `${body.trim().split(/\s+/).filter(Boolean).length} words` : 'empty'}
           </span>
         </div>

@@ -219,7 +219,7 @@ export function SmartProposalGenerator() {
           <Sparkles size={18} className="text-aws-orange" />
           6-Section Smart Proposal
         </h2>
-        <p className="text-[12.5px] opacity-80 mt-1.5 leading-relaxed">
+        <p className="text-[12.5px] text-muted mt-1.5 leading-relaxed">
           Paste the job description (or arrive here from the Live Gigs tab). I'll generate a personalised
           proposal with <strong>Hook · Understanding · My Approach · Why Me · Timeline · CTA</strong> in the
           200-350 word range. Hit <em>Regenerate</em> for a different angle, <em>Shorten</em> or <em>Expand</em>
@@ -241,7 +241,7 @@ export function SmartProposalGenerator() {
               <ClipboardPaste size={11} /> Paste from clipboard
             </button>
             {jd && (
-              <span className="text-[10.5px] opacity-60">{wordCount(jd)} words in JD</span>
+              <span className="text-[10.5px] text-muted">{wordCount(jd)} words in JD</span>
             )}
           </div>
         </div>
@@ -369,7 +369,7 @@ export function SmartProposalGenerator() {
                 {wc} words {wcStatus.label && `· ${wcStatus.label}`}
               </span>
               {proposal.meta?.cert && (
-                <span className="text-[10.5px] opacity-60">
+                <span className="text-[10.5px] text-muted">
                   · cert: {proposal.meta.cert.replace(/AWS Certified /, '')}
                 </span>
               )}

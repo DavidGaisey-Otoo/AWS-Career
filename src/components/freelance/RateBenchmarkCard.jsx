@@ -80,7 +80,7 @@ export function RateBenchmarkCard({ brief = '', variant = 'full', className = ''
       <div className="rounded-xl bg-success/5 border border-success/30 p-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-[10.5px] font-bold opacity-70 mb-0.5 flex items-center gap-1">
+            <div className="text-[10.5px] font-bold text-muted mb-0.5 flex items-center gap-1">
               <MapPin size={10} />
               {bench.location.flag} {bench.location.label} client
               {bench.detected.evidence && locationId === null && (
@@ -89,9 +89,9 @@ export function RateBenchmarkCard({ brief = '', variant = 'full', className = ''
             </div>
             <div className="text-2xl font-extrabold text-success">
               ${bench.range.low}–${bench.range.high}
-              <span className="text-[12px] opacity-70 ml-1">/hr</span>
+              <span className="text-[12px] text-muted ml-1">/hr</span>
             </div>
-            <div className="text-[11px] opacity-75 mt-0.5">
+            <div className="text-[11px] text-muted mt-0.5">
               {bench.level.label} ({bench.level.cert})
             </div>
           </div>
@@ -231,7 +231,7 @@ function RecommendationModal({ bench, onClose }) {
             <DollarSign size={24} className="text-success" />
           </div>
           <h3 className="text-xl font-extrabold mb-1">My recommendation</h3>
-          <p className="text-[12.5px] opacity-70">Based on the client signals + your level + platform</p>
+          <p className="text-[12.5px] text-muted">Based on the client signals + your level + platform</p>
         </div>
 
         <div className="rounded-xl bg-success/5 border border-success/30 p-4 text-center mb-3">

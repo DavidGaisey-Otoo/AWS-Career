@@ -100,7 +100,7 @@ export function CombinedScriptsPanel({ title, content = {} }) {
           <h4 className="text-sm font-extrabold tracking-tight">Full end-to-end script</h4>
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-electric ml-1">All-in-one</span>
         </div>
-        <p className="text-[11px] opacity-70 leading-snug">
+        <p className="text-[11px] text-muted leading-snug">
           The entire walkthrough as a single script — split into sections you can copy individually
           or download as one file. Skip the console clicks and run it from your terminal /
           Terraform / CloudFormation deploy.
@@ -129,7 +129,7 @@ export function CombinedScriptsPanel({ title, content = {} }) {
             >
               <Icon size={12} />
               {t.label}
-              {!has && <span className="text-[9px] opacity-60">(n/a)</span>}
+              {!has && <span className="text-[9px] text-muted">(n/a)</span>}
             </button>
           );
         })}
@@ -138,7 +138,7 @@ export function CombinedScriptsPanel({ title, content = {} }) {
       {/* Section jump-nav (CLICKABLE pills) */}
       {active.segments.length > 0 && (
         <div className="px-4 pt-3 pb-1">
-          <div className="text-[10px] uppercase tracking-widest font-extrabold opacity-60 mb-1.5 flex items-center gap-1.5">
+          <div className="text-[10px] uppercase tracking-widest font-extrabold text-muted mb-1.5 flex items-center gap-1.5">
             <ArrowDown size={9} /> Jump to section
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -232,7 +232,7 @@ export function CombinedScriptsPanel({ title, content = {} }) {
       {/* Whole-script action bar */}
       {active.segments.length > 0 && (
         <div className="px-4 pb-4 flex items-center gap-2 flex-wrap border-t border-electric/10 pt-3">
-          <span className="text-[10px] uppercase tracking-widest font-extrabold opacity-60 mr-1">
+          <span className="text-[10px] uppercase tracking-widest font-extrabold text-muted mr-1">
             All-in-one:
           </span>
           <button

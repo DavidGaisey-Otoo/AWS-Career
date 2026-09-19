@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, ExternalLink, Github } from 'lucide-react';
+import { ArrowRight, ExternalLink } from 'lucide-react';
+import { Github } from '../common/BrandIcons.jsx';
 import { Link } from 'react-router-dom';
 import { usePortfolio } from '../../context/PortfolioContext.jsx';
 import { PRIORITY } from '../../data/projects.js';

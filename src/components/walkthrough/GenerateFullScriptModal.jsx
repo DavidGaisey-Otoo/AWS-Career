@@ -89,7 +89,7 @@ export function GenerateFullScriptModal({ walkthrough, open, onClose, region }) 
             <h2 className="text-xl font-extrabold flex items-center gap-2">
               <FileText size={18} className="text-aws-orange" /> Generate Full Project Script
             </h2>
-            <p className="text-[12px] opacity-70 mt-1">
+            <p className="text-[12px] text-muted mt-1">
               <strong>{walkthrough?.title}</strong> · {walkthrough?.steps?.length} steps merged into one production-quality script.
               {region && <> · region: <strong className="text-aws-orange">{region}</strong></>}
             </p>
@@ -118,12 +118,12 @@ export function GenerateFullScriptModal({ walkthrough, open, onClose, region }) 
               >
                 <div className="text-2xl mb-1">{f.icon}</div>
                 <div className="text-[12.5px] font-extrabold leading-snug mb-0.5">{f.label}</div>
-                <div className="text-[10px] opacity-70">.{f.extension}</div>
+                <div className="text-[10px] text-muted">.{f.extension}</div>
               </button>
             ))}
           </div>
           {activeFormat && (
-            <p className="text-[11.5px] opacity-75 mt-2.5 italic leading-snug">
+            <p className="text-[11.5px] text-muted mt-2.5 italic leading-snug">
               {activeFormat.description}
             </p>
           )}
@@ -131,7 +131,7 @@ export function GenerateFullScriptModal({ walkthrough, open, onClose, region }) 
 
         {/* Action bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-token bg-[var(--card-2)]/30">
-          <div className="text-[11.5px] opacity-75 font-mono">
+          <div className="text-[11.5px] text-muted font-mono">
             📄 {filename} <span className="opacity-50">· {generated.length.toLocaleString()} chars · {generated.split('\n').length} lines</span>
           </div>
           <div className="flex items-center gap-2">
@@ -181,7 +181,7 @@ export function GenerateFullScriptModal({ walkthrough, open, onClose, region }) 
         </div>
 
         {/* Footer note */}
-        <div className="px-4 py-3 border-t border-token bg-[var(--card-2)]/40 text-[10.5px] opacity-70">
+        <div className="px-4 py-3 border-t border-token bg-[var(--card-2)]/40 text-[10.5px] text-muted">
           ⚠ This script merges per-step snippets — review references, parameters, and resource names before deploying to production.
           AWS resources cost money — never run unfamiliar scripts unattended.
         </div>

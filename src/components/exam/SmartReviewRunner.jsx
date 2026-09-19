@@ -157,7 +157,7 @@ export function SmartReviewRunner({ cert, onExit }) {
               <div className="text-2xl font-extrabold tabular-nums">
                 {mastery.masteryPct == null ? '—' : `${mastery.masteryPct}%`}
               </div>
-              <div className="text-[11px] opacity-70">
+              <div className="text-[11px] text-muted">
                 {mastery.rated} of {mastery.total} questions rated
               </div>
             </div>
@@ -189,7 +189,7 @@ export function SmartReviewRunner({ cert, onExit }) {
 
         {/* Session count picker */}
         <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-widest opacity-70 mb-1.5">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1.5">
             Questions in this session
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -228,7 +228,7 @@ export function SmartReviewRunner({ cert, onExit }) {
           <button onClick={onExit} className="btn btn-ghost">Cancel</button>
         </div>
 
-        <div className="text-[11px] opacity-60 italic">
+        <div className="text-[11px] text-muted italic">
           💡 Keyboard shortcuts during play: <kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> to rate.
         </div>
       </div>
@@ -248,7 +248,7 @@ export function SmartReviewRunner({ cert, onExit }) {
         <header className="text-center">
           <div className="text-5xl mb-2">🎯</div>
           <h2 className="text-2xl font-extrabold">Session complete</h2>
-          <p className="opacity-80 text-sm mt-1">
+          <p className="text-muted text-sm mt-1">
             You rated {sessionStats.length} questions. Next session will re-surface the weak ones.
           </p>
         </header>
@@ -336,7 +336,7 @@ export function SmartReviewRunner({ cert, onExit }) {
               <RatingButton color="warning" label="Unsure"   num={2} q={q} onRate={handleRating} />
               <RatingButton color="success" label="Got it"   num={3} q={q} onRate={handleRating} />
             </div>
-            <div className="text-[10.5px] opacity-60 italic mt-2 text-center">
+            <div className="text-[10.5px] text-muted italic mt-2 text-center">
               Rating drives when this question returns. Keyboard: <kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd>
             </div>
           </div>
@@ -353,7 +353,7 @@ function Stat({ color, label, value }) {
   return (
     <div className="rounded-lg border border-token bg-[var(--card-2)]/40 px-2 py-2">
       <div className={cn('text-xl font-extrabold tabular-nums', color)}>{value}</div>
-      <div className="text-[9.5px] opacity-70 font-bold uppercase tracking-wide mt-0.5">{label}</div>
+      <div className="text-[9.5px] text-muted font-bold uppercase tracking-wide mt-0.5">{label}</div>
     </div>
   );
 }
@@ -374,7 +374,7 @@ function RatingButton({ color, label, num, q, onRate }) {
     >
       <span className="text-2xl">{num === 1 ? '😵' : num === 2 ? '🤔' : '✅'}</span>
       <span>{label}</span>
-      <span className="text-[10px] opacity-70">Rating {num}</span>
+      <span className="text-[10px] text-muted">Rating {num}</span>
     </button>
   );
 }

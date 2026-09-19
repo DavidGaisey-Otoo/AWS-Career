@@ -131,7 +131,7 @@ export function SyncModal() {
               <CheckCircle2 size={20} className="text-success shrink-0" />
               <div className="flex-1">
                 <div className="font-extrabold text-success text-[13.5px]">Sync is on.</div>
-                <div className="text-[11.5px] opacity-80 mt-0.5">
+                <div className="text-[11.5px] text-muted mt-0.5">
                   Every change auto-pushes to your access-controlled private repository. {meta.lastPushAt && `Last push ${timeAgo(meta.lastPushAt)}.`}
                 </div>
               </div>
@@ -144,7 +144,7 @@ export function SyncModal() {
         {/* ── STATE 2: SYNC OFF — show the 3-step setup ─────────────── */}
         {(!enabled || !hasToken || status === 'no-token') && !hasScopeError && (
           <div className="space-y-3">
-            <p className="text-[12.5px] opacity-80 leading-relaxed">
+            <p className="text-[12.5px] text-muted leading-relaxed">
               Sync your data to an <strong>access-controlled private GitHub repository</strong> so you can keep working from your phone, tablet, or another laptop.
             </p>
 
@@ -253,7 +253,7 @@ export function SyncModal() {
         )}
 
         {/* Privacy footer */}
-        <div className="text-[10.5px] opacity-60 italic leading-relaxed pt-2 border-t border-token">
+        <div className="text-[10.5px] text-muted italic leading-relaxed pt-2 border-t border-token">
           <strong>Privacy:</strong> GitHub enforces access to the private repository; it is not an unlisted Gist. We skip the
           encrypted AWS credential vault, raw AWS keys, and other per-device secrets. Not a primary backup.
         </div>
@@ -292,7 +292,7 @@ function SetupSteps({ hasToken }) {
     {
       done: false,
       title: 'Tap "Turn on sync" below',
-      body: <span className="opacity-70 text-[11px]">First push creates a private sync repository. ~3 seconds.</span>,
+      body: <span className="text-muted text-[11px]">First push creates a private sync repository. ~3 seconds.</span>,
     },
   ];
   return (
@@ -352,7 +352,7 @@ function SecurityAdvisoryCard({ busy, onSecure, onDismiss }) {
       >
         {busy ? <><Loader2 size={13} className="animate-spin" /> Securing…</> : <><KeyRound size={13} /> Secure my gist now</>}
       </button>
-      <p className="text-[10.5px] opacity-70 leading-relaxed">
+      <p className="text-[10.5px] text-muted leading-relaxed">
         Afterwards, also{' '}
         <a
           href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer"

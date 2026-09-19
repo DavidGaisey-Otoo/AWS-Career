@@ -63,14 +63,14 @@ export default function MyNotes() {
               {tagFilter} <X size={9} />
             </button>
           )}
-          <span className="text-[10.5px] opacity-60 ml-auto">
+          <span className="text-[10.5px] text-muted ml-auto">
             {filtered.length} of {list.length} note{list.length === 1 ? '' : 's'}
           </span>
         </div>
 
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            <span className="text-[10.5px] opacity-60 self-center mr-1">Tags:</span>
+            <span className="text-[10.5px] text-muted self-center mr-1">Tags:</span>
             {tags.map((t) => (
               <button
                 key={t}
@@ -139,7 +139,7 @@ function NoteCard({ note, onDelete }) {
             {note.source}
           </div>
           <h3 className="text-[14px] font-extrabold leading-snug">{note.title}</h3>
-          <div className="text-[11px] opacity-70 mt-0.5 inline-flex items-center gap-1">
+          <div className="text-[11px] text-muted mt-0.5 inline-flex items-center gap-1">
             <Calendar size={9} /> {new Date(note.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
           </div>
         </div>

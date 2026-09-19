@@ -102,7 +102,7 @@ export function OnboardingModal() {
                   <ActiveIcon size={22} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold tracking-widest uppercase opacity-75">
+                  <div className="text-[11px] font-bold tracking-widest uppercase text-muted">
                     Step {step + 1} of {STEPS.length}
                   </div>
                   <div id="onboarding-title" className="text-xl font-extrabold tracking-tight">{STEPS[step].title}</div>

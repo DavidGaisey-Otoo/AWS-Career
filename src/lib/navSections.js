@@ -8,13 +8,8 @@
  * compatibility with code that still reads it) AND a child under one of
  * the five sections below.
  */
-import {
-  Activity, Award, BarChart3, BookOpen, Brain, Briefcase, BriefcaseBusiness,
-  Calculator, Calendar, Cloud, DollarSign, FileSearch, FileText, FlaskConical, GanttChart,
-  GraduationCap, Hammer, Heart, Home, Inbox, Layers, Library, Mail, Map as MapIcon,
-  Newspaper, PhoneCall, Plane, Presentation, Settings, Sparkles, Target,
-  TrendingUp, Trophy, Users, Wand2, Mic, ShieldCheck, Rocket, ListChecks, Swords, KeyRound, RotateCcw, Github,
-} from 'lucide-react';
+import { Activity, Award, BarChart3, BookOpen, Brain, Briefcase, BriefcaseBusiness, Calculator, Calendar, Cloud, DollarSign, FileSearch, FileText, FlaskConical, GanttChart, GraduationCap, Hammer, Heart, Home, Inbox, Layers, Library, Mail, Map as MapIcon, Newspaper, PhoneCall, Plane, Presentation, Settings, Sparkles, Target, TrendingUp, Trophy, Users, Wand2, Mic, ShieldCheck, Rocket, ListChecks, Swords, KeyRound, RotateCcw } from 'lucide-react';
+import { Github } from '../components/common/BrandIcons.jsx';
 
 export const SECTIONS = [
   {
@@ -93,6 +88,8 @@ export const SECTIONS = [
       { id: 'architecture', label: 'Architecture Studio', icon: Layers,      path: '/architecture' },
       { id: 'aws-accounts', label: 'AWS Account Manager', icon: Cloud,       path: '/aws-accounts' },
       { id: 'deploy',       label: 'Deploy Console',      icon: Rocket,      path: '/deploy' },
+      { id: 'resource-search', label: 'Resource Search',  icon: FileSearch,  path: '/resource-search',
+        hint: 'Search your live AWS account read-only — what is running, what it costs, what is misconfigured' },
       { id: 'walkthroughs', label: 'Project Walkthroughs',icon: ListChecks,  path: '/walkthroughs' },
       { id: 'session-log',  label: 'Session Log',         icon: FileText,    path: '/session-log' },
     ],

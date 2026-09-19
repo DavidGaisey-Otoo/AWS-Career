@@ -38,7 +38,7 @@ function AwsServiceNodeImpl({ data, selected }) {
       <div className="text-2xl leading-none mb-0.5">{def.icon}</div>
       <div className="text-[11px] font-extrabold leading-tight">{def.label}</div>
       {data.label && (
-        <div className="text-[9.5px] font-bold opacity-70 mt-0.5 leading-tight">{data.label}</div>
+        <div className="text-[9.5px] font-bold text-muted mt-0.5 leading-tight">{data.label}</div>
       )}
     </div>
   );

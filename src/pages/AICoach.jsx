@@ -1,9 +1,6 @@
 import { motion } from 'framer-motion';
-import {
-  Award, BookmarkPlus, Briefcase, Building, ChevronLeft, ClipboardCopy,
-  Compass, DollarSign, FileText, Linkedin, MessageSquare, Mic, Send, Sparkles,
-  Target, TrendingUp, Trophy, User2, Wand2,
-} from 'lucide-react';
+import { Award, BookmarkPlus, Briefcase, Building, ChevronLeft, ClipboardCopy, Compass, DollarSign, FileText, MessageSquare, Mic, Send, Sparkles, Target, TrendingUp, Trophy, User2, Wand2 } from 'lucide-react';
+import { Linkedin } from '../components/common/BrandIcons.jsx';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Markdown } from '../components/ai/Markdown.jsx';

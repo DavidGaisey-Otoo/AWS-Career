@@ -150,12 +150,12 @@ export function GigFeed() {
               <Briefcase size={18} className="text-aws-orange" />
               Entry-Level AWS Gig Finder
               {!loading && (
-                <span className="text-xs font-bold opacity-70 px-2 py-0.5 rounded-full bg-[var(--card-2)]">
+                <span className="text-xs font-bold text-muted px-2 py-0.5 rounded-full bg-[var(--card-2)]">
                   {filtered.length} of {data.gigs.length}
                 </span>
               )}
             </h2>
-            <p className="text-[12px] opacity-80 mt-1">
+            <p className="text-[12px] text-muted mt-1">
               Prioritizes junior AWS, networking, support, documentation, and low-risk planning work. Every match is scored conservatively before you apply.
               <span className="block mt-1 text-aws-orange font-bold">Current evidence-based level: {career.current.label} · {career.score}/100</span>
               <span className="block mt-1 opacity-70">Live remote job boards only. Upwork does not provide this app a public job-feed API, so Upwork posts must be opened there or pasted into Job Analyzer.</span>
@@ -294,7 +294,7 @@ export function GigFeed() {
           {experienceFit === 'entry' && data.gigs.length > 0 ? (
             <>
               <div className="text-sm font-bold mb-1">{data.gigs.length} live opportunities scanned — no safe entry-level match today</div>
-              <div className="text-[12px] opacity-75 max-w-xl mx-auto">
+              <div className="text-[12px] text-muted max-w-xl mx-auto">
                 The scanner did not lose the results: it screened out {fitSummary.notRecommended} unsuitable roles and found {fitSummary.stretch} that may be possible with careful review.
               </div>
               {fitSummary.stretch > 0 && (
@@ -310,7 +310,7 @@ export function GigFeed() {
           ) : (
             <>
               <div className="text-sm font-bold mb-1">No gigs match the selected filters</div>
-              <div className="text-[12px] opacity-75">Clear the search, platform, date, or budget filters—or refresh the live sources.</div>
+              <div className="text-[12px] text-muted">Clear the search, platform, date, or budget filters—or refresh the live sources.</div>
             </>
           )}
         </div>
@@ -324,7 +324,7 @@ export function GigFeed() {
       )}
 
       {filtered.length > 60 && (
-        <div className="text-center text-[11px] opacity-60 italic">
+        <div className="text-center text-[11px] text-muted italic">
           Showing first 60 results — narrow with filters to see more relevant gigs.
         </div>
       )}
@@ -381,7 +381,7 @@ function MarketplaceGigImport({ gigs, career, learningProfile, learningEvents, o
         <div>
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange">Marketplace Gig Import & Match</div>
           <h3 className="text-lg font-extrabold mt-1">Found a priced gig on Upwork or another marketplace?</h3>
-          <p className="text-[12px] opacity-75 mt-1 max-w-3xl">Paste the listing once. The app scores it against your current level and carries the exact requirements and amount into your proposal and delivery workflow. It never signs in, scrapes, submits, or accepts work for you.</p>
+          <p className="text-[12px] text-muted mt-1 max-w-3xl">Paste the listing once. The app scores it against your current level and carries the exact requirements and amount into your proposal and delivery workflow. It never signs in, scrapes, submits, or accepts work for you.</p>
         </div>
         <button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-aws-orange text-ink-950 text-xs font-extrabold">
           <PlusCircle size={14} /> {open ? 'Close importer' : 'Import marketplace gig'}
@@ -442,7 +442,7 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
         <div className="flex-1 min-w-0">
           <h3 className="text-[14px] font-extrabold leading-snug">{gig.title}</h3>
           {gig.company && (
-            <div className="text-[11.5px] opacity-75 mt-0.5">{gig.company}</div>
+            <div className="text-[11.5px] text-muted mt-0.5">{gig.company}</div>
           )}
         </div>
         <span className="px-2 py-0.5 rounded-full bg-[var(--card-2)] border border-token text-[9.5px] font-extrabold uppercase tracking-wide flex-shrink-0">
@@ -452,7 +452,7 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
 
       {/* Description preview */}
       {gig.description && (
-        <p className="text-[12px] opacity-80 leading-snug line-clamp-2">{gig.description}</p>
+        <p className="text-[12px] text-muted leading-snug line-clamp-2">{gig.description}</p>
       )}
 
       <div className={cn(
@@ -476,7 +476,7 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
       )}
 
       {/* Meta line */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] opacity-75">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-muted">
         {gig.budget && (
           <span className="inline-flex items-center gap-1 text-success font-bold">
             <DollarSign size={10} /> {gig.budget}

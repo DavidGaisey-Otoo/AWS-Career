@@ -7,10 +7,8 @@
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Github, ExternalLink, ClipboardCopy, Check, ArrowRight, ArrowLeft,
-  ShieldCheck, AlertTriangle, KeyRound, RefreshCw, CheckCircle2,
-} from 'lucide-react';
+import { ExternalLink, ClipboardCopy, Check, ArrowRight, ArrowLeft, ShieldCheck, AlertTriangle, KeyRound, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Github } from '../components/common/BrandIcons.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import {
@@ -164,7 +162,7 @@ function Header({ existing }) {
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">Renew your GitHub token</h1>
-          <p className="text-sm opacity-80 mt-1 max-w-2xl">
+          <p className="text-sm text-muted mt-1 max-w-2xl">
             Step-by-step renewal. Each step is one click or one paste. Takes about 90 seconds end to end.
           </p>
         </div>
@@ -299,7 +297,7 @@ function PasteTokenForm() {
       </div>
 
       <div>
-        <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1 block">New token</label>
+        <label className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1 block">New token</label>
         <input
           type="password"
           value={token}
@@ -310,14 +308,14 @@ function PasteTokenForm() {
       </div>
 
       <div>
-        <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1 block">New expiry date</label>
+        <label className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1 block">New expiry date</label>
         <input
           type="date"
           value={expiresAt}
           onChange={(e) => setExpiresAt(e.target.value)}
           className="bg-[var(--card)] border border-token rounded-md px-3 py-2 text-sm focus:border-aws-orange focus:outline-none"
         />
-        <p className="text-[10px] opacity-60 mt-1">The exact date GitHub showed for this token's expiry.</p>
+        <p className="text-[10px] text-muted mt-1">The exact date GitHub showed for this token's expiry.</p>
       </div>
 
       <Button variant="primary" onClick={saveAndVerify} disabled={busy || !token}>
@@ -344,7 +342,7 @@ function DoneCard() {
         <ShieldCheck size={32} />
       </div>
       <h2 className="text-2xl font-bold mb-1">Token renewed 🎉</h2>
-      <p className="text-sm opacity-80 mb-4 max-w-md mx-auto">
+      <p className="text-sm text-muted mb-4 max-w-md mx-auto">
         Your new token is saved + verified. The expiry banner will reset based on your new expiry date.
         You can close this page.
       </p>

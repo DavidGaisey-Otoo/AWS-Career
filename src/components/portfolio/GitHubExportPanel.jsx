@@ -1,8 +1,6 @@
 import { motion } from 'framer-motion';
-import {
-  AlertCircle, Check, ChevronRight, ClipboardCopy, ExternalLink, FileCode,
-  Github, Loader2, Rocket, Sparkles, Wand2,
-} from 'lucide-react';
+import { AlertCircle, Check, ChevronRight, ClipboardCopy, ExternalLink, FileCode, Loader2, Rocket, Sparkles, Wand2 } from 'lucide-react';
+import { Github } from '../common/BrandIcons.jsx';
 import { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 import { usePortfolio } from '../../context/PortfolioContext.jsx';

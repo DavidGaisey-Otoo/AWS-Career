@@ -157,19 +157,19 @@ export function FlashcardDeck({ topicId, cards }) {
           onClick={() => mark('known')}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold bg-success/15 text-success border border-success/30 hover:bg-success/25 transition focus-ring"
         >
-          <Sparkles size={14} /> Known <kbd className="text-[10px] opacity-70">1</kbd>
+          <Sparkles size={14} /> Known <kbd className="text-[10px] text-muted">1</kbd>
         </button>
         <button
           onClick={() => mark('learning')}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold bg-warning/15 text-warning border border-warning/30 hover:bg-warning/25 transition focus-ring"
         >
-          <Target size={14} /> Learning <kbd className="text-[10px] opacity-70">2</kbd>
+          <Target size={14} /> Learning <kbd className="text-[10px] text-muted">2</kbd>
         </button>
         <button
           onClick={() => mark('hard')}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold bg-danger/15 text-danger border border-danger/30 hover:bg-danger/25 transition focus-ring"
         >
-          <Zap size={14} /> Hard <kbd className="text-[10px] opacity-70">3</kbd>
+          <Zap size={14} /> Hard <kbd className="text-[10px] text-muted">3</kbd>
         </button>
       </div>
 

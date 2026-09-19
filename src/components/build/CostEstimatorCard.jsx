@@ -52,7 +52,7 @@ export function CostEstimatorCard({ services = [], projectName = 'this project',
               PJ-03 · Estimated AWS Cost
             </div>
             <h3 className="text-lg font-extrabold">What will {projectName} cost to run?</h3>
-            <p className="text-[12px] opacity-75 mt-0.5">
+            <p className="text-[12px] text-muted mt-0.5">
               Order-of-magnitude estimate based on typical personal-project usage.
             </p>
           </div>
@@ -146,7 +146,7 @@ export function CostEstimatorCard({ services = [], projectName = 'this project',
 
       {/* Unknown services warning */}
       {unknownServices.length > 0 && (
-        <div className="text-[11.5px] opacity-70 italic">
+        <div className="text-[11.5px] text-muted italic">
           ⚠ Services not in our pricing database: {unknownServices.join(', ')}. Use the AWS Pricing Calculator for accurate quotes.
         </div>
       )}
@@ -164,9 +164,9 @@ export function CostEstimatorCard({ services = [], projectName = 'this project',
           {breakdown.map((b) => (
             <div key={b.id} className="rounded-lg bg-[var(--card-2)]/40 p-3">
               <div className="text-[11.5px] font-extrabold mb-0.5">
-                {b.label} <span className="opacity-60 text-[10px]">— {b.unit}</span>
+                {b.label} <span className="text-muted text-[10px]">— {b.unit}</span>
               </div>
-              <div className="text-[12px] opacity-80 leading-snug">{b.explanation}</div>
+              <div className="text-[12px] text-muted leading-snug">{b.explanation}</div>
             </div>
           ))}
         </div>
@@ -197,7 +197,7 @@ export function CostEstimatorCard({ services = [], projectName = 'this project',
       )}
 
       {/* Disclaimer */}
-      <div className="text-[10.5px] opacity-60 italic pt-2 border-t border-token flex items-start gap-1.5">
+      <div className="text-[10.5px] text-muted italic pt-2 border-t border-token flex items-start gap-1.5">
         <AlertTriangle size={11} className="text-warning mt-0.5 flex-shrink-0" />
         <span>
           Costs vary by region, usage volume, and AWS pricing changes. This is an estimate based on typical usage patterns —
@@ -218,10 +218,10 @@ function HeadlineCard({ icon, label, value, subtitle, tone }) {
     <div className="rounded-2xl border border-token bg-[var(--card-2)]/40 p-4">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-2xl">{icon}</span>
-        <div className="text-[10px] font-extrabold uppercase tracking-widest opacity-70">{label}</div>
+        <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted">{label}</div>
       </div>
       <div className={cn('text-2xl font-extrabold tabular-nums', valueColor)}>{value}</div>
-      <div className="text-[11px] opacity-70 mt-0.5">{subtitle}</div>
+      <div className="text-[11px] text-muted mt-0.5">{subtitle}</div>
     </div>
   );
 }

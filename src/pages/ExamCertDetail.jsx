@@ -1,10 +1,6 @@
 import { motion } from 'framer-motion';
-import {
-  Award, BookOpen, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Clipboard,
-  Clock, ExternalLink, Filter, FileText, Flag, GraduationCap, Layers, Library,
-  Monitor, MonitorSmartphone, Search, Star, Target, Ticket, Trash2, Trophy,
-  Wand2, Youtube, Zap,
-} from 'lucide-react';
+import { Award, BookOpen, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Clipboard, Clock, ExternalLink, Filter, FileText, Flag, GraduationCap, Layers, Library, Monitor, MonitorSmartphone, Search, Star, Target, Ticket, Trash2, Trophy, Wand2, Zap } from 'lucide-react';
+import { Youtube } from '../components/common/BrandIcons.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -271,7 +267,7 @@ function SmartReviewMasteryCard({ cert }) {
           <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-aws-orange inline-flex items-center gap-1.5">
             <Award size={11} /> Smart Review mastery
           </h3>
-          <p className="text-[11px] opacity-70 mt-0.5">
+          <p className="text-[11px] text-muted mt-0.5">
             Mastery % per topic, driven by your confidence ratings in Smart Review sessions.
           </p>
         </div>
@@ -305,7 +301,7 @@ function SmartReviewMasteryCard({ cert }) {
             <div className="text-2xl font-extrabold tabular-nums">
               {overall.masteryPct == null ? '—' : `${overall.masteryPct}%`}
             </div>
-            <div className="text-[11px] opacity-70">{overall.rated} of {overall.total} rated</div>
+            <div className="text-[11px] text-muted">{overall.rated} of {overall.total} rated</div>
           </div>
           <div className="flex-1 min-w-[180px] max-w-md">
             <div className="w-full h-2.5 rounded-full bg-[var(--card)] overflow-hidden">
@@ -334,20 +330,20 @@ function SmartReviewMasteryCard({ cert }) {
       {/* Per-topic mastery — top 12 weakest shown first */}
       {sorted.some((t) => t.masteryPct != null) ? (
         <div className="space-y-1.5">
-          <div className="text-[10px] font-extrabold uppercase tracking-widest opacity-60 mb-1">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1">
             Per-topic mastery — weakest first
           </div>
           {sorted.slice(0, 12).map((t) => (
             <MasteryRow key={t.id} topic={t} />
           ))}
           {sorted.length > 12 && (
-            <div className="text-[10.5px] opacity-60 text-center pt-1 italic">
+            <div className="text-[10.5px] text-muted text-center pt-1 italic">
               + {sorted.length - 12} more topics — start a Smart Review session to fill them in
             </div>
           )}
         </div>
       ) : (
-        <div className="text-center py-4 text-sm opacity-70">
+        <div className="text-center py-4 text-sm text-muted">
           You haven't rated any questions yet. <Link to={`/exam/${cert.id}/run/smartReview`} className="text-aws-orange font-bold hover:underline">Start your first Smart Review</Link> to build the mastery map.
         </div>
       )}
@@ -378,7 +374,7 @@ function MasteryRow({ topic }) {
       <span className={cn('w-10 text-right tabular-nums font-bold', tone)}>
         {pct == null ? '—' : `${pct}%`}
       </span>
-      <span className="w-16 text-right text-[10.5px] opacity-60">
+      <span className="w-16 text-right text-[10.5px] text-muted">
         {topic.rated}/{topic.total}
       </span>
     </div>
@@ -467,7 +463,7 @@ function TopicHeatmapCard({ cert }) {
                 {noQuestions ? 'No Qs' : s.pct == null ? `${s.available} Q` : `${s.pct}%`}
               </div>
               {!noQuestions && s.attempts > 0 && (
-                <div className="text-[9px] opacity-70 mt-0.5">{s.attempts}/{s.available} done</div>
+                <div className="text-[9px] text-muted mt-0.5">{s.attempts}/{s.available} done</div>
               )}
             </button>
           );
@@ -511,7 +507,7 @@ function TopicNotesDrawer({ cert, topic, onClose }) {
           <span className="text-2xl">{topic.icon}</span>
           <div>
             <h4 className="text-base font-extrabold">{topic.label} — quick notes</h4>
-            <p className="text-[11px] opacity-70">
+            <p className="text-[11px] text-muted">
               {topic.available} question{topic.available === 1 ? '' : 's'} in the bank · {topic.attempts > 0 ? `${topic.pct}% latest accuracy across ${topic.attempts} attempts` : 'No attempts yet'}
             </p>
           </div>
@@ -575,7 +571,7 @@ function TopicNotesDrawer({ cert, topic, onClose }) {
           </div>
         </div>
       ) : (
-        <div className="text-sm opacity-70">
+        <div className="text-sm text-muted">
           Notes for <strong>{topic.label}</strong> are coming. For now, hit the practice button to drill into questions.
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
@@ -777,7 +773,7 @@ function WeakTopicsCard({ cert, certId }) {
             {summary.isCritical ? '🔴 ' : '🟡 '}
             Weak topics ({summary.topics.length || 1})
           </h3>
-          <p className="text-xs opacity-80 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Topics where you scored under 60% in the last 2 sessions. Click any to see the recovery plan.
           </p>
         </div>
@@ -804,7 +800,7 @@ function WeakTopicsCard({ cert, certId }) {
                   <Target size={12} className={summary.isCritical ? 'text-danger' : 'text-warning'} />
                   {t.label}
                 </span>
-                <span className="text-[11px] opacity-70 font-mono">
+                <span className="text-[11px] text-muted font-mono">
                   latest {t.latestPct}% · prev {t.previousPct}%
                 </span>
               </summary>
@@ -821,7 +817,7 @@ function WeakTopicsCard({ cert, certId }) {
                       </li>
                     ))}
                   </ol>
-                  <div className="text-[10px] opacity-70 mt-2">
+                  <div className="text-[10px] text-muted mt-2">
                     Estimated recovery time: <strong>{t.plan.estimatedHours} hours</strong> · Real-exam weight: <strong>{t.plan.weight}%</strong>
                   </div>
                 </>

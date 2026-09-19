@@ -56,9 +56,9 @@ export function ExpertReviewPanel({ brief = '', services = [], region, level = '
             <Shield size={15} className="text-aws-orange" />
             8 AWS experts reviewed your solution
           </h3>
-          <p className="text-[11.5px] opacity-70 mt-0.5">
+          <p className="text-[11.5px] text-muted mt-0.5">
             Security · Database · Network · Cost · Compliance · Compute · Storage · Reliability
-            <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] opacity-60 italic">
+            <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] text-muted italic">
               · {review.runMode === 'rules' ? 'Rule-engine mode (deterministic)' : 'LLM mode'}
             </span>
           </p>
@@ -70,7 +70,7 @@ export function ExpertReviewPanel({ brief = '', services = [], region, level = '
           GRADE_TONE[review.grade.tone]
         )}>
           <div className="text-2xl font-extrabold leading-none">{review.grade.letter}</div>
-          <div className="text-[10px] font-bold opacity-80 mt-0.5">{review.score}/100</div>
+          <div className="text-[10px] font-bold text-muted mt-0.5">{review.score}/100</div>
         </div>
       </div>
 
@@ -125,7 +125,7 @@ export function ExpertReviewPanel({ brief = '', services = [], region, level = '
                     {score}/100
                   </div>
                 </div>
-                <div className="text-[10.5px] opacity-70 mb-1">
+                <div className="text-[10.5px] text-muted mb-1">
                   {expert.role} · {expert.yearsExperience}+ years
                 </div>
                 <div className="text-[11px]">

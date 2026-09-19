@@ -18,11 +18,8 @@
  * the recording + values into a polished report.
  */
 import { useEffect, useState } from 'react';
-import {
-  Sparkles, User, Layers, Globe, Cloud, BookOpen, Github,
-  FileText, Download, Printer, ExternalLink, ArrowRight, CheckCircle2,
-  RefreshCw, Wand2,
-} from 'lucide-react';
+import { Sparkles, User, Layers, Globe, Cloud, BookOpen, FileText, Download, Printer, ExternalLink, ArrowRight, CheckCircle2, RefreshCw, Wand2 } from 'lucide-react';
+import { Github } from '../components/common/BrandIcons.jsx';
 import { Wizard } from '../components/wizard/Wizard.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { useRecorder } from '../context/RecorderContext.jsx';
@@ -104,7 +101,7 @@ const STEPS = [
               <t.icon size={16} className="text-[var(--brand)]" />
               <span className="font-bold">{t.label}</span>
             </div>
-            <p className="text-xs opacity-70">{t.desc}</p>
+            <p className="text-xs text-muted">{t.desc}</p>
           </button>
         ))}
       </div>
@@ -312,7 +309,7 @@ function Header() {
         <Wand2 size={18} className="text-[var(--brand)]" />
         <h1 className="text-2xl font-bold tracking-tight">Project Builder</h1>
       </div>
-      <p className="text-sm opacity-70 max-w-2xl">
+      <p className="text-sm text-muted max-w-2xl">
         A step-by-step wizard for spinning up an AWS portfolio project. One question per screen,
         smart name suggestions, auto-recorded session, and a polished PDF / Markdown / GitHub
         push at the end. Use this for every new project — you'll never have to think about names again.
@@ -425,7 +422,7 @@ function GenerateStage({ values }) {
           </div>
           <div>
             <h3 className="text-lg font-bold">Everything captured</h3>
-            <p className="text-sm opacity-80 mt-1">
+            <p className="text-sm text-muted mt-1">
               Session recorded · {input.session.steps?.length || 0} steps · {Object.keys(values).length} fields.
               Pick one or more outputs below.
             </p>
@@ -481,7 +478,7 @@ function GenerateStage({ values }) {
             Build with full context
           </div>
           <h3 className="text-lg font-extrabold">Generate a Deep Walkthrough for this project</h3>
-          <p className="text-[12px] opacity-80 leading-snug mt-0.5">
+          <p className="text-[12px] text-muted leading-snug mt-0.5">
             Auto-orders the right services (network → security → storage → compute → integration → monitoring) and adds WHY,
             analogy, mistakes, and HOW in 4 formats for each step.
           </p>
@@ -508,7 +505,7 @@ function GenerateStage({ values }) {
       )}
 
       <details className="rounded-2xl border border-token bg-[var(--card)] p-4">
-        <summary className="cursor-pointer text-sm font-semibold opacity-80">Preview the Markdown</summary>
+        <summary className="cursor-pointer text-sm font-semibold text-muted">Preview the Markdown</summary>
         <pre className="mt-3 text-[10px] font-mono whitespace-pre-wrap overflow-auto max-h-96 opacity-90">{markdown}</pre>
       </details>
     </div>
@@ -522,7 +519,7 @@ function OutputCard({ icon: Icon, title, description, action }) {
         <Icon size={16} className="text-[var(--brand)]" />
         <span className="font-bold">{title}</span>
       </div>
-      <p className="text-xs opacity-70 flex-1">{description}</p>
+      <p className="text-xs text-muted flex-1">{description}</p>
       <div>{action}</div>
     </div>
   );
@@ -536,7 +533,7 @@ function Field({ label, hint, value, onChange, placeholder, textarea, rows = 3, 
   const common = 'w-full px-3 py-2.5 rounded-xl bg-[var(--card)] border border-token focus:border-[var(--brand)] focus:outline-none text-sm';
   return (
     <div>
-      <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1.5 block">{label}</label>
+      <label className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1.5 block">{label}</label>
       {asSelect ? (
         <select value={value} onChange={(e) => onChange(e.target.value)} className={common}>
           {options.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -550,7 +547,7 @@ function Field({ label, hint, value, onChange, placeholder, textarea, rows = 3, 
           className={common}
         />
       )}
-      {hint && <div className="text-[10px] opacity-60 mt-1">{hint}</div>}
+      {hint && <div className="text-[10px] text-muted mt-1">{hint}</div>}
     </div>
   );
 }
@@ -570,7 +567,7 @@ function FieldWithSuggest({ label, hint, value, onChange, suggestKind, suggestHi
 
   return (
     <div>
-      <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1.5 block">{label}</label>
+      <label className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1.5 block">{label}</label>
       <div className="flex gap-2">
         <input
           type="text" value={value} onChange={(e) => onChange(e.target.value)}
@@ -584,7 +581,7 @@ function FieldWithSuggest({ label, hint, value, onChange, suggestKind, suggestHi
           <RefreshCw size={12} />
         </button>
       </div>
-      {hint && <div className="text-[10px] opacity-60 mt-1">{hint}</div>}
+      {hint && <div className="text-[10px] text-muted mt-1">{hint}</div>}
       {variations.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {variations.map((v) => (

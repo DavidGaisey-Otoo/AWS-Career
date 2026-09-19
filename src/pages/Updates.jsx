@@ -14,11 +14,8 @@
  * right tool for the job — we just make it convenient.
  */
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Sparkles, RefreshCw, ExternalLink, Wrench, Rocket, CheckCircle2,
-  AlertCircle, BookOpen, Newspaper, Loader2, Terminal, GitBranch, Shield,
-  ChevronDown, ChevronRight, Calendar, Tag, Github,
-} from 'lucide-react';
+import { Sparkles, RefreshCw, ExternalLink, Wrench, Rocket, CheckCircle2, AlertCircle, BookOpen, Newspaper, Loader2, Terminal, GitBranch, Shield, ChevronDown, ChevronRight, Calendar, Tag } from 'lucide-react';
+import { Github } from '../components/common/BrandIcons.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../components/ui/Button.jsx';
 import { APP_CHANGELOG, currentVersion, latestEntry } from '../data/appChangelog.js';
@@ -57,16 +54,16 @@ function Header() {
             <RefreshCw size={18} className="text-[var(--brand)]" />
             <h1 className="text-2xl font-bold tracking-tight">Updates</h1>
           </div>
-          <p className="text-sm opacity-70 max-w-2xl">
+          <p className="text-sm text-muted max-w-2xl">
             What's shipped in your app, what's new in AWS itself, and how to pull the next batch of
             updates into your local copy.
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className="text-[10px] uppercase tracking-widest font-bold opacity-60">App version</span>
+          <span className="text-[10px] uppercase tracking-widest font-bold text-muted">App version</span>
           <span className="text-2xl font-bold font-mono tabular-nums">v{currentVersion()}</span>
           {latest?.date && (
-            <span className="text-[10px] opacity-60">Last ship: {latest.date}</span>
+            <span className="text-[10px] text-muted">Last ship: {latest.date}</span>
           )}
         </div>
       </div>
@@ -123,7 +120,7 @@ function ChangelogEntry({ entry, latest }) {
           {latest ? <Rocket size={16} /> : <Tag size={14} />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest opacity-70 mb-0.5">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted mb-0.5">
             <span className="font-mono font-bold">v{entry.version}</span>
             <span>·</span>
             <Calendar size={9} />
@@ -224,7 +221,7 @@ function AwsNewsTab() {
       <div className="rounded-2xl border border-token bg-[var(--card)] p-4 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h3 className="text-base font-bold flex items-center gap-2"><Newspaper size={16} /> AWS What's New (live)</h3>
-          <p className="text-xs opacity-70 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Pulled from <a href="https://aws.amazon.com/about-aws/whats-new/recent/" target="_blank" rel="noreferrer" className="underline text-electric">aws.amazon.com</a>.
             {cache.at && <span className="ml-1">Last refreshed {timeAgo(cache.at)}.</span>}
           </p>
@@ -249,7 +246,7 @@ function AwsNewsTab() {
       )}
 
       {(cache.items || []).length === 0 && !busy && !error ? (
-        <div className="rounded-xl border border-token bg-[var(--card)] p-8 text-center text-sm opacity-60">
+        <div className="rounded-xl border border-token bg-[var(--card)] p-8 text-center text-sm text-muted">
           No items cached yet. Click Refresh.
         </div>
       ) : (
@@ -267,7 +264,7 @@ function AwsNewsTab() {
                   <Newspaper size={14} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest opacity-60 mb-1">
+                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted mb-1">
                     <Calendar size={9} />
                     <span>{formatDate(it.pubDate)}</span>
                   </div>
@@ -275,7 +272,7 @@ function AwsNewsTab() {
                     {it.title}
                   </h4>
                   {it.summary && (
-                    <p className="text-xs opacity-70 mt-1 line-clamp-2">{it.summary}</p>
+                    <p className="text-xs text-muted mt-1 line-clamp-2">{it.summary}</p>
                   )}
                 </div>
                 <ExternalLink size={12} className="opacity-40 group-hover:opacity-100 shrink-0 mt-1" />
@@ -372,7 +369,7 @@ function HowToUpdateTab() {
           </div>
           <div>
             <h3 className="text-lg font-bold">Updating the app</h3>
-            <p className="text-sm opacity-80 mt-1">
+            <p className="text-sm text-muted mt-1">
               This app is a local Vite React frontend you run on your machine. Updates ship as code
               changes — easiest path is to ask <strong>Claude Code</strong> to apply them.
             </p>
@@ -385,7 +382,7 @@ function HowToUpdateTab() {
           Open a terminal in <code className="px-1 py-0.5 rounded bg-[var(--card-2)] text-xs">C:\Users\zinc9\OneDrive\Desktop\Projects\AWS Prep</code> and run:
         </p>
         <pre className="mt-2 rounded-lg bg-[var(--card-2)]/60 border border-token p-3 text-xs font-mono overflow-x-auto">claude</pre>
-        <p className="mt-2 text-xs opacity-70">
+        <p className="mt-2 text-xs text-muted">
           If you don't have Claude Code installed yet, get it at&nbsp;
           <a href="https://docs.claude.com/claude-code/setup" target="_blank" rel="noreferrer" className="underline text-electric">
             docs.claude.com/claude-code/setup
@@ -402,7 +399,7 @@ function HowToUpdateTab() {
 3. Make sure all URL strings in the data files render as clickable in the UI.
 4. Run npm run build at the end and confirm it succeeds.`}
         </pre>
-        <p className="mt-2 text-xs opacity-70">
+        <p className="mt-2 text-xs text-muted">
           Claude will read the codebase, make the changes, run the build, and tell you what shipped.
         </p>
       </StepCard>
@@ -429,7 +426,7 @@ function HowToUpdateTab() {
           <li className="flex items-start gap-2"><span className="text-success mt-0.5">✓</span> npm package vulnerabilities (npm audit).</li>
           <li className="flex items-start gap-2"><span className="text-success mt-0.5">✓</span> AWS SDK version bumps so verifier calls keep working.</li>
         </ul>
-        <p className="mt-3 text-xs opacity-70">
+        <p className="mt-3 text-xs text-muted">
           Just say: <em>"Claude, do a freshness sweep — check everything in this list and tell me what needs updating."</em>
         </p>
       </StepCard>
@@ -438,7 +435,7 @@ function HowToUpdateTab() {
         <Github size={16} className="text-[var(--brand)]" />
         <div className="flex-1">
           <div className="text-sm font-bold">Want auto-update via GitHub?</div>
-          <div className="text-xs opacity-70">
+          <div className="text-xs text-muted">
             Push this project to a private GitHub repo, then ask Claude to set up a&nbsp;
             <a href="https://docs.github.com/en/actions" target="_blank" rel="noreferrer" className="underline text-electric">
               GitHub Action

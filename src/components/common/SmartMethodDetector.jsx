@@ -230,7 +230,7 @@ function ConsoleTab({ c, progressKey }) {
           {/* Top control row — step strip + actions */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase tracking-widest font-extrabold opacity-60">
+              <span className="text-[10px] uppercase tracking-widest font-extrabold text-muted">
                 Step <strong className="opacity-100 text-aws-orange">{current + 1}</strong> of {steps.length}
               </span>
               {doneSet.size > 0 && (
@@ -241,7 +241,7 @@ function ConsoleTab({ c, progressKey }) {
             </div>
             <button
               onClick={() => setExpandAll((e) => !e)}
-              className="text-[10px] font-bold px-2 py-1 rounded-lg hover:bg-[var(--card-2)] flex items-center gap-1 opacity-80"
+              className="text-[10px] font-bold px-2 py-1 rounded-lg hover:bg-[var(--card-2)] flex items-center gap-1 text-muted"
             >
               {expandAll ? <Minimize2 size={10} /> : <Maximize2 size={10} />}
               {expandAll ? 'One at a time' : 'Expand all'}
@@ -562,7 +562,7 @@ function CheckMyWork({ verify, verification, context = {}, onSaveContext, onSave
             <div className="mt-2 space-y-1.5">
               {needs.map((n) => (
                 <div key={n} className="flex items-center gap-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest opacity-70 w-20 shrink-0">{n}</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted w-20 shrink-0">{n}</label>
                   <input
                     type="text"
                     value={inputs[n] || ''}
@@ -611,7 +611,7 @@ function CheckMyWork({ verify, verification, context = {}, onSaveContext, onSave
               </button>
             )}
             {!isConnected && (
-              <span className="text-[10px] opacity-70 italic">
+              <span className="text-[10px] text-muted italic">
                 Link account in AWS Account Manager to enable
               </span>
             )}

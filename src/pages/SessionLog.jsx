@@ -12,6 +12,7 @@ import {
   Printer, CheckCircle2, AlertTriangle, ArrowRight, ChevronRight, Lightbulb,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button.jsx';
+import { EmptyState } from '../components/common/EmptyState.jsx';
 import { SESSIONS, sessionToMarkdown } from '../data/sessionLog.js';
 import { useDeploy } from '../context/DeployContext.jsx';
 import { openPrintable, downloadPdfFile } from '../lib/printableHtml.js';
@@ -31,7 +32,7 @@ export default function SessionLog() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5">
         <Sidebar sessions={all} activeId={activeId} setActiveId={setActiveId} />
-        {active ? <SessionView session={active} /> : <EmptyState />}
+        {active ? <SessionView session={active} /> : <EmptyState tone="quiet" icon={FileText} title="No sessions yet" description="Future deploy console activity will appear here automatically." />}
       </div>
     </div>
   );
@@ -44,7 +45,7 @@ function Header() {
         <FileText size={18} className="text-[var(--brand)]" />
         <h1 className="text-2xl font-bold tracking-tight">Session Log</h1>
       </div>
-      <p className="text-sm opacity-70 max-w-2xl">
+      <p className="text-sm text-muted max-w-2xl">
         A polished, step-by-step record of every AWS setup and build session you've completed in this app.
         Export to Markdown or print as a clean PDF — perfect for portfolio evidence, white-papers, or revision.
       </p>
@@ -55,7 +56,7 @@ function Header() {
 function Sidebar({ sessions, activeId, setActiveId }) {
   return (
     <aside className="rounded-2xl border border-token bg-[var(--card)] overflow-hidden lg:sticky lg:top-4">
-      <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold opacity-60">
+      <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold text-muted">
         Sessions
       </div>
       <ul className="divide-y divide-[var(--border)]">
@@ -70,7 +71,7 @@ function Sidebar({ sessions, activeId, setActiveId }) {
               <div className="flex items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate">{s.title}</div>
-                  <div className="text-[10px] opacity-60 flex items-center gap-2 mt-0.5">
+                  <div className="text-[10px] text-muted flex items-center gap-2 mt-0.5">
                     <Calendar size={9} /> {s.date}
                     {s.durationMin && <><span>·</span><Clock size={9} /> {s.durationMin}m</>}
                   </div>
@@ -82,16 +83,6 @@ function Sidebar({ sessions, activeId, setActiveId }) {
         ))}
       </ul>
     </aside>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="rounded-2xl border border-token bg-[var(--card)] p-8 text-center">
-      <FileText size={32} className="mx-auto opacity-30 mb-3" />
-      <h2 className="text-lg font-bold">No sessions yet</h2>
-      <p className="text-sm opacity-70">Future deploy console activity will appear here automatically.</p>
-    </div>
   );
 }
 
@@ -138,7 +129,7 @@ function SessionView({ session }) {
         <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">{session.title}</h2>
-            <div className="text-xs opacity-60 flex flex-wrap gap-3 mt-1">
+            <div className="text-xs text-muted flex flex-wrap gap-3 mt-1">
               <span className="flex items-center gap-1"><Calendar size={11} /> {session.date}</span>
               {session.durationMin && <span className="flex items-center gap-1"><Clock size={11} /> {session.durationMin} min</span>}
               {session.account?.id && <span>Account {session.account.id}</span>}
@@ -180,7 +171,7 @@ function SessionView({ session }) {
                 </span>
                 <div className="flex-1">
                   <div className="font-semibold">{o.label}</div>
-                  {o.note && <div className="text-xs opacity-70 mt-0.5">{o.note}</div>}
+                  {o.note && <div className="text-xs text-muted mt-0.5">{o.note}</div>}
                 </div>
               </li>
             ))}
@@ -228,9 +219,9 @@ function SessionStep({ step, hasNext }) {
         </div>
         <div className="flex-1 min-w-0 p-4 pl-2">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] uppercase tracking-widest font-bold opacity-60">Phase: {step.phase}</span>
+            <span className="text-[10px] uppercase tracking-widest font-bold text-muted">Phase: {step.phase}</span>
             {step.durationMin && (
-              <span className="text-[10px] opacity-60 flex items-center gap-1"><Clock size={9} /> {step.durationMin}m</span>
+              <span className="text-[10px] text-muted flex items-center gap-1"><Clock size={9} /> {step.durationMin}m</span>
             )}
           </div>
           <h4 className="text-base font-bold mb-2">Step {step.n} — {step.title}</h4>

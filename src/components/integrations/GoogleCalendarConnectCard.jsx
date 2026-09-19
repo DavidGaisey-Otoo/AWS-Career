@@ -130,7 +130,7 @@ export function GoogleCalendarConnectCard() {
                 </span>
               )}
             </h3>
-            <p className="text-[12px] opacity-80 mt-0.5">
+            <p className="text-[12px] text-muted mt-0.5">
               Book discovery calls in one click from any proposal or outreach email.
             </p>
           </div>

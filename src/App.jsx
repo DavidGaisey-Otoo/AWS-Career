@@ -75,6 +75,7 @@ const AWSUpdates           = lazy(() => import('./pages/AWSUpdates.jsx'));
 const ProjectPlan          = lazy(() => import('./pages/ProjectPlan.jsx'));
 const ContentQueue         = lazy(() => import('./pages/ContentQueue.jsx'));
 const DeployConsole        = lazy(() => import('./pages/DeployConsole.jsx'));
+const ResourceSearch       = lazy(() => import('./pages/ResourceSearch.jsx'));
 const Walkthroughs         = lazy(() => import('./pages/Walkthroughs.jsx'));
 const SessionLog           = lazy(() => import('./pages/SessionLog.jsx'));
 const ProjectBuilder       = lazy(() => import('./pages/ProjectBuilder.jsx'));
@@ -189,6 +190,7 @@ export default function App() {
                        <Route path="/content-queue" element={<Suspended><ContentQueue /></Suspended>} />
                        <Route path="/aws-updates"   element={<Suspended><AWSUpdates /></Suspended>} />
                        <Route path="/deploy"        element={<Suspended><DeployConsole /></Suspended>} />
+                       <Route path="/resource-search" element={<Suspended><ResourceSearch /></Suspended>} />
                        <Route path="/walkthroughs"  element={<Suspended><Walkthroughs /></Suspended>} />
                        <Route path="/walkthroughs/:id" element={<Suspended><Walkthroughs /></Suspended>} />
                        <Route path="/session-log"   element={<Suspended><SessionLog /></Suspended>} />

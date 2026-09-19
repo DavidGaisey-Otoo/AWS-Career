@@ -75,10 +75,10 @@ export function EmergencyStopFAB() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">🚨 Emergency Stop</h2>
-                <p className="text-sm opacity-80 mt-1">
+                <p className="text-sm text-muted mt-1">
                   Review urgent cleanup steps and clear <strong>{liveResources} unverified local resource record{liveResources === 1 ? '' : 's'}</strong>.
                 </p>
-                <p className="text-xs opacity-70 mt-2">
+                <p className="text-xs text-muted mt-2">
                   If you see unexpected charges, open AWS Billing and CloudFormation immediately. This button cannot terminate AWS resources because these local records are not verified deployment evidence.
                 </p>
               </div>
@@ -88,7 +88,7 @@ export function EmergencyStopFAB() {
               <strong className="text-rose-300">No AWS deletion occurs here.</strong> Delete verified stacks through Deploy Console and confirm <code>DELETE_COMPLETE</code> in CloudFormation. Use AWS Resource Explorer, Tag Editor, and Billing to find anything else.
             </div>
 
-            <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1.5 block">
+            <label className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1.5 block">
               Type <span className="font-mono text-rose-300">CLEAR</span> to clear local records
             </label>
             <input
@@ -117,7 +117,7 @@ export function EmergencyStopFAB() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">{report.ok ? 'Local records cleared' : 'Couldn\'t complete'}</h2>
-                <p className="text-sm opacity-80 mt-1">
+                <p className="text-sm text-muted mt-1">
                   {report.ok
                     ? `Cleared ${report.deploymentsCleared} planning record(s) and ${report.resourcesCleared} unverified resource record(s). No AWS deletion was attempted.`
                     : report.error}
@@ -128,11 +128,11 @@ export function EmergencyStopFAB() {
             {report.ok && (
               <div className="grid grid-cols-3 gap-2 mb-4">
                 <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3 text-center">
-                  <div className="text-[10px] uppercase tracking-widest opacity-60">Deployments</div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted">Deployments</div>
                   <div className="text-2xl font-bold mt-1">{report.deploymentsCleared}</div>
                 </div>
                 <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3 text-center">
-                  <div className="text-[10px] uppercase tracking-widest opacity-60">Resources</div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted">Resources</div>
                   <div className="text-2xl font-bold mt-1">{report.resourcesCleared}</div>
                 </div>
                 <div className="rounded-xl border border-success/30 bg-success/5 p-3 text-center">

@@ -48,7 +48,7 @@ export function SetupDocumentation({ profileId = 'default' }) {
             <ShieldCheck size={18} className="text-aws-orange" />
             AWS account best practices
           </h2>
-          <p className="text-[12.5px] opacity-80 mt-1.5 leading-relaxed max-w-2xl">
+          <p className="text-[12.5px] text-muted mt-1.5 leading-relaxed max-w-2xl">
             9 current controls for this specific AWS profile. Mark an item only after checking its evidence — each has the WHY,
             click-by-click instructions, and a CLI command to verify it's actually on. Generates a portable report you can
             share with auditors or save to your portfolio.
@@ -129,7 +129,7 @@ function ProgressStrip({ progress, status }) {
   return (
     <div className="rounded-xl bg-[var(--card-2)] border border-token p-3">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[11px] font-extrabold uppercase tracking-widest opacity-75">Setup progress</span>
+        <span className="text-[11px] font-extrabold uppercase tracking-widest text-muted">Setup progress</span>
         <span className="text-[13px] font-extrabold">
           {progress.done} / {progress.total}
           <span className="opacity-70 ml-1">({progress.pct}%)</span>
@@ -139,7 +139,7 @@ function ProgressStrip({ progress, status }) {
         <div className={cn('h-full transition-all duration-500', toneClass)} style={{ width: `${progress.pct}%` }} />
       </div>
       {progress.pct < 100 && (
-        <p className="text-[11px] opacity-70 mt-2">
+        <p className="text-[11px] text-muted mt-2">
           {progress.done === 0
             ? 'Start with Root MFA + IAM Admin user — those are the two highest-impact items.'
             : progress.pct < 50
@@ -292,7 +292,7 @@ function IamPrinciple({ principle }) {
         <span className="text-[18px] flex-shrink-0">{principle.icon}</span>
         <div className="flex-1 min-w-0">
           <div className="text-[13px] font-extrabold">{principle.title}</div>
-          <div className="text-[11px] opacity-75 mt-0.5">{principle.oneLiner}</div>
+          <div className="text-[11px] text-muted mt-0.5">{principle.oneLiner}</div>
         </div>
         {open ? <ChevronUp size={14} className="opacity-60" /> : <ChevronDown size={14} className="opacity-60" />}
       </button>
@@ -367,7 +367,7 @@ function ReportModal({ state, progress, onClose }) {
               <FileText size={16} className="text-aws-orange" />
               AWS Account Setup Report
             </h3>
-            <div className="text-[11px] opacity-70 mt-0.5">
+            <div className="text-[11px] text-muted mt-0.5">
               {progress.done} of {progress.total} items complete ({progress.pct}%)
             </div>
           </div>

@@ -95,7 +95,7 @@ function SetupCard({ compact, currentSetup, onSaved, onCancel }) {
             <h3 className="text-base font-extrabold">
               {currentSetup ? 'Update your study plan' : 'Set your exam date to unlock your daily plan'}
             </h3>
-            <p className="text-[12px] opacity-75 mt-0.5">
+            <p className="text-[12px] text-muted mt-0.5">
               Your daily plan auto-generates based on days remaining, weak topics, and what you haven\'t covered.
             </p>
           </div>
@@ -150,7 +150,7 @@ function SetupCard({ compact, currentSetup, onSaved, onCancel }) {
           const d = daysToExam(examDate);
           if (d == null || d < 0) return null;
           return (
-            <div className="text-[12px] opacity-75">
+            <div className="text-[12px] text-muted">
               <Sparkles size={11} className="inline -mt-0.5 mr-1 text-aws-orange" />
               {d === 0 ? 'Your exam is today — focus on a final review.'
                 : `${d} day${d === 1 ? '' : 's'} until exam → ${Math.round(d * (Number(hoursPerDay) || 1))} hours of total study planned.`}
@@ -211,7 +211,7 @@ function PlanCard({ compact, summary, plan, onDone, onRegenerate, onEditSetup })
               {plan?.completed && <span className="px-1.5 py-0.5 rounded-full bg-success/15 text-success text-[9.5px]">✓ Done</span>}
             </div>
             <h3 className="text-base font-extrabold truncate">{cert?.code} · {cert?.name}</h3>
-            <div className="text-[11.5px] opacity-75 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+            <div className="text-[11.5px] text-muted mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
               <span><Clock size={10} className="inline -mt-0.5 mr-0.5" /> {totalMin} min</span>
               {days != null && (
                 <span><Target size={10} className="inline -mt-0.5 mr-0.5" />
@@ -237,7 +237,7 @@ function PlanCard({ compact, summary, plan, onDone, onRegenerate, onEditSetup })
 
       {/* Blocks */}
       {blocks.length === 0 ? (
-        <div className="text-sm opacity-70 italic text-center py-4">
+        <div className="text-sm text-muted italic text-center py-4">
           No blocks generated for today — try re-rolling or pick a cert with questions.
         </div>
       ) : (
@@ -250,7 +250,7 @@ function PlanCard({ compact, summary, plan, onDone, onRegenerate, onEditSetup })
       <div className="pt-2 border-t border-token">
         {plan?.completed ? (
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-[12px] opacity-80 font-semibold inline-flex items-center gap-1.5">
+            <div className="text-[12px] text-muted font-semibold inline-flex items-center gap-1.5">
               <CheckCircle2 size={14} className="text-success" />
               You\'re done for today — see you tomorrow for the next plan.
             </div>
@@ -260,7 +260,7 @@ function PlanCard({ compact, summary, plan, onDone, onRegenerate, onEditSetup })
           </div>
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-[11px] opacity-70 italic">
+            <div className="text-[11px] text-muted italic">
               Work through each block (click to jump in), then tick today off.
             </div>
             <button onClick={onDone} className="btn btn-primary text-xs">
@@ -295,7 +295,7 @@ function BlockRow({ block, index, done }) {
             <span className="opacity-50 text-[10px]">{index}.</span>
             {block.label}
           </div>
-          <div className="text-[10.5px] opacity-70 mt-0.5 flex items-center gap-2">
+          <div className="text-[10.5px] text-muted mt-0.5 flex items-center gap-2">
             <span className={cn('px-1.5 py-0.5 rounded-full border text-[9px] font-extrabold uppercase tracking-wide', k.cls)}>{k.tag}</span>
             <span><Clock size={9} className="inline -mt-0.5 mr-0.5" />{block.minutes} min</span>
           </div>

@@ -1,9 +1,6 @@
 import { motion } from 'framer-motion';
-import {
-  Archive, CalendarClock, Check, CheckCircle2, ChevronLeft, ChevronRight,
-  ClipboardCopy, Edit3, ExternalLink, Filter, Github, Inbox, Linkedin,
-  Mail, Plus, Rocket, Sparkles, Trash2, Wand2, X,
-} from 'lucide-react';
+import { Archive, CalendarClock, Check, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCopy, Edit3, ExternalLink, Filter, Inbox, Mail, Plus, Rocket, Sparkles, Trash2, Wand2, X } from 'lucide-react';
+import { Github, Linkedin } from '../components/common/BrandIcons.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';

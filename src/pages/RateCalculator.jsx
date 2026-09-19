@@ -286,7 +286,7 @@ export default function RateCalculator() {
           <div className="surface rounded-2xl p-4 flex items-center justify-between gap-3 flex-wrap">
             <div className="flex-1">
               <div className="text-[12.5px] font-bold">Save this as your rate?</div>
-              <div className="text-[11px] opacity-70 mt-0.5">
+              <div className="text-[11px] text-muted mt-0.5">
                 {savedRate
                   ? <>Currently saved: <strong>${Math.round(savedRate.amount)}/hr</strong> (set {new Date(savedRate.savedAt).toLocaleDateString('en-GB')}). Future proposals will reference it.</>
                   : 'Stores in your profile — Smart Proposal Generator + Rate Benchmark will know your floor.'
@@ -331,12 +331,12 @@ function Section({ title, icon: Icon, children }) {
 function Field({ label, hint, value, onChange, prefix, suffix, icon: Icon }) {
   return (
     <div>
-      <label className="text-[10.5px] font-bold opacity-75 flex items-center gap-1 mb-1">
+      <label className="text-[10.5px] font-bold text-muted flex items-center gap-1 mb-1">
         {Icon && <Icon size={10} />} {label.toUpperCase()}
       </label>
       <div className="relative">
         {prefix && (
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12.5px] opacity-60 font-bold pointer-events-none">{prefix}</span>
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12.5px] text-muted font-bold pointer-events-none">{prefix}</span>
         )}
         <input
           type="number"
@@ -351,10 +351,10 @@ function Field({ label, hint, value, onChange, prefix, suffix, icon: Icon }) {
           )}
         />
         {suffix && (
-          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11.5px] opacity-60 font-bold pointer-events-none">{suffix}</span>
+          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11.5px] text-muted font-bold pointer-events-none">{suffix}</span>
         )}
       </div>
-      {hint && <p className="text-[10.5px] opacity-60 mt-0.5 leading-snug">{hint}</p>}
+      {hint && <p className="text-[10.5px] text-muted mt-0.5 leading-snug">{hint}</p>}
     </div>
   );
 }
@@ -371,12 +371,12 @@ function BigStat({ icon: Icon, label, value, suffix, tone, footnote, highlight }
       highlight ? 'border-aws-orange/40 bg-aws-orange/5 shadow-glow-orange' : 'surface'
     )}>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-75">{label}</span>
+        <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted">{label}</span>
         {Icon && <Icon size={13} className={toneClass} />}
       </div>
       <div className={cn('text-2xl font-extrabold leading-tight', toneClass)}>
         ${typeof value === 'number' ? value.toFixed(2) : value}
-        <span className="text-[12px] opacity-70 ml-0.5 font-bold">{suffix}</span>
+        <span className="text-[12px] text-muted ml-0.5 font-bold">{suffix}</span>
       </div>
       {footnote && <div className="text-[10.5px] opacity-65 mt-1 leading-snug">{footnote}</div>}
     </div>
@@ -391,9 +391,9 @@ function Metric({ label, value, subtitle, tone }) {
   }[tone] || 'text-aws-orange';
   return (
     <div className="rounded-xl bg-[var(--card-2)] border border-token p-3">
-      <div className="text-[10.5px] font-bold opacity-75 mb-0.5">{label.toUpperCase()}</div>
+      <div className="text-[10.5px] font-bold text-muted mb-0.5">{label.toUpperCase()}</div>
       <div className={cn('text-xl font-extrabold', toneClass)}>{value}</div>
-      {subtitle && <div className="text-[10.5px] opacity-70 mt-0.5">{subtitle}</div>}
+      {subtitle && <div className="text-[10.5px] text-muted mt-0.5">{subtitle}</div>}
     </div>
   );
 }

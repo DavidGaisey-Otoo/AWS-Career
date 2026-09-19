@@ -54,7 +54,7 @@ export function LocalAIPanel() {
           <h3 className="text-[15px] font-extrabold flex items-center gap-2">
             <Cpu size={16} className="text-electric" /> Local AI
           </h3>
-          <p className="text-[12.5px] opacity-80 mt-1 leading-relaxed max-w-xl">
+          <p className="text-[12.5px] text-muted mt-1 leading-relaxed max-w-xl">
             Adds the one thing the rule engines cannot do — re-explaining a question
             when the written explanation doesn&apos;t land. Runs a model on this machine
             through Ollama: no API key, no cost per use, nothing leaves your device.
@@ -114,7 +114,7 @@ export function LocalAIPanel() {
       {status?.ok && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-[11px] font-extrabold uppercase tracking-widest opacity-60">Model</span>
+            <span className="text-[11px] font-extrabold uppercase tracking-widest text-muted">Model</span>
             <select
               value={settings.model || ''}
               onChange={(e) => update({ model: e.target.value })}
@@ -122,12 +122,12 @@ export function LocalAIPanel() {
             >
               {status.models.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
-            <span className="text-[10.5px] opacity-60 mt-1 block">
+            <span className="text-[10.5px] text-muted mt-1 block">
               Smaller is faster. llama3.2:3b answers in a few seconds; 8B models take far longer.
             </span>
           </label>
           <label className="block">
-            <span className="text-[11px] font-extrabold uppercase tracking-widest opacity-60">Server</span>
+            <span className="text-[11px] font-extrabold uppercase tracking-widest text-muted">Server</span>
             <input
               type="text"
               value={settings.host}
@@ -136,7 +136,7 @@ export function LocalAIPanel() {
               placeholder={LOCAL_LLM_DEFAULT_HOST}
               className="mt-1 w-full rounded-lg bg-[var(--card-2)] border border-token px-2.5 py-2 text-[12.5px] font-mono outline-none focus:border-electric"
             />
-            <span className="text-[10.5px] opacity-60 mt-1 block">
+            <span className="text-[10.5px] text-muted mt-1 block">
               Ollama&apos;s default is {LOCAL_LLM_DEFAULT_HOST}.
             </span>
           </label>

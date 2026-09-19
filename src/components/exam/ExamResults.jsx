@@ -308,7 +308,7 @@ function CriticalAlert({ cert, domainId, scorePct }) {
             </ol>
           )}
           {plan && (
-            <div className="mt-3 text-[11px] opacity-70">
+            <div className="mt-3 text-[11px] text-muted">
               Estimated time: <strong>{plan.estimatedHours} hours</strong> · Weight in real exam: <strong>{plan.weight}%</strong>
             </div>
           )}
@@ -343,7 +343,7 @@ function SustainedWeaknessBanner({ cert, items, onRetryWeak }) {
                 <details key={w.domainId} className="rounded-lg border border-warning/30 bg-[var(--card-2)]/40 p-2.5 text-sm">
                   <summary className="cursor-pointer font-bold flex items-center justify-between">
                     <span>{getDomainLabel(cert, w.domainId)}</span>
-                    <span className="text-[11px] opacity-70 font-mono">latest {w.latestPct}% · prev {w.previousPct}%</span>
+                    <span className="text-[11px] text-muted font-mono">latest {w.latestPct}% · prev {w.previousPct}%</span>
                   </summary>
                   {plan && (
                     <ol className="mt-2 space-y-1 text-[12px]">

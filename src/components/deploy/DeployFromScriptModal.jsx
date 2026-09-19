@@ -233,7 +233,7 @@ export function DeployFromScriptModal({
               <div className="font-extrabold text-[12px]">{policy.ok ? `${policy.profile.id} policy preflight passed` : 'Deployment policy blocked'}</div>
               {policy.blockers.map((item) => <div key={item} className="text-[11px] text-danger">• {item}</div>)}
               {policy.warnings.map((item) => <div key={item} className="text-[11px] text-warning">• {item}</div>)}
-              {policy.profile.leaseHours && <div className="text-[11px] opacity-80">Training lease: EC2 stop target {policy.profile.leaseHours}h. Cleanup target: {policy.profile.autoTerminateHours}h. Stopping is not deletion.</div>}
+              {policy.profile.leaseHours && <div className="text-[11px] text-muted">Training lease: EC2 stop target {policy.profile.leaseHours}h. Cleanup target: {policy.profile.autoTerminateHours}h. Stopping is not deletion.</div>}
             </div>
 
             {/* Credentials */}
@@ -325,7 +325,7 @@ export function DeployFromScriptModal({
 
             {/* Template preview (collapsed) */}
             <details className="rounded-xl border border-token bg-[var(--card-2)] p-3">
-              <summary className="cursor-pointer text-[11.5px] font-bold opacity-75">
+              <summary className="cursor-pointer text-[11.5px] font-bold text-muted">
                 Preview template ({Math.ceil(script.length / 1024)} KB)
               </summary>
               <pre className="mt-2 text-[10.5px] font-mono max-h-48 overflow-auto whitespace-pre-wrap">{script}</pre>
@@ -403,7 +403,7 @@ export function DeployFromScriptModal({
 
             {/* Progress log */}
             <div className="rounded-xl bg-ink-900/40 border border-token p-3 max-h-[40vh] overflow-y-auto">
-              <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-70 mb-2">
+              <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted mb-2">
                 Progress log ({events.length})
               </div>
               <div className="space-y-1 font-mono text-[11px]">
@@ -477,7 +477,7 @@ function EventLine({ event }) {
           'bg-aws-orange/20 text-aws-orange'
         )}>{event.status}</span>
         <span className="opacity-75 truncate">{event.logicalId} ({event.resourceType})</span>
-        {event.reason && <span className="opacity-60 text-[10px] truncate">— {event.reason}</span>}
+        {event.reason && <span className="text-muted text-[10px] truncate">— {event.reason}</span>}
       </div>
     );
   }
@@ -585,7 +585,7 @@ function RunLocallyModal({ format, script, onClose }) {
           </div>
 
           <details className="rounded-xl border border-token bg-[var(--card-2)] p-3">
-            <summary className="cursor-pointer text-[11.5px] font-bold opacity-75">
+            <summary className="cursor-pointer text-[11.5px] font-bold text-muted">
               Preview script ({Math.ceil(script.length / 1024)} KB)
             </summary>
             <pre className="mt-2 text-[10.5px] font-mono max-h-72 overflow-auto whitespace-pre-wrap">{script}</pre>

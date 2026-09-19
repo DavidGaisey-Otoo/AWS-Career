@@ -112,7 +112,7 @@ function Header({ w, pct, doneCount }) {
     <div className="rounded-3xl border border-token bg-gradient-to-br from-[var(--brand)]/8 via-transparent to-transparent p-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold opacity-60 mb-1">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted mb-1">
             <span>{w.category}</span>
             <span>•</span>
             <span className="flex items-center gap-1"><Clock size={10} /> {w.estimateMin} min</span>
@@ -120,17 +120,17 @@ function Header({ w, pct, doneCount }) {
             <span className={`px-1.5 py-0.5 rounded ${diffStyle[w.difficulty] || ''}`}>{w.difficulty}</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight">{w.title}</h1>
-          <p className="text-sm opacity-80 mt-2 max-w-2xl">{w.intro}</p>
+          <p className="text-sm text-muted mt-2 max-w-2xl">{w.intro}</p>
         </div>
         <div className="text-right">
-          <div className="text-xs opacity-60">Done</div>
+          <div className="text-xs text-muted">Done</div>
           <div className="text-3xl font-bold tabular-nums">{pct}%</div>
         </div>
       </div>
 
       {w.prerequisites?.length > 0 && (
         <div className="mt-4 rounded-2xl bg-[var(--card)] border border-token p-4">
-          <div className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-2">Before you start</div>
+          <div className="text-[10px] uppercase tracking-widest font-bold text-muted mb-2">Before you start</div>
           <ul className="space-y-1 text-sm">
             {w.prerequisites.map((p, i) => (
               <li key={i} className="flex items-start gap-2">
@@ -244,7 +244,7 @@ function StepCard({ step, done, onToggle, hasNext }) {
               {step.code && (
                 <div className="rounded-xl border border-token overflow-hidden">
                   <div className="flex items-center justify-between px-3 py-1.5 bg-[var(--card-2)] border-b border-token">
-                    <span className="text-[10px] font-mono opacity-60 uppercase">Code</span>
+                    <span className="text-[10px] font-mono text-muted uppercase">Code</span>
                     <button onClick={copyCode} className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[var(--card)]">
                       <ClipboardCopy size={10} /> {copied ? 'Copied' : 'Copy'}
                     </button>
@@ -266,7 +266,7 @@ function StepCard({ step, done, onToggle, hasNext }) {
                       : <Circle size={18} className="opacity-50" />}
                   </button>
                   <div className="flex-1">
-                    <div className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Checkpoint</div>
+                    <div className="text-[10px] uppercase tracking-widest font-bold text-muted mb-0.5">Checkpoint</div>
                     <div className="text-sm">{step.checkpoint}</div>
                   </div>
                   <Button
@@ -316,9 +316,9 @@ function CompletionCard({ w }) {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-xl font-bold">All steps complete! 🎉</h3>
-          <p className="text-sm opacity-80 mt-1">{w.outcome}</p>
+          <p className="text-sm text-muted mt-1">{w.outcome}</p>
           {w.nextId && (
-            <p className="text-xs opacity-70 mt-3">
+            <p className="text-xs text-muted mt-3">
               Next walkthrough: <a className="underline font-bold" href={`/walkthroughs/${w.nextId}`}>{w.nextId}</a>
             </p>
           )}

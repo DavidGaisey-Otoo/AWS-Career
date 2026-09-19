@@ -32,7 +32,7 @@ export function SolutionStudioWidget() {
             {live.length} stack{live.length > 1 ? 's' : ''} live on AWS
           </strong>
         </div>
-        <p className="text-[11.5px] opacity-80 leading-relaxed mb-2.5">
+        <p className="text-[11.5px] text-muted leading-relaxed mb-2.5">
           These are billing right now. Tear them down when you&apos;re finished with them.
         </p>
         <div className="space-y-1 mb-3">
@@ -62,7 +62,7 @@ export function SolutionStudioWidget() {
             <Wand2 size={15} className="text-aws-orange shrink-0" />
             Turn any gig into a build
           </h3>
-          <p className="text-[11.5px] opacity-80 mt-1 leading-relaxed">
+          <p className="text-[11.5px] text-muted mt-1 leading-relaxed">
             Paste a job post — get the architecture, names, plan, code, an expert review, and a
             button that builds it on AWS.
           </p>

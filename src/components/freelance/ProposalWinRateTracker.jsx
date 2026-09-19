@@ -53,7 +53,7 @@ export function ProposalWinRateTracker() {
           <Trophy size={18} className="text-aws-orange" />
           My Proposals
         </h2>
-        <p className="text-[12.5px] opacity-80 mt-1.5">
+        <p className="text-[12.5px] text-muted mt-1.5">
           Generated proposals land here as drafts. Review each one and mark it Sent only after you personally
           submit it on the marketplace; drafts never inflate your win rate.
         </p>
@@ -92,7 +92,7 @@ export function ProposalWinRateTracker() {
         </div>
 
         {filtered.length === 0 && (
-          <div className="text-center py-10 opacity-60 text-[13px]">
+          <div className="text-center py-10 text-muted text-[13px]">
             {list.length === 0
               ? <>No proposals logged yet. Go to <strong>Smart Generator</strong> and generate one — it&apos;ll appear here.</>
               : <>No proposals match this filter.</>
@@ -146,11 +146,11 @@ function StatCard({ icon: Icon, label, value, tone, subtitle }) {
   return (
     <div className="surface rounded-2xl p-4">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-70">{label}</span>
+        <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted">{label}</span>
         <Icon size={14} className={cn(toneClasses[tone] || 'text-aws-orange')} />
       </div>
       <div className={cn('text-2xl font-extrabold', toneClasses[tone] || 'text-aws-orange')}>{value}</div>
-      {subtitle && <div className="text-[10.5px] opacity-60 mt-0.5">{subtitle}</div>}
+      {subtitle && <div className="text-[10.5px] text-muted mt-0.5">{subtitle}</div>}
     </div>
   );
 }
@@ -367,7 +367,7 @@ function ProposalModal({ entry, onClose, onStatusChange, onDuplicate, onDelete }
 
         {/* Status picker */}
         <div className="rounded-xl bg-[var(--card-2)] border border-token p-3 mb-3">
-          <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-70 mb-2">Status</div>
+          <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted mb-2">Status</div>
           <div className="flex flex-wrap gap-1.5">
             {STATUS_LIST.map((s) => {
               const active = entry.status === s.id;

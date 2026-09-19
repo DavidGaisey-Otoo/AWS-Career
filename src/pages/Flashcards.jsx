@@ -84,7 +84,7 @@ function CategoryPicker() {
           <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-2">
             🃏 Flashcards
           </h1>
-          <p className="text-sm opacity-80 mt-1.5">
+          <p className="text-sm text-muted mt-1.5">
             70+ AWS services across 7 categories. Tap to flip. Rate each card —
             "still learning" ones come back, "know it" ones graduate.
           </p>
@@ -119,7 +119,7 @@ function CategoryPicker() {
                   <div className="text-2xl font-extrabold tabular-nums text-aws-orange">
                     {p.mastered}/{p.total}
                   </div>
-                  <div className="text-[10px] opacity-70 font-bold uppercase tracking-wide">
+                  <div className="text-[10px] text-muted font-bold uppercase tracking-wide">
                     mastered
                   </div>
                 </div>
@@ -256,11 +256,11 @@ function CategorySession({ category, onExit }) {
         <div className="surface rounded-3xl p-8 text-center gradient-border">
           <div className="text-6xl mb-3">🎉</div>
           <h2 className="text-2xl font-extrabold mb-2">Session complete!</h2>
-          <p className="opacity-80 text-sm mb-4">
+          <p className="text-muted text-sm mb-4">
             You rated {sessionStats.know + sessionStats.still} cards this session.
             ({sessionStats.know} known · {sessionStats.still} still learning)
           </p>
-          <div className="text-sm opacity-80 mb-5">
+          <div className="text-sm text-muted mb-5">
             Overall mastery in {category.label}: <strong className="text-aws-orange">{progress.mastered}/{progress.total}</strong>
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
@@ -373,7 +373,7 @@ function CategorySession({ category, onExit }) {
         >
           <span className="text-3xl">🔄</span>
           <span>Still learning</span>
-          <span className="text-[10.5px] opacity-70 font-bold">comes back</span>
+          <span className="text-[10.5px] text-muted font-bold">comes back</span>
         </button>
         <button
           onClick={handleKnowIt}
@@ -387,12 +387,12 @@ function CategorySession({ category, onExit }) {
         >
           <span className="text-3xl">✓</span>
           <span>Know it</span>
-          <span className="text-[10.5px] opacity-70 font-bold">mastered</span>
+          <span className="text-[10.5px] text-muted font-bold">mastered</span>
         </button>
       </div>
 
       {/* Tools row */}
-      <div className="flex items-center justify-between text-xs opacity-70">
+      <div className="flex items-center justify-between text-xs text-muted">
         <button onClick={handleShuffle} className="inline-flex items-center gap-1 hover:text-aws-orange">
           <Shuffle size={12} /> Shuffle remaining
         </button>

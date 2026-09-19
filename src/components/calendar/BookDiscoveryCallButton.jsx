@@ -168,7 +168,7 @@ function BookingModal({ defaultTitle, defaultDescription, defaultAttendee, onClo
 
             {result.meetLink && (
               <div>
-                <div className="text-[10.5px] font-bold opacity-75 mb-1 flex items-center gap-1">
+                <div className="text-[10.5px] font-bold text-muted mb-1 flex items-center gap-1">
                   <Video size={11} /> GOOGLE MEET LINK
                 </div>
                 <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ function BookingModal({ defaultTitle, defaultDescription, defaultAttendee, onClo
         {!result && (
           <form onSubmit={handleSubmit} className="space-y-3">
             <label className="block">
-              <span className="text-[10.5px] font-bold opacity-75">TITLE</span>
+              <span className="text-[10.5px] font-bold text-muted">TITLE</span>
               <input
                 type="text"
                 value={title}
@@ -213,7 +213,7 @@ function BookingModal({ defaultTitle, defaultDescription, defaultAttendee, onClo
             </label>
 
             <label className="block">
-              <span className="text-[10.5px] font-bold opacity-75">ATTENDEE EMAIL (optional)</span>
+              <span className="text-[10.5px] font-bold text-muted">ATTENDEE EMAIL (optional)</span>
               <input
                 type="email"
                 value={attendee}
@@ -221,12 +221,12 @@ function BookingModal({ defaultTitle, defaultDescription, defaultAttendee, onClo
                 placeholder="client@example.com"
                 className="w-full mt-1 rounded-lg bg-[var(--card-2)] border border-token px-3 py-1.5 text-[13px] outline-none focus:border-aws-orange"
               />
-              <span className="text-[10px] opacity-60 mt-0.5 block">Google emails them the invite automatically.</span>
+              <span className="text-[10px] text-muted mt-0.5 block">Google emails them the invite automatically.</span>
             </label>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <span className="text-[10.5px] font-bold opacity-75 flex items-center gap-1">
+                <span className="text-[10.5px] font-bold text-muted flex items-center gap-1">
                   <Clock size={10} /> START
                 </span>
                 <input
@@ -238,7 +238,7 @@ function BookingModal({ defaultTitle, defaultDescription, defaultAttendee, onClo
                 />
               </label>
               <label className="block">
-                <span className="text-[10.5px] font-bold opacity-75">DURATION</span>
+                <span className="text-[10.5px] font-bold text-muted">DURATION</span>
                 <select
                   value={durationMin}
                   onChange={(e) => setDurationMin(parseInt(e.target.value, 10))}
@@ -253,7 +253,7 @@ function BookingModal({ defaultTitle, defaultDescription, defaultAttendee, onClo
             </div>
 
             <label className="block">
-              <span className="text-[10.5px] font-bold opacity-75">DESCRIPTION (optional)</span>
+              <span className="text-[10.5px] font-bold text-muted">DESCRIPTION (optional)</span>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

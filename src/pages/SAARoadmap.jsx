@@ -68,7 +68,7 @@ export default function SAARoadmap() {
         <button onClick={resetAll} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold border border-danger/30 text-danger hover:bg-danger/10 transition">
           <RotateCcw size={12} /> Reset progress
         </button>
-        <span className="text-[11px] opacity-60 ml-auto">
+        <span className="text-[11px] text-muted ml-auto">
           Roadmap content is hand-curated by a senior AWS architect, not generated. Worth your trust to follow exactly.
         </span>
       </div>
@@ -148,7 +148,7 @@ function ReadinessCard({ state, readiness, daysToExam, phasesComplete, lastScore
           <span className="inline-flex items-center gap-1.5">
             <input type="number" placeholder="correct/65" value={scoreInput} onChange={(e) => setScoreInput(e.target.value)}
                    className="w-20 rounded-lg bg-[var(--card-2)] border border-token px-2 py-1 text-[12px]" />
-            <span className="text-[11px] opacity-60">/65</span>
+            <span className="text-[11px] text-muted">/65</span>
             <button onClick={() => { logPracticeScore(parseInt(scoreInput, 10) || 0, 65); setScoreInput(''); setEditingScore(false); }}
                     className="btn btn-primary text-[11px] !py-1">Save</button>
             <button onClick={() => setEditingScore(false)} className="text-[11px] opacity-60 hover:opacity-100">Cancel</button>
@@ -170,7 +170,7 @@ function StatPill({ icon: Icon, label, value, sub }) {
         <Icon size={9} /> {label}
       </div>
       <div className="text-lg font-extrabold">{value}</div>
-      {sub && <div className="text-[10px] opacity-60 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[10px] text-muted mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -226,9 +226,9 @@ function PhaseCard({ phase, state, isOpen, onToggle }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[14px] font-extrabold">{phase.label}</span>
-            <span className="text-[10.5px] opacity-70 px-1.5 py-0.5 rounded-full bg-[var(--card-2)] border border-token">{phase.weeks}</span>
-            <span className="text-[10.5px] opacity-70">~{phase.hoursPerWeek}h/wk</span>
-            <span className="text-[10.5px] opacity-70 ml-auto">{completion.done}/{completion.total} services</span>
+            <span className="text-[10.5px] text-muted px-1.5 py-0.5 rounded-full bg-[var(--card-2)] border border-token">{phase.weeks}</span>
+            <span className="text-[10.5px] text-muted">~{phase.hoursPerWeek}h/wk</span>
+            <span className="text-[10.5px] text-muted ml-auto">{completion.done}/{completion.total} services</span>
           </div>
           {/* Progress bar */}
           <div className="h-1.5 rounded-full overflow-hidden bg-[var(--card-2)] mt-2 border border-token">

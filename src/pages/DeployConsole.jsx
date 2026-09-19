@@ -15,6 +15,7 @@ import {
   KeyRound, RotateCcw, AlertTriangle, Activity, CheckCircle2, XCircle, Clock,
   FileText, Filter, Copy, Sparkles, ChevronRight,
 } from 'lucide-react';
+import { StatChip } from '../components/common/StatChip.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Modal } from '../components/ui/Modal.jsx';
 import { useDeploy } from '../context/DeployContext.jsx';
@@ -55,7 +56,7 @@ function Header({ hasVault }) {
             <ShieldCheck size={18} className="text-[var(--brand)]" />
             <h1 className="text-2xl font-bold tracking-tight">Deploy Console</h1>
           </div>
-          <p className="text-sm opacity-70 max-w-2xl">
+          <p className="text-sm text-muted max-w-2xl">
             The strict-approval gateway between this app and your AWS account. Every action is
             classified by risk tier, gated by a deploy password, and recorded in an immutable audit log.
           </p>
@@ -72,7 +73,7 @@ function Header({ hasVault }) {
           <div key={t.id} className="rounded-xl border border-token bg-[var(--card)] px-3 py-2.5">
             <div className="text-base">{t.icon}</div>
             <div className="text-xs font-bold mt-0.5">{t.label}</div>
-            <div className="text-[10px] opacity-60 mt-0.5">
+            <div className="text-[10px] text-muted mt-0.5">
               {t.id === 'read'    && 'No password'}
               {t.id === 'build'   && 'Password required'}
               {t.id === 'destroy' && 'Type resource name'}
@@ -240,7 +241,7 @@ function SetupCard({ activeProfile, pw, setPw, pw2, setPw2, strength, creating, 
   return (
     <div className="rounded-2xl border border-token p-5 bg-[var(--card)]">
       <h3 className="text-lg font-bold mb-1">Step 1 · Create your encrypted vault</h3>
-      <p className="text-xs opacity-70 mb-4">
+      <p className="text-xs text-muted mb-4">
         Your AWS keys (from <span className="font-mono">{activeProfile?.name}</span>) will be wrapped in AES-GCM 256
         and the key derived from your password with PBKDF2 (220,000 iterations). Without the password,
         the encrypted blob is useless — even to you.
@@ -254,7 +255,7 @@ function SetupCard({ activeProfile, pw, setPw, pw2, setPw2, strength, creating, 
 
       <div className="grid sm:grid-cols-2 gap-3">
         <div>
-          <label className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-1.5 block">Deploy password</label>
+          <label className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1.5 block">Deploy password</label>
           <input
             type="password" value={pw} onChange={(e) => setPw(e.target.value)}
             placeholder="At least 12 chars recommended"
@@ -265,12 +266,12 @@ function SetupCard({ activeProfile, pw, setPw, pw2, setPw2, strength, creating, 
               <div className="h-1.5 bg-[var(--card-2)] rounded-full overflow-hidden">
                 <div className={`h-full ${strengthColors[strength.score]}`} style={{ width: `${(strength.score + 1) * 20}%` }} />
               </div>
-              <p className="text-[10px] mt-1 opacity-70">{strength.label} — {strength.warning}</p>
+              <p className="text-[10px] mt-1 text-muted">{strength.label} — {strength.warning}</p>
             </div>
           )}
         </div>
         <div>
-          <label className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-1.5 block">Confirm password</label>
+          <label className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1.5 block">Confirm password</label>
           <input
             type="password" value={pw2} onChange={(e) => setPw2(e.target.value)}
             placeholder="Type it again"
@@ -279,7 +280,7 @@ function SetupCard({ activeProfile, pw, setPw, pw2, setPw2, strength, creating, 
         </div>
       </div>
 
-      <div className="rounded-xl bg-[var(--card-2)]/40 border border-token p-3 mt-4 text-xs opacity-80">
+      <div className="rounded-xl bg-[var(--card-2)]/40 border border-token p-3 mt-4 text-xs text-muted">
         <p className="font-bold mb-1">⚠ If you forget this password, the vault is unrecoverable.</p>
         <p>That's the point — but it means YOU must remember it. Save it in a password manager
         (1Password, Bitwarden) before clicking Create.</p>
@@ -303,7 +304,7 @@ function UnlockTester({ unlockTry, setUnlockTry, unlockStatus, onUnlock, unlockO
   return (
     <div className="rounded-2xl border border-token p-5 bg-[var(--card)]">
       <h3 className="text-lg font-bold mb-1">Test your password</h3>
-      <p className="text-xs opacity-70 mb-3">Verify the deploy password works without revealing the credentials.</p>
+      <p className="text-xs text-muted mb-3">Verify the deploy password works without revealing the credentials.</p>
       <div className="flex gap-2">
         <input
           type="password" value={unlockTry} onChange={(e) => setUnlockTry(e.target.value)}
@@ -328,7 +329,7 @@ function RotateCard({ rotateOld, rotateNew, setRotateOld, setRotateNew, onRotate
   return (
     <div className="rounded-2xl border border-token p-5 bg-[var(--card)]">
       <h3 className="text-lg font-bold mb-1 flex items-center gap-2"><RotateCcw size={16} /> Rotate password</h3>
-      <p className="text-xs opacity-70 mb-3">Replace the deploy password without re-entering AWS credentials.</p>
+      <p className="text-xs text-muted mb-3">Replace the deploy password without re-entering AWS credentials.</p>
       <div className="grid sm:grid-cols-2 gap-3">
         <input
           type="password" value={rotateOld} onChange={(e) => setRotateOld(e.target.value)}
@@ -393,7 +394,7 @@ function SettingRow({ label, help, value, onChange, type = 'text' }) {
     <div className="flex flex-wrap items-start gap-3">
       <div className="flex-1 min-w-[200px]">
         <div className="text-sm font-semibold">{label}</div>
-        <div className="text-[11px] opacity-60">{help}</div>
+        <div className="text-[11px] text-muted">{help}</div>
       </div>
       <input
         type={type} value={value}
@@ -410,11 +411,11 @@ function PanicCard({ onClick }) {
       <h3 className="text-lg font-bold mb-1 flex items-center gap-2 text-rose-300">
         <AlertTriangle size={16} /> Panic killswitch
       </h3>
-      <p className="text-xs opacity-80 mb-3">
+      <p className="text-xs text-muted mb-3">
         Wipes the encrypted vault from this browser. Your AWS keys remain valid until you rotate
         them in the AWS Console — do that immediately after using this button.
       </p>
-      <p className="text-[11px] opacity-70 mb-3">
+      <p className="text-[11px] text-muted mb-3">
         Keyboard shortcut: <span className="font-mono px-1.5 py-0.5 rounded bg-[var(--card-2)]">Ctrl/⌘ + Shift + K</span>
       </p>
       <Button variant="danger" onClick={onClick}>🚨 Wipe vault now</Button>
@@ -445,7 +446,7 @@ function BlockedActionsCard() {
   return (
     <div className="rounded-2xl border border-token p-5 bg-[var(--card)]">
       <h3 className="text-lg font-bold mb-1 flex items-center gap-2">⛔ Hardcoded fuses</h3>
-      <p className="text-xs opacity-70 mb-3">
+      <p className="text-xs text-muted mb-3">
         These actions are <strong>never</strong> executable by the app, no matter the password.
         Doing them manually in the AWS Console is the only path. This is what protects you against
         a fully compromised app.
@@ -456,7 +457,7 @@ function BlockedActionsCard() {
             <div className="text-lg">⛔</div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold">{a.summary}</div>
-              <div className="text-[11px] opacity-70 mt-0.5">{a.blockReason}</div>
+              <div className="text-[11px] text-muted mt-0.5">{a.blockReason}</div>
             </div>
             {a.consoleUrl && (
               <a href={a.consoleUrl()} target="_blank" rel="noreferrer"
@@ -532,7 +533,7 @@ function ActionsTab() {
       ))}
 
       {Object.keys(services).length === 0 && (
-        <div className="text-center py-12 text-sm opacity-60">No actions match.</div>
+        <div className="text-center py-12 text-sm text-muted">No actions match.</div>
       )}
     </div>
   );
@@ -547,7 +548,7 @@ function ActionRow({ action }) {
         <span className="text-lg">{tier.icon}</span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold flex items-center gap-2">
-            <span className="font-mono text-xs opacity-70">{action.id}</span>
+            <span className="font-mono text-xs text-muted">{action.id}</span>
             <span className={`text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded ${
               action.tier === 'READ' ? 'bg-emerald-500/20 text-emerald-300' :
               action.tier === 'BUILD' ? 'bg-amber-500/20 text-amber-300' :
@@ -556,7 +557,7 @@ function ActionRow({ action }) {
               'bg-slate-500/20 text-slate-300'
             }`}>{tier.label}</span>
           </div>
-          <div className="text-xs opacity-70 mt-0.5">{action.summary}</div>
+          <div className="text-xs text-muted mt-0.5">{action.summary}</div>
         </div>
         {action.consoleUrl && (
           <a href={action.consoleUrl({})} target="_blank" rel="noreferrer" className="text-[11px] px-2 py-1 rounded-lg bg-[var(--card-2)] hover:bg-[var(--card-3)] flex items-center gap-1">
@@ -597,7 +598,7 @@ function RunActionDialog({ action, onClose }) {
 
   return (
     <Modal open={true} onClose={onClose} size="lg" title={`Run · ${action.id}`}>
-      <p className="text-sm mb-4 opacity-80">{action.summary}</p>
+      <p className="text-sm mb-4 text-muted">{action.summary}</p>
       <div className="space-y-3">
         {(action.params || []).map((p) => (
           <ParamField key={p.id} field={p} value={params[p.id]} onChange={(v) => update(p.id, v)} />
@@ -621,7 +622,7 @@ function ParamField({ field, value, onChange }) {
 
   return (
     <div>
-      <label className="text-[11px] font-bold uppercase tracking-widest opacity-70 mb-1 block">
+      <label className="text-[11px] font-bold uppercase tracking-widest text-muted mb-1 block">
         {field.label} {field.required && <span className="text-rose-300">*</span>}
       </label>
       {(field.type === 'text' || field.type === 'email' || !field.type) && (
@@ -651,7 +652,7 @@ function ParamField({ field, value, onChange }) {
           ))}
         </select>
       )}
-      {field.hint && <div className="text-[10px] opacity-60 mt-1">{field.hint}</div>}
+      {field.hint && <div className="text-[10px] text-muted mt-1">{field.hint}</div>}
     </div>
   );
 }
@@ -692,12 +693,12 @@ function AuditTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-        <StatCard icon={Activity} label="Total" value={stats.total} />
-        <StatCard icon={Activity} label="🟢 Read" value={stats.byTier.READ} />
-        <StatCard icon={Activity} label="🟡 Build" value={stats.byTier.BUILD} />
-        <StatCard icon={Activity} label="🟠 Destroy" value={stats.byTier.DESTROY} />
-        <StatCard icon={Activity} label="🔴 Admin" value={stats.byTier.ADMIN} />
-        <StatCard icon={XCircle} label="Failed" value={stats.failures} tone="rose" />
+        <StatChip icon={Activity} label="Total" value={stats.total} />
+        <StatChip icon={Activity} label="🟢 Read" value={stats.byTier.READ} />
+        <StatChip icon={Activity} label="🟡 Build" value={stats.byTier.BUILD} />
+        <StatChip icon={Activity} label="🟠 Destroy" value={stats.byTier.DESTROY} />
+        <StatChip icon={Activity} label="🔴 Admin" value={stats.byTier.ADMIN} />
+        <StatChip icon={XCircle} label="Failed" value={stats.failures} tone="danger" />
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
@@ -715,25 +716,13 @@ function AuditTab() {
 
       <div className="rounded-2xl border border-token bg-[var(--card)] overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-sm opacity-60">No audit entries match.</div>
+          <div className="text-center py-12 text-sm text-muted">No audit entries match.</div>
         ) : (
           <div className="divide-y divide-[var(--border)]">
             {filtered.map((e) => <AuditRow key={e.id} entry={e} />)}
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, tone = 'default' }) {
-  const tones = { default: '', rose: 'text-rose-300' };
-  return (
-    <div className="rounded-xl border border-token bg-[var(--card)] p-3">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold opacity-60">
-        <Icon size={10} /> {label}
-      </div>
-      <div className={`text-lg font-bold mt-1 ${tones[tone]}`}>{value}</div>
     </div>
   );
 }
@@ -746,9 +735,9 @@ function AuditRow({ entry }) {
     <>
       <button onClick={() => setOpen((o) => !o)} className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-[var(--card-2)]/30 text-left">
         <span className="text-base">{tier.icon}</span>
-        <span className="text-xs opacity-60 font-mono w-20 shrink-0">{dt.toLocaleTimeString()}</span>
-        <span className="text-xs opacity-60 w-24 shrink-0">{dt.toLocaleDateString()}</span>
-        <span className="text-xs font-mono opacity-80 w-48 shrink-0 truncate">{entry.actionId}</span>
+        <span className="text-xs text-muted font-mono w-20 shrink-0">{dt.toLocaleTimeString()}</span>
+        <span className="text-xs text-muted w-24 shrink-0">{dt.toLocaleDateString()}</span>
+        <span className="text-xs font-mono text-muted w-48 shrink-0 truncate">{entry.actionId}</span>
         <span className="text-xs flex-1 truncate">{entry.summary}</span>
         <span className={`text-[10px] uppercase font-bold ${entry.ok === false ? 'text-rose-300' : 'text-emerald-300'}`}>
           {entry.ok === false ? 'FAIL' : 'OK'}
@@ -756,7 +745,7 @@ function AuditRow({ entry }) {
       </button>
       {open && (
         <div className="px-4 py-3 bg-[var(--card-2)]/20 border-t border-token">
-          <pre className="text-[10px] font-mono whitespace-pre-wrap overflow-auto max-h-64 opacity-80">
+          <pre className="text-[10px] font-mono whitespace-pre-wrap overflow-auto max-h-64 text-muted">
 {JSON.stringify(entry, null, 2)}
           </pre>
         </div>

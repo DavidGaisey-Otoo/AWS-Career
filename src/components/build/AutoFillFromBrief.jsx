@@ -252,7 +252,7 @@ export function AutoFillFromBrief({ value = {}, onChange, title = 'Paste a job d
                 : 'bg-[var(--card-2)] border-token'
             )}>
               {(value.techStack || []).length === 0 ? (
-                <span className="text-[12px] opacity-60 italic">— no specific tech mentioned —</span>
+                <span className="text-[12px] text-muted italic">— no specific tech mentioned —</span>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {(value.techStack || []).map((t) => (

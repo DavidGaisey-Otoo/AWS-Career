@@ -1,9 +1,6 @@
 import { motion } from 'framer-motion';
-import {
-  ArrowUp, Bookmark, ChevronRight, Crown, Filter, Flag, Flame, Github, Heart,
-  MessageSquare, MessageSquarePlus, Plus, Send, Sparkles, Star, Trophy,
-  UserCheck, Users, X,
-} from 'lucide-react';
+import { ArrowUp, Bookmark, ChevronRight, Crown, Filter, Flag, Flame, Heart, MessageSquare, MessageSquarePlus, Plus, Send, Sparkles, Star, Trophy, UserCheck, Users, X } from 'lucide-react';
+import { Github } from '../components/common/BrandIcons.jsx';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useApp } from '../context/AppContext.jsx';

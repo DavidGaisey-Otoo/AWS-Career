@@ -92,7 +92,7 @@ export default function NewWalkthrough() {
         <h1 className="text-2xl font-extrabold flex items-center gap-2">
           <Wand2 size={20} className="text-aws-orange" /> Generate a Deep Walkthrough
         </h1>
-        <p className="text-sm opacity-80 mt-1.5">
+        <p className="text-sm text-muted mt-1.5">
           Paste a project description OR pick services from the chips. The generator orders the steps correctly
           (network → security → storage → data → compute → integration → monitoring) and adds WHAT, WHY, analogy,
           common mistakes, and HOW in all 4 formats.
@@ -154,7 +154,7 @@ export default function NewWalkthrough() {
         </div>
 
         {finalServices.length > 0 && (
-          <div className="text-[11px] opacity-70 italic">
+          <div className="text-[11px] text-muted italic">
             Will generate {finalServices.length} step{finalServices.length === 1 ? '' : 's'} · estimated {Math.max(15, finalServices.length * 12)} min read · auto difficulty {finalServices.length <= 3 ? 'Beginner' : finalServices.length <= 6 ? 'Intermediate' : 'Advanced'}.
           </div>
         )}

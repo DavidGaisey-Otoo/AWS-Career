@@ -126,12 +126,12 @@ export function TeardownModal({ open, onClose, stackName, region, title, onCompl
                   instances, everything.
                 </div>
               </div>
-              {title && <div className="text-[11px] opacity-70 pl-[23px]">Solution: {title}</div>}
+              {title && <div className="text-[11px] text-muted pl-[23px]">Solution: {title}</div>}
             </div>
 
             {/* Credentials */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest opacity-70">
+              <div className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-muted">
                 <KeyRound size={12} /> AWS credentials
               </div>
               <input
@@ -168,7 +168,7 @@ export function TeardownModal({ open, onClose, stackName, region, title, onCompl
                 value={sessionToken} onChange={(e) => setSessionToken(e.target.value)}
                 className="w-full rounded-lg bg-[var(--card-2)] border border-token px-3 py-2.5 text-[12px] font-mono outline-none focus:border-danger"
               />
-              <p className="text-[10.5px] opacity-60 flex items-start gap-1.5 leading-relaxed">
+              <p className="text-[10.5px] text-muted flex items-start gap-1.5 leading-relaxed">
                 <Lock size={11} className="shrink-0 mt-0.5" />
                 Held in memory for this one call, sent only to AWS, then discarded. Never saved.
               </p>

@@ -116,7 +116,7 @@ function SuggestedNameBanner({ discovery }) {
         <div className="flex-1 min-w-0">
           <div className="text-[10px] uppercase tracking-widest font-bold text-aws-orange">Suggested name</div>
           <div className="text-lg font-bold tracking-tight">{name || '(no name extracted)'}</div>
-          {client && <div className="text-xs opacity-70 mt-0.5">Client: <strong>{client}</strong></div>}
+          {client && <div className="text-xs text-muted mt-0.5">Client: <strong>{client}</strong></div>}
         </div>
       </div>
     </div>
@@ -173,7 +173,7 @@ function Panel1Summary({ analysis }) {
       <p className="text-sm opacity-90 mt-3 leading-relaxed">{analysis.summary}</p>
 
       {Object.keys(analysis.facts || {}).length > 0 && (
-        <details className="mt-3 text-xs opacity-80">
+        <details className="mt-3 text-xs text-muted">
           <summary className="cursor-pointer font-bold">📌 Facts the brief already answers ({Object.keys(analysis.facts).length}) — won't ask about these</summary>
           <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 font-mono">
             {Object.entries(analysis.facts).map(([k, v]) => (
@@ -192,7 +192,7 @@ function Panel1Summary({ analysis }) {
 function StatChip({ icon: Icon, label, value }) {
   return (
     <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-2.5">
-      <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-widest font-bold opacity-60">
+      <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-widest font-bold text-muted">
         <Icon size={10} />{label}
       </div>
       <div className="text-sm font-bold mt-0.5 truncate" title={value}>{value}</div>
@@ -209,7 +209,7 @@ function MatchChip({ score, reasons }) {
       tone === 'warning' && 'border-warning/30 bg-warning/5',
       tone === 'danger'  && 'border-danger/30 bg-danger/5',
     )} title={reasons.join(' · ')}>
-      <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-widest font-bold opacity-60">
+      <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-widest font-bold text-muted">
         <Gauge size={10} />Match
       </div>
       <div className={cn('text-sm font-bold mt-0.5',
@@ -233,14 +233,14 @@ function Panel2Services({ analysis, classification }) {
   }
   return (
     <PanelShell icon={Cloud} title={`Services required (${analysis.services.length})`} tone="aws">
-      <p className="text-xs opacity-70 mb-3">
+      <p className="text-xs text-muted mb-3">
         🔒 <strong>Never substituted.</strong> Every service the brief specifies is included as requested.
         The Test column below shows what to use on YOUR account to avoid cost — but client deliverable uses the exact specs.
       </p>
       <div className="space-y-3">
         {Object.entries(groups).map(([cat, services]) => (
           <div key={cat}>
-            <div className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-1.5">{cat}</div>
+            <div className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1.5">{cat}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {services.map((s) => {
                 const safety = checkServiceCostSafety(s, classification);
@@ -253,9 +253,9 @@ function Panel2Services({ analysis, classification }) {
                   )}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-sm font-bold">{s.label}</div>
-                      <span className="text-[9px] font-bold opacity-80">{s.tag}</span>
+                      <span className="text-[9px] font-bold text-muted">{s.tag}</span>
                     </div>
-                    <div className="text-[11px] opacity-70 mt-0.5">{s.costNote}</div>
+                    <div className="text-[11px] text-muted mt-0.5">{s.costNote}</div>
                   </div>
                 );
               })}
@@ -272,7 +272,7 @@ function Panel2Services({ analysis, classification }) {
 function PanelDiscovery({ discovery, stats }) {
   return (
     <PanelShell icon={CheckCircle2} title={`Discovery questions — auto-answered ${stats.done}/${stats.total} (${stats.percent}%)`} tone={stats.missing === 0 ? 'success' : stats.missing <= 3 ? 'electric' : 'warning'}>
-      <p className="text-xs opacity-80 mb-3">
+      <p className="text-xs text-muted mb-3">
         Every question that the brief answers is filled in. <strong>Only ask the client about the {stats.missing} unanswered one{stats.missing === 1 ? '' : 's'} below.</strong>
       </p>
       <div className="space-y-1.5">
@@ -284,7 +284,7 @@ function PanelDiscovery({ discovery, stats }) {
             <span className={cn('shrink-0 mt-0.5', d.autoAnswered ? 'text-success' : 'text-warning')}>
               {d.autoAnswered ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
             </span>
-            <span className="text-xs opacity-70 w-44 shrink-0 truncate">{d.label}</span>
+            <span className="text-xs text-muted w-44 shrink-0 truncate">{d.label}</span>
             <span className="flex-1 text-xs truncate">
               {d.autoAnswered ? <strong className="text-success">{d.answer}</strong> : <em className="opacity-60">— ask the client</em>}
             </span>
@@ -400,7 +400,7 @@ function DeploymentColumn({ title, subtitle, tone, analysis, mode, scriptOpts, c
 
   return (
     <PanelShell icon={mode === 'test' ? Target : Rocket} title={title} tone={tone}>
-      <p className="text-xs opacity-80 mb-3">{subtitle}</p>
+      <p className="text-xs text-muted mb-3">{subtitle}</p>
 
       {/* Cost block */}
       <div className="grid grid-cols-3 gap-2 mb-3">
@@ -419,7 +419,7 @@ function DeploymentColumn({ title, subtitle, tone, analysis, mode, scriptOpts, c
 
       {/* Line-item cost expander */}
       <details className="rounded-lg border border-token bg-[var(--card-2)]/40 mb-3">
-        <summary className="cursor-pointer px-3 py-1.5 text-xs font-bold opacity-80">
+        <summary className="cursor-pointer px-3 py-1.5 text-xs font-bold text-muted">
           📊 Line-item cost ({cost.lines.length} services)
         </summary>
         <table className="w-full text-[11px] mt-1">
@@ -466,7 +466,7 @@ function DeploymentColumn({ title, subtitle, tone, analysis, mode, scriptOpts, c
           </div>
         )}
         <div className="flex items-center justify-between px-3 py-1.5 border-b border-token bg-[var(--card-2)]/60">
-          <span className="text-[10px] font-mono opacity-70">{active.filename}</span>
+          <span className="text-[10px] font-mono text-muted">{active.filename}</span>
           <div className="flex gap-1">
             <button onClick={copyAll} className="text-[10px] flex items-center gap-1 opacity-70 hover:opacity-100 px-1.5 py-0.5 rounded hover:bg-[var(--card)]">
               <ClipboardCopy size={10} /> Copy
@@ -492,7 +492,7 @@ function DeploymentColumn({ title, subtitle, tone, analysis, mode, scriptOpts, c
       </div>
 
       {active.notes?.length > 0 && (
-        <ul className="mt-2 space-y-0.5 text-[10px] opacity-70">
+        <ul className="mt-2 space-y-0.5 text-[10px] text-muted">
           {active.notes.map((n, i) => <li key={i}>› {n}</li>)}
         </ul>
       )}
@@ -509,7 +509,7 @@ function CostStat({ label, value, tone = 'default' }) {
   };
   return (
     <div className={cn('rounded-lg border p-2', tones[tone] || tones.default)}>
-      <div className="text-[9px] uppercase tracking-widest opacity-60 font-bold">{label}</div>
+      <div className="text-[9px] uppercase tracking-widest text-muted font-bold">{label}</div>
       <div className="text-base font-bold mt-0.5">{value}</div>
     </div>
   );
@@ -527,7 +527,7 @@ function Panel3Missing({ analysis }) {
         </div>
       ) : (
         <>
-          <p className="text-xs opacity-80 mb-2">
+          <p className="text-xs text-muted mb-2">
             These weren't covered in the brief. <strong>Max 3 questions</strong> — anything more and you risk losing the gig.
           </p>
           <ol className="space-y-1.5">
@@ -553,7 +553,7 @@ function Panel4Approach({ analysis }) {
       <div className="space-y-3">
         {analysis.approach.map((line, i) => (
           <div key={i}>
-            <div className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-1">{line.heading}</div>
+            <div className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1">{line.heading}</div>
             {Array.isArray(line.body) ? (
               <ol className="space-y-1 text-sm">
                 {line.body.map((stage, j) => (
@@ -609,12 +609,12 @@ function TestTab({ analysis }) {
           <ShieldCheck size={14} className="text-success" />
           {analysis.testDeployment.summary}
         </div>
-        <div className="text-xs opacity-80">
+        <div className="text-xs text-muted">
           Recommendation: auto-destroy after <strong>{analysis.testDeployment.autoDestroyHours} hours</strong> so you never wake up to a bill.
         </div>
       </div>
       <div className="rounded-xl border border-token overflow-hidden">
-        <div className="px-3 py-1.5 border-b border-token bg-[var(--card-2)]/60 text-[10px] uppercase tracking-widest font-bold opacity-70">
+        <div className="px-3 py-1.5 border-b border-token bg-[var(--card-2)]/60 text-[10px] uppercase tracking-widest font-bold text-muted">
           Free-tier mapping table
         </div>
         <div className="divide-y divide-[var(--border)]">
@@ -673,11 +673,11 @@ function Panel6Costs({ analysis }) {
           <div className="text-2xl font-bold mt-1 text-success">{analysis.testDeployment.cost}</div>
         </div>
         <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3">
-          <div className="text-[10px] uppercase tracking-widest opacity-60 font-bold">Client monthly (estimate)</div>
+          <div className="text-[10px] uppercase tracking-widest text-muted font-bold">Client monthly (estimate)</div>
           <div className="text-2xl font-bold mt-1">~${estimateClientMonthly(analysis)}/mo</div>
         </div>
         <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3">
-          <div className="text-[10px] uppercase tracking-widest opacity-60 font-bold">vs client budget</div>
+          <div className="text-[10px] uppercase tracking-widest text-muted font-bold">vs client budget</div>
           <div className="text-2xl font-bold mt-1">
             {analysis.budget?.awsMonthly
               ? estimateClientMonthly(analysis) <= analysis.budget.awsMonthly
@@ -816,7 +816,7 @@ function Panel7Actions({ analysis }) {
 
   return (
     <PanelShell icon={Sparkles} title="Generate deliverables" tone="electric">
-      <p className="text-[11px] opacity-70 mb-3">
+      <p className="text-[11px] text-muted mb-3">
         Click any button to instantly generate + download a Markdown deliverable filled with the analysis above.
         No navigation — file lands in your Downloads folder.
       </p>

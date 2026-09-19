@@ -65,7 +65,7 @@ export function InitialSplash() {
                 transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
               />
             </div>
-            <div className="mt-4 text-xs font-bold tracking-widest opacity-60 uppercase">
+            <div className="mt-4 text-xs font-bold tracking-widest text-muted uppercase">
               AWS Career Launchpad Pro
             </div>
           </div>

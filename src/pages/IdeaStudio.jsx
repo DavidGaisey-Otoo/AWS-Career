@@ -166,7 +166,7 @@ export default function IdeaStudio() {
           </div>
           <div className="flex-1 min-w-0">
             <label className="text-sm font-bold">What do you want to build?</label>
-            <p className="text-xs opacity-70 mt-0.5 mb-3">
+            <p className="text-xs text-muted mt-0.5 mb-3">
               Type a description, paste a job/gig spec, or click the mic to speak. AWS-aware — but
               also handles general project ideation.
             </p>
@@ -214,7 +214,7 @@ export default function IdeaStudio() {
 
         {/* Example prompts */}
         <div className="mt-4 pt-4 border-t border-token">
-          <div className="text-[10px] uppercase tracking-widest font-extrabold opacity-60 mb-2 flex items-center gap-1.5">
+          <div className="text-[10px] uppercase tracking-widest font-extrabold text-muted mb-2 flex items-center gap-1.5">
             <Lightbulb size={11} /> Try one of these
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -248,7 +248,7 @@ export default function IdeaStudio() {
       {history.length === 0 && (
         <div className="rounded-2xl border border-token bg-[var(--card)] p-8 text-center">
           <Wand2 size={28} className="mx-auto opacity-30 mb-3" />
-          <p className="text-sm opacity-70 max-w-md mx-auto">
+          <p className="text-sm text-muted max-w-md mx-auto">
             Your generated plans appear here. Pick an example above or type your own to get started.
             Currently {RECIPE_NAMES.length} recipe patterns recognised.
           </p>
@@ -265,7 +265,7 @@ function Header() {
         <Wand2 size={18} className="text-[var(--brand)]" />
         <h1 className="text-2xl font-bold tracking-tight">Idea Studio</h1>
       </div>
-      <p className="text-sm opacity-80 max-w-2xl">
+      <p className="text-sm text-muted max-w-2xl">
         Type, paste, or <strong>speak</strong> what you want to build. I'll turn it into a structured
         proposal: architecture, AWS services, build steps, cost estimate, follow-up questions, and
         alternative designs. Works for client gigs, side projects, exam scenarios, anything.
@@ -296,7 +296,7 @@ function ProposalCard({ entry, onReask }) {
       <div className="px-5 py-3 bg-[var(--card-2)]/40 border-b border-token flex items-start gap-3">
         <MessageSquare size={14} className="text-[var(--brand)] shrink-0 mt-1" />
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase tracking-widest font-extrabold opacity-60 mb-0.5">
+          <div className="text-[10px] uppercase tracking-widest font-extrabold text-muted mb-0.5">
             You asked · {new Date(entry.at).toLocaleString()}
           </div>
           <p className="text-sm font-semibold">{entry.input}</p>
@@ -341,7 +341,7 @@ function ProposalCard({ entry, onReask }) {
                   <Cloud size={11} className="text-[var(--brand)]" />
                   {s.label}
                 </div>
-                <p className="text-xs opacity-70 mt-1">{s.desc}</p>
+                <p className="text-xs text-muted mt-1">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -369,11 +369,11 @@ function ProposalCard({ entry, onReask }) {
         <Section icon={DollarSign} title="Cost estimate">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3">
-              <div className="text-[10px] uppercase tracking-widest opacity-60">Typical</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted">Typical</div>
               <div className="text-lg font-bold">{p.cost.typical != null ? `$${p.cost.typical}/mo` : '—'}</div>
             </div>
             <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3">
-              <div className="text-[10px] uppercase tracking-widest opacity-60">Max</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted">Max</div>
               <div className="text-lg font-bold">{p.cost.max != null ? `$${p.cost.max}/mo` : '—'}</div>
             </div>
             <div className="rounded-xl border border-success/30 bg-success/5 p-3">
@@ -427,7 +427,7 @@ function ProposalCard({ entry, onReask }) {
                   <span>{alt.name}</span>
                   <ArrowRight size={12} className="opacity-50" />
                 </div>
-                <p className="text-xs opacity-70 mt-1">{alt.blurb}</p>
+                <p className="text-xs text-muted mt-1">{alt.blurb}</p>
               </button>
             ))}
           </div>
@@ -468,7 +468,7 @@ function Section({ icon: Icon, title, tone = 'default', children }) {
   const toneCls = tone === 'electric' ? 'border-electric/30 bg-electric/[0.04]' : 'border-token';
   return (
     <div className={`px-5 py-4 border-b last:border-b-0 ${toneCls}`}>
-      <div className="text-[10px] uppercase tracking-widest font-extrabold opacity-60 mb-2 flex items-center gap-1.5">
+      <div className="text-[10px] uppercase tracking-widest font-extrabold text-muted mb-2 flex items-center gap-1.5">
         <Icon size={11} className="text-[var(--brand)]" />
         {title}
       </div>

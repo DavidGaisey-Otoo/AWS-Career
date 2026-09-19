@@ -7,6 +7,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
+import { EmptyState } from '../components/common/EmptyState.jsx';
 import { useDialog } from '../context/DialogContext.jsx';
 import { useEarn } from '../context/EarnContext.jsx';
 import { useFreelance } from '../context/FreelanceContext.jsx';
@@ -243,7 +244,7 @@ export default function ProjectPlan() {
 
         {/* RIGHT — plan view */}
         <div className="space-y-3">
-          {!plan ? <EmptyState /> : (
+          {!plan ? <EmptyState icon={Briefcase} title="Fill the form, hit Generate." description="Your plan appears here. Smart phases, tasks, milestones, dependencies, and a Gantt chart — all editable inline." /> : (
             <>
               <PlanHeader plan={plan} onEdit={editPlan} />
               <GanttView plan={plan} />
@@ -359,20 +360,6 @@ function SavedPlansList({ plans = [], activeId, onPick, onDelete }) {
           ))}
         </ul>
       )}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="surface rounded-2xl p-10 text-center space-y-3">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-aws mx-auto grid place-items-center text-ink-950 shadow-glow-orange">
-        <Briefcase size={22} strokeWidth={2.5} />
-      </div>
-      <h3 className="text-base font-extrabold">Fill the form, hit Generate.</h3>
-      <p className="text-[12px] text-muted max-w-md mx-auto leading-relaxed">
-        Your plan appears here. Smart phases, tasks, milestones, dependencies, and a Gantt chart — all editable inline.
-      </p>
     </div>
   );
 }

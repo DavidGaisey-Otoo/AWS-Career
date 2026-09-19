@@ -103,7 +103,7 @@ export function ApproachRecommendationPanel({
             How to deliver this work
           </h3>
         </div>
-        <div className="text-[10.5px] opacity-60">
+        <div className="text-[10.5px] text-muted">
           {rec.options.reduce((a, o) => a + o.score, 0) > 0
             ? `Scored from ${Object.values(rec.keywords).flat().length} keyword hit${Object.values(rec.keywords).flat().length === 1 ? '' : 's'}`
             : 'No keywords matched — using freelance default'}
@@ -144,10 +144,10 @@ export function ApproachRecommendationPanel({
                   <div className="text-[12.5px] font-extrabold flex items-center gap-1">
                     {opt.label}
                     {opt.score > 0 && (
-                      <span className="text-[9px] opacity-60 font-bold">+{opt.score}</span>
+                      <span className="text-[9px] text-muted font-bold">+{opt.score}</span>
                     )}
                   </div>
-                  <div className="text-[10.5px] opacity-75 leading-snug">{opt.short}</div>
+                  <div className="text-[10.5px] text-muted leading-snug">{opt.short}</div>
                 </div>
               </div>
 

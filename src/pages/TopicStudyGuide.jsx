@@ -75,7 +75,7 @@ export default function TopicStudyGuide() {
               {guide?.title || topic.label}
             </h1>
             {guide?.subtitle && (
-              <p className="text-base opacity-80 mt-1.5">{guide.subtitle}</p>
+              <p className="text-base text-muted mt-1.5">{guide.subtitle}</p>
             )}
             <div className="flex flex-wrap items-center gap-3 mt-3 text-xs">
               {guide?.estReadMin && (
@@ -172,7 +172,7 @@ function FullGuide({ guide, cert, topic, available }) {
                 <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-1">{c.k}</div>
                 <div className="text-[13.5px] font-bold leading-snug">{c.v}</div>
                 {c.desc && (
-                  <div className="text-[11.5px] opacity-75 mt-1.5 leading-relaxed">{c.desc}</div>
+                  <div className="text-[11.5px] text-muted mt-1.5 leading-relaxed">{c.desc}</div>
                 )}
               </div>
             ))}
@@ -203,7 +203,7 @@ function FullGuide({ guide, cert, topic, available }) {
       {available > 0 && (
         <div className="surface rounded-3xl p-6 text-center gradient-border">
           <h3 className="text-xl font-extrabold mb-2">Feeling ready?</h3>
-          <p className="opacity-80 text-sm mb-4">
+          <p className="text-muted text-sm mb-4">
             Test what you just learned — {available} {topic.label} question{available === 1 ? '' : 's'} waiting.
           </p>
           <Link
@@ -281,7 +281,7 @@ function BriefStub({ briefNotes, topic, cert, available }) {
         </>
       ) : (
         <Section icon={<ScrollText size={16} />} title="No notes yet">
-          <p className="text-sm opacity-80">
+          <p className="text-sm text-muted">
             Notes for {topic.label} are being written. In the meantime, the practice
             questions for this topic include full explanations.
           </p>
@@ -389,7 +389,7 @@ function WorkedExample({ index, example }) {
         </span>
         <div className="flex-1">
           <div className="text-[13px] font-extrabold mb-1">{example.title}</div>
-          <p className="text-[12.5px] opacity-80 leading-snug">{example.scenario}</p>
+          <p className="text-[12.5px] text-muted leading-snug">{example.scenario}</p>
         </div>
         {open ? <ChevronDown size={16} className="opacity-60 mt-1" /> : <ChevronRight size={16} className="opacity-60 mt-1" />}
       </button>
@@ -401,7 +401,7 @@ function WorkedExample({ index, example }) {
           <ol className="space-y-2 mb-4">
             {example.reasoning.map((step, i) => (
               <li key={i} className="flex items-start gap-2.5 text-[13px]">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--card)] text-[10px] font-bold flex items-center justify-center mt-0.5 opacity-70">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--card)] text-[10px] font-bold flex items-center justify-center mt-0.5 text-muted">
                   {i + 1}
                 </span>
                 <span className="opacity-90 leading-relaxed">{step}</span>
@@ -455,7 +455,7 @@ function DecisionTree({ tree }) {
         ))}
       </div>
       {tree.tip && (
-        <div className="mt-3 text-[12px] opacity-75 italic border-l-2 border-aws-orange/50 pl-3">
+        <div className="mt-3 text-[12px] text-muted italic border-l-2 border-aws-orange/50 pl-3">
           💡 {tree.tip}
         </div>
       )}

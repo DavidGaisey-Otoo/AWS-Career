@@ -82,7 +82,7 @@ export function BuildYourOwnCard() {
           </div>
           <div className="min-w-0">
             <div className="font-extrabold text-[14px]">Build something else</div>
-            <p className="text-[12px] opacity-75 mt-0.5 leading-relaxed">
+            <p className="text-[12px] text-muted mt-0.5 leading-relaxed">
               None of these what you need? Describe your own project and get the same
               step-by-step build, cost estimate and progress tracking.
             </p>
@@ -121,7 +121,7 @@ export function BuildYourOwnCard() {
                 )}
               </div>
 
-              <p className="text-[12.5px] opacity-80 leading-relaxed">
+              <p className="text-[12.5px] text-muted leading-relaxed">
                 Describe it in your own words — what it does, roughly how many users, and
                 anything that matters like a budget or a deadline. The more you say, the
                 better the build plan.
@@ -165,7 +165,7 @@ export function BuildYourOwnCard() {
               </button>
 
               <div className="pt-3 border-t border-token">
-                <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-60 mb-2">
+                <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted mb-2">
                   Not sure how to describe it? Try one of these
                 </div>
                 <div className="space-y-1.5">
@@ -182,7 +182,7 @@ export function BuildYourOwnCard() {
                 </div>
               </div>
 
-              <p className="text-[10.5px] opacity-60 leading-relaxed">
+              <p className="text-[10.5px] text-muted leading-relaxed">
                 You&apos;ll get the AWS services it needs, a phase-by-phase build plan you can
                 tick off, an architecture diagram, a cost estimate, and the mistakes people
                 usually make on this kind of build — the same as any project in the catalogue.

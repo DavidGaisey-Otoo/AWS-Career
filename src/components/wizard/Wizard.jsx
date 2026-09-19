@@ -309,11 +309,11 @@ function StepCard({ step, idx, total, values, set, advance, recorder, recordAs, 
           {idx + 1}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase tracking-widest font-bold opacity-60">
+          <div className="text-[10px] uppercase tracking-widest font-bold text-muted">
             Step {idx + 1} of {total}{step.optional ? ' · Optional' : ''}
           </div>
           <h2 className="text-2xl font-bold tracking-tight mt-0.5">{step.title}</h2>
-          {step.description && <p className="text-sm opacity-80 mt-1.5 leading-relaxed">{step.description}</p>}
+          {step.description && <p className="text-sm text-muted mt-1.5 leading-relaxed">{step.description}</p>}
         </div>
       </div>
 
@@ -349,7 +349,7 @@ function ExpandedStep({ step, idx, isCurrent, isDone, values, set, advance, reco
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-bold">{step.title}</h3>
-          {step.description && <p className="text-xs opacity-70 mt-0.5">{step.description}</p>}
+          {step.description && <p className="text-xs text-muted mt-0.5">{step.description}</p>}
         </div>
       </div>
       <div className="pl-12">
@@ -380,7 +380,7 @@ function SummaryPanel({ steps, values, completed }) {
                 {done ? <CheckCircle2 size={12} className="text-emerald-400" /> : <Circle size={12} className="opacity-30" />}
               </span>
               <div className="flex-1 min-w-0">
-                <dt className="text-[10px] uppercase tracking-widest font-bold opacity-60">{s.title}</dt>
+                <dt className="text-[10px] uppercase tracking-widest font-bold text-muted">{s.title}</dt>
                 <dd className="text-xs">{summary}</dd>
               </div>
             </div>

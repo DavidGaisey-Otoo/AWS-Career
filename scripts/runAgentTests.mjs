@@ -21,6 +21,8 @@ import { runClientDiscoveryFormTests } from '../src/lib/__tests__/clientDiscover
 import { runAwsEnvironmentPolicyTests } from '../src/lib/__tests__/awsEnvironmentPolicy.test.js';
 import { runProjectStandardsTests } from '../src/lib/__tests__/projectStandards.test.js';
 import { runSolutionDeliveryStandardTests } from '../src/lib/__tests__/solutionDeliveryStandard.test.js';
+import { runResourceSearchTests } from '../src/lib/__tests__/resourceSearch.test.js';
+import { runAccountTierTests } from '../src/lib/__tests__/accountTier.test.js';
 
 const agents = runAllTests();
 console.log(printReport(agents));
@@ -163,6 +165,20 @@ console.log('  CLIENT DISCOVERY FORM TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of clientDiscovery.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
+const resourceSearch = runResourceSearchTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  RESOURCE SEARCH TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of resourceSearch.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
+const accountTier = runAccountTierTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  ACCOUNT TIER / FREE PLAN TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of accountTier.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
 const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
 const syncOk = sync.allPassed;
@@ -182,7 +198,9 @@ const deliveryStatusOk = deliveryStatus.allPassed;
 const planningRecommendationsOk = planningRecommendations.allPassed;
 const clientDiscoveryOk = clientDiscovery.allPassed;
 const awsEnvironmentPolicyOk = awsEnvironmentPolicy.allPassed;
-const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk;
+const resourceSearchOk = resourceSearch.allPassed;
+const accountTierOk = accountTier.allPassed;
+const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk;
 
 console.log('');
 console.log(allOk
@@ -190,6 +208,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} awsEnvironmentPolicy:${awsEnvironmentPolicyOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

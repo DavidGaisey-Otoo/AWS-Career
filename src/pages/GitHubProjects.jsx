@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ExternalLink, Github, Loader2, Lock, RefreshCw, Rocket, Search, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Loader2, Lock, RefreshCw, Rocket, Search, ShieldCheck } from 'lucide-react';
+import { Github } from '../components/common/BrandIcons.jsx';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { usePortfolio } from '../context/PortfolioContext.jsx';
@@ -89,8 +90,8 @@ export default function GitHubProjects() {
           </section>
 
           <section className="surface rounded-2xl p-5 space-y-4">
-            {!selected ? <p className="text-sm opacity-60">Choose a repository to continue.</p> : <>
-              <div className="flex justify-between gap-3"><div><h2 className="font-extrabold">{selected.fullName}</h2><p className="text-xs opacity-70">{selected.description || 'No repository description.'}</p></div><a href={selected.htmlUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a></div>
+            {!selected ? <p className="text-sm text-muted">Choose a repository to continue.</p> : <>
+              <div className="flex justify-between gap-3"><div><h2 className="font-extrabold">{selected.fullName}</h2><p className="text-xs text-muted">{selected.description || 'No repository description.'}</p></div><a href={selected.htmlUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a></div>
               <label className="text-xs font-bold block">Branch<select value={branch} onChange={(e) => { setBranch(e.target.value); setAnalysis(null); }} className="mt-1 w-full rounded-xl bg-[var(--card-2)] border border-token p-2.5">{branches.map((item) => <option key={item.name}>{item.name}</option>)}</select></label>
               <button onClick={analyze} disabled={busy} className="btn btn-primary">{busy ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Analyze safely</button>
               {analysis && <Analysis analysis={analysis} onImport={createGuidedProject} />}

@@ -1,8 +1,6 @@
 import { motion } from 'framer-motion';
-import {
-  ArrowRight, Check, Cloud, Code, FolderKanban, GraduationCap, Linkedin,
-  Rocket, ShieldCheck, Sparkles, Terminal, User, X,
-} from 'lucide-react';
+import { ArrowRight, Check, Cloud, Code, FolderKanban, GraduationCap, Rocket, ShieldCheck, Sparkles, Terminal, User, X } from 'lucide-react';
+import { Linkedin } from '../common/BrandIcons.jsx';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext.jsx';

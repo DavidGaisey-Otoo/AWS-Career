@@ -127,7 +127,7 @@ export function RegionSuggestionChip({
               <h4 className="text-base font-extrabold">
                 {suggestion.primary} — {suggestion.primaryLabel}
               </h4>
-              <div className="text-[10px] opacity-70">
+              <div className="text-[10px] text-muted">
                 Confidence: <strong className={
                   suggestion.confidence === 'high' ? 'text-success'
                   : suggestion.confidence === 'medium' ? 'text-warning'

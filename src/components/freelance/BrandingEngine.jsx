@@ -1,7 +1,5 @@
-import {
-  Calendar, Check, ClipboardCopy, Gauge, Globe, Linkedin, Sparkles, Star,
-  Wand2, Youtube,
-} from 'lucide-react';
+import { Calendar, Check, ClipboardCopy, Gauge, Globe, Sparkles, Star, Wand2 } from 'lucide-react';
+import { Linkedin, Youtube } from '../common/BrandIcons.jsx';
 import { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 import { useFreelance } from '../../context/FreelanceContext.jsx';

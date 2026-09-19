@@ -103,7 +103,7 @@ export function ServiceSuggestionChips({
             )}
           </div>
           {!compact && (
-            <p className="text-[11.5px] opacity-70 mt-0.5">
+            <p className="text-[11.5px] text-muted mt-0.5">
               Click any chip for what / why / free tier. Toggle to add or remove from your project.
             </p>
           )}
@@ -134,7 +134,7 @@ export function ServiceSuggestionChips({
           ))}
         </div>
       ) : (
-        <div className="text-[12px] opacity-60 italic">
+        <div className="text-[12px] text-muted italic">
           No services selected yet. {brief.length > 20 ? 'Nothing detected from the brief above — add some manually.' : 'Paste a project description above or click "Add service".'}
         </div>
       )}
@@ -142,7 +142,7 @@ export function ServiceSuggestionChips({
       {/* COMPANION suggestions */}
       {companionChips.length > 0 && (
         <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-widest opacity-70 mb-1.5">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1.5">
             Also commonly paired
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -203,7 +203,7 @@ function ServiceChip({
         <span className="text-[14px]">{service.icon}</span>
         <span>{service.label}</span>
         {selected && matched && <Check size={11} />}
-        {selected && !matched && <span className="text-[9px] opacity-70">manual</span>}
+        {selected && !matched && <span className="text-[9px] text-muted">manual</span>}
         {!selected && <Plus size={11} />}
       </button>
 
@@ -220,7 +220,7 @@ function ServiceChip({
               <div className="text-2xl">{service.icon}</div>
               <div className="flex-1">
                 <h4 className="text-base font-extrabold leading-snug">{service.label}</h4>
-                <div className="text-[10px] opacity-70 font-bold uppercase tracking-wide">{service.category}</div>
+                <div className="text-[10px] text-muted font-bold uppercase tracking-wide">{service.category}</div>
               </div>
               {selected ? (
                 <button onClick={onRemove}
@@ -321,7 +321,7 @@ function AddServicePicker({ selectedIds, onAdd, onClose }) {
       <div className="max-h-[280px] overflow-y-auto space-y-3 pr-1">
         {Object.entries(filtered).map(([cat, items]) => (
           <div key={cat}>
-            <div className="text-[10px] font-extrabold uppercase tracking-widest opacity-60 mb-1">
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1">
               {cat}
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -350,7 +350,7 @@ function AddServicePicker({ selectedIds, onAdd, onClose }) {
           </div>
         ))}
         {Object.keys(filtered).length === 0 && (
-          <div className="text-[12px] opacity-60 italic text-center py-4">
+          <div className="text-[12px] text-muted italic text-center py-4">
             No services match "{search}".
           </div>
         )}

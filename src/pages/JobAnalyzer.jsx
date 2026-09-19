@@ -268,7 +268,7 @@ function Analysis({ result }) {
             Ready to build?
           </div>
           <h3 className="text-base font-extrabold">Generate a Deep Walkthrough for this job</h3>
-          <p className="text-[11.5px] opacity-80 leading-snug mt-0.5">
+          <p className="text-[11.5px] text-muted leading-snug mt-0.5">
             Auto-orders the services from this brief into a numbered Deep Walkthrough — saved under 💼 Freelance Jobs.
             <strong className="text-aws-orange"> {pickedServices.length} service{pickedServices.length === 1 ? '' : 's'}</strong> will carry through.
           </p>

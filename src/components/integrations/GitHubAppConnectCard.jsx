@@ -1,4 +1,5 @@
-import { AlertTriangle, Check, CheckCircle2, Copy, ExternalLink, Github, Loader2, LogOut } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, Copy, ExternalLink, Loader2, LogOut } from 'lucide-react';
+import { Github } from '../common/BrandIcons.jsx';
 import { useEffect, useState } from 'react';
 import { useToast } from '../../context/ToastContext.jsx';
 import {

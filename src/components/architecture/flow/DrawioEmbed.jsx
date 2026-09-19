@@ -109,9 +109,9 @@ export function DrawioEmbed({
         <div className="flex items-center gap-2">
           <ExternalLink size={14} className="text-aws-orange" />
           <span className="text-sm font-extrabold">Editing in draw.io</span>
-          <span className="text-[11px] opacity-60">·</span>
-          <span className="text-[11.5px] opacity-80">{diagramName}</span>
-          <span className="text-[11px] opacity-60 ml-2">
+          <span className="text-[11px] text-muted">·</span>
+          <span className="text-[11.5px] text-muted">{diagramName}</span>
+          <span className="text-[11px] text-muted ml-2">
             {status === 'loading' && '(loading editor…)'}
             {status === 'ready'   && '(use draw.io\'s Save → returns here)'}
             {status === 'error'   && '(invalid diagram blocked — your previous version is unchanged)'}

@@ -306,7 +306,7 @@ function SchedulePlanner() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className={cn('text-sm font-extrabold', done && 'line-through opacity-60')}>{b.label}</div>
-                    <div className="text-[10px] uppercase tracking-widest font-bold opacity-70">{kind.label} · {b.minutes} min</div>
+                    <div className="text-[10px] uppercase tracking-widest font-bold text-muted">{kind.label} · {b.minutes} min</div>
                   </div>
                   <button onClick={() => removeBlock(day, b.id)}
                           className="text-muted hover:text-danger p-1"><Trash2 size={12} /></button>

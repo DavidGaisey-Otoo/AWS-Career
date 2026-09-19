@@ -16,7 +16,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Clock, ExternalLink, X, RefreshCw, Github } from 'lucide-react';
+import { AlertTriangle, Clock, ExternalLink, X, RefreshCw } from 'lucide-react';
+import { Github } from '../common/BrandIcons.jsx';
 import {
   readToken, expirySeverity, expiryLabel, isSnoozed, snoozeWarning,
   GITHUB_TOKEN_PAGE,

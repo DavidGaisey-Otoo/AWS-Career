@@ -106,10 +106,10 @@ function PendingGate({ pending, onExecute, onCancel }) {
               <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md ${tierStyle.badge}`}>
                 {tierMeta.icon} {tierMeta.label} TIER
               </span>
-              <span className="text-[10px] opacity-60 font-mono">{action.service}</span>
+              <span className="text-[10px] text-muted font-mono">{action.service}</span>
             </div>
             <h2 className="text-xl font-bold tracking-tight">{action.summary}</h2>
-            <p className="text-xs opacity-70 mt-1">
+            <p className="text-xs text-muted mt-1">
               Action ID: <span className="font-mono">{action.id || pending.actionId}</span>
             </p>
           </div>
@@ -167,13 +167,13 @@ function PreviewStage({ action, params, onNext, onCancel }) {
     <div className="space-y-5">
       {/* Plain-English summary */}
       <div className="rounded-2xl border border-token bg-[var(--card-2)]/40 p-4">
-        <div className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-1">What this does</div>
+        <div className="text-[10px] uppercase tracking-widest font-bold text-muted mb-1">What this does</div>
         <p className="text-sm">{action.summary}</p>
       </div>
 
       {/* Parameters table */}
       <div className="rounded-2xl border border-token overflow-hidden">
-        <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold opacity-60">
+        <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold text-muted">
           Parameters
         </div>
         <div className="divide-y divide-[var(--border)]">
@@ -182,7 +182,7 @@ function PreviewStage({ action, params, onNext, onCancel }) {
           )}
           {Object.entries(params || {}).map(([k, v]) => (
             <div key={k} className="px-4 py-2 flex items-start gap-3">
-              <span className="text-xs font-mono opacity-60 w-32 shrink-0">{k}</span>
+              <span className="text-xs font-mono text-muted w-32 shrink-0">{k}</span>
               <span className="text-xs font-mono break-all">
                 {typeof v === 'boolean' ? (v ? 'true' : 'false') : Array.isArray(v) ? `[${v.length} item${v.length === 1 ? '' : 's'}]` : typeof v === 'object' && v ? JSON.stringify(v).slice(0, 80) + '...' : String(v ?? '')}
               </span>
@@ -240,7 +240,7 @@ function InfoCard({ icon: Icon, label, value, tone = 'ok' }) {
   const tones = { ok: 'text-emerald-300', warn: 'text-amber-300' };
   return (
     <div className="rounded-xl border border-token bg-[var(--card)] p-3">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold opacity-60">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted">
         <Icon size={12} />
         {label}
       </div>
@@ -267,14 +267,14 @@ function ConfirmStage({
         <div className="flex items-center gap-2 font-bold mb-1">
           <Lock size={14} /> Final approval required
         </div>
-        <p className="text-xs opacity-70">
+        <p className="text-xs text-muted">
           Type your deploy password{tierMeta.requiresExtraConfirm ? ' AND the confirmation phrase below' : ''} to execute this action. Your password is used once and forgotten immediately.
         </p>
       </div>
 
       {/* Deploy password */}
       <div>
-        <label className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1.5 block">
+        <label className="text-xs font-bold uppercase tracking-widest text-muted mb-1.5 block">
           Deploy password
         </label>
         <div className="relative">
@@ -300,10 +300,10 @@ function ConfirmStage({
       {/* Extra confirmation */}
       {tierMeta.requiresExtraConfirm && (
         <div>
-          <label className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1.5 block">
+          <label className="text-xs font-bold uppercase tracking-widest text-muted mb-1.5 block">
             Type to confirm
           </label>
-          <p className="text-xs opacity-70 mb-1.5">
+          <p className="text-xs text-muted mb-1.5">
             To prove you mean it, type exactly: <span className="font-mono px-1.5 py-0.5 rounded bg-[var(--card-2)] font-bold">{expectedConfirm}</span>
           </p>
           <input
@@ -354,7 +354,7 @@ function RunningStage({ actionSummary, error, onCancel }) {
             <XCircle size={28} className="text-rose-300" />
           </div>
           <h3 className="text-lg font-bold">Execution failed</h3>
-          <p className="text-xs opacity-70 mt-1 max-w-md mx-auto">{error}</p>
+          <p className="text-xs text-muted mt-1 max-w-md mx-auto">{error}</p>
           <Button variant="ghost" onClick={onCancel} className="mt-4">Close</Button>
         </>
       ) : (
@@ -365,7 +365,7 @@ function RunningStage({ actionSummary, error, onCancel }) {
             className="mx-auto w-14 h-14 rounded-full border-4 border-[var(--card-2)] border-t-[var(--brand)] mb-3"
           />
           <h3 className="text-lg font-bold">Executing…</h3>
-          <p className="text-xs opacity-70 mt-1">{actionSummary}</p>
+          <p className="text-xs text-muted mt-1">{actionSummary}</p>
         </>
       )}
     </div>
@@ -389,7 +389,7 @@ function ResultModal({ result, onClose }) {
           </div>
           <div>
             <h2 className="text-xl font-bold">{ok ? 'Action completed' : 'Action failed'}</h2>
-            <p className="text-xs opacity-70 mt-1 font-mono">{result.actionId}</p>
+            <p className="text-xs text-muted mt-1 font-mono">{result.actionId}</p>
           </div>
         </div>
       </div>
@@ -403,7 +403,7 @@ function ResultModal({ result, onClose }) {
 
         {result.result && (
           <div className="rounded-2xl border border-token overflow-hidden">
-            <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold opacity-60 flex items-center justify-between">
+            <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold text-muted flex items-center justify-between">
               <span>Result</span>
               <button
                 onClick={async () => {
@@ -422,7 +422,7 @@ function ResultModal({ result, onClose }) {
 
         {result.log && result.log.length > 0 && (
           <div className="rounded-2xl border border-token overflow-hidden">
-            <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold opacity-60">
+            <div className="px-4 py-2 border-b border-token bg-[var(--card-2)]/40 text-[10px] uppercase tracking-widest font-bold text-muted">
               Execution log
             </div>
             <div className="divide-y divide-[var(--border)]">

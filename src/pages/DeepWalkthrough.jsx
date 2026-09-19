@@ -138,11 +138,11 @@ function DeepWalkthroughsIndex() {
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-2 flex-wrap">
             🛠 Deep Walkthroughs
-            <span className="text-xs font-bold opacity-70 px-2 py-1 rounded-full bg-[var(--card-2)]">
+            <span className="text-xs font-bold text-muted px-2 py-1 rounded-full bg-[var(--card-2)]">
               {merged.length} total
             </span>
           </h1>
-          <p className="text-sm opacity-80 mt-1.5">
+          <p className="text-sm text-muted mt-1.5">
             Every step explained: WHAT, WHY, analogy, common mistakes, and HOW in all 4 formats.
             Hand-authored library + your own generated walkthroughs in one place.
           </p>
@@ -195,7 +195,7 @@ function DeepWalkthroughsIndex() {
           </select>
         </div>
         {/* Result count */}
-        <div className="text-[11px] opacity-70">
+        <div className="text-[11px] text-muted">
           Showing <strong className="text-aws-orange">{filtered.length}</strong> of {merged.length} walkthroughs
         </div>
       </div>
@@ -294,7 +294,7 @@ function ProjectRow({ w }) {
       <div className="text-xl">{w.services?.includes('ec2') ? '🖥' : '🪣'}</div>
       <div className="flex-1 min-w-0">
         <div className="text-[13px] font-extrabold truncate">{w.title}</div>
-        <div className="text-[10.5px] opacity-70">{w.services?.join(' · ') || ''}</div>
+        <div className="text-[10.5px] text-muted">{w.services?.join(' · ') || ''}</div>
       </div>
       <StatusPill status={w._status} pct={w._pct} done={w._done} total={w._total} />
     </Link>
@@ -308,9 +308,9 @@ function Section({ title, subtitle, items }) {
     <section>
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <h3 className="text-base font-extrabold">{title}
-          <span className="ml-2 text-[11px] opacity-60 font-bold">{items.length}</span>
+          <span className="ml-2 text-[11px] text-muted font-bold">{items.length}</span>
         </h3>
-        {subtitle && <span className="text-[11px] opacity-60">{subtitle}</span>}
+        {subtitle && <span className="text-[11px] text-muted">{subtitle}</span>}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {items.map((w) => <WalkthroughCard key={w.id} w={w} />)}
@@ -339,7 +339,7 @@ function WalkthroughCard({ w }) {
         </div>
       </div>
       <h3 className="text-base font-extrabold mb-1 group-hover:text-aws-orange transition leading-tight">{w.title}</h3>
-      <p className="text-[12px] opacity-75 leading-snug mb-2 line-clamp-2">{w.blurb}</p>
+      <p className="text-[12px] text-muted leading-snug mb-2 line-clamp-2">{w.blurb}</p>
 
       {/* Progress bar */}
       <div className="w-full h-1 rounded-full bg-[var(--card-2)] overflow-hidden mb-2">
@@ -351,7 +351,7 @@ function WalkthroughCard({ w }) {
         }} />
       </div>
 
-      <div className="flex items-center justify-between text-[10.5px] opacity-70">
+      <div className="flex items-center justify-between text-[10.5px] text-muted">
         <span><Clock size={10} className="inline -mt-0.5 mr-0.5" />{w.estMinutes} min</span>
         <span><Layers size={10} className="inline -mt-0.5 mr-0.5" />{w._done}/{w._total} done</span>
         <StatusPill status={w._status} pct={w._pct} done={w._done} total={w._total} compact />
@@ -431,8 +431,8 @@ function WalkthroughView({ walkthrough }) {
             />
           </div>
         </div>
-        <p className="text-sm opacity-80 mb-3">{walkthrough.blurb}</p>
-        <div className="flex flex-wrap gap-3 text-[11.5px] opacity-80">
+        <p className="text-sm text-muted mb-3">{walkthrough.blurb}</p>
+        <div className="flex flex-wrap gap-3 text-[11.5px] text-muted">
           <span><Clock size={11} className="inline -mt-0.5 mr-1" />~{walkthrough.estMinutes} min</span>
           <span><Layers size={11} className="inline -mt-0.5 mr-1" />{walkthrough.steps.length} steps</span>
           <span><Target size={11} className="inline -mt-0.5 mr-1" />{walkthrough.difficulty}</span>
@@ -486,7 +486,7 @@ function WalkthroughView({ walkthrough }) {
         <div className="surface rounded-3xl p-7 text-center gradient-border">
           <div className="text-5xl mb-2">🎉</div>
           <h2 className="text-xl font-extrabold mb-1">All steps complete!</h2>
-          <p className="opacity-80 text-sm">
+          <p className="text-muted text-sm">
             You\'ve walked through every step of {walkthrough.title}. Try another Deep Walkthrough or apply this to a real project.
           </p>
         </div>
@@ -508,7 +508,7 @@ function WalkthroughView({ walkthrough }) {
               Ready to take this with you?
             </div>
             <h3 className="text-lg font-extrabold mb-1">Generate Full Project Script</h3>
-            <p className="text-[12.5px] opacity-80 leading-snug">
+            <p className="text-[12.5px] text-muted leading-snug">
               Combine every step into a single production-quality script — pick from 4 formats: Console PDF-ready guide, full Bash CLI script, complete CloudFormation template, or Terraform configuration. Preview, copy, or download.
             </p>
           </div>
@@ -652,13 +652,13 @@ function HowTabs({ how }) {
 
 function ConsoleSteps({ steps }) {
   if (!steps || steps.length === 0) {
-    return <div className="text-[12px] opacity-60 italic">No console steps available.</div>;
+    return <div className="text-[12px] text-muted italic">No console steps available.</div>;
   }
   return (
     <ol className="space-y-1.5">
       {steps.map((s, i) => (
         <li key={i} className="flex items-start gap-2 text-[13.5px]">
-          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--card-2)] text-[10px] font-bold flex items-center justify-center mt-0.5 opacity-70 tabular-nums">
+          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--card-2)] text-[10px] font-bold flex items-center justify-center mt-0.5 text-muted tabular-nums">
             {i + 1}
           </span>
           <span className="opacity-90 leading-relaxed">{s}</span>
@@ -670,7 +670,7 @@ function ConsoleSteps({ steps }) {
 
 function CodeBlock({ language, code }) {
   const [copied, setCopied] = useState(false);
-  if (!code) return <div className="text-[12px] opacity-60 italic">No {language} snippet for this step.</div>;
+  if (!code) return <div className="text-[12px] text-muted italic">No {language} snippet for this step.</div>;
   return (
     <div className="relative">
       <button
@@ -704,7 +704,7 @@ export function DeepModeToggle({ enabled, onChange, inline = false }) {
           <Sparkles size={11} /> Walkthrough mode
         </div>
         {!inline && (
-          <div className="text-[11.5px] opacity-70 mt-0.5">
+          <div className="text-[11.5px] text-muted mt-0.5">
             <strong>Standard:</strong> WHAT + Console steps. <strong>Deep:</strong> adds WHY, analogy, common mistakes, and HOW in 4 formats (Console / CLI / CFN / Terraform).
           </div>
         )}
