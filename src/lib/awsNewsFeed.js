@@ -128,7 +128,9 @@ export function parseAwsRss(xml) {
       service: serviceFromTitle(title),
       dateISO: when && !Number.isNaN(when.getTime()) ? when.toISOString() : null,
       url: link || 'https://aws.amazon.com/about-aws/whats-new/recent/',
-      tag: 'general',
+      // Must be a key of UPDATE_TAGS; 'news' is the general bucket.
+      // Inventing a tag here crashed the page that renders these.
+      tag: 'news',
       level: 'info',
       live: true,
     });

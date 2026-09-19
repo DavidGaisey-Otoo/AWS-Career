@@ -110,6 +110,23 @@ export function runAwsNewsFeedTests() {
     }
   });
 
+  test('every item carries a tag the renderer knows', () => {
+    // A tag outside UPDATE_TAGS crashed the page with
+    // "Cannot read properties of undefined (reading 'tone')".
+    const VALID = ['study', 'cert', 'freelance', 'news', 'retire'];
+    for (const item of parseAwsRss(RSS)) {
+      assert(VALID.includes(item.tag), `item tag "${item.tag}" is not in the taxonomy`);
+    }
+  });
+
+  test('every item has the fields the page renders', () => {
+    for (const item of parseAwsRss(RSS)) {
+      for (const field of ['id', 'title', 'summary', 'service', 'url', 'tag']) {
+        assert(item[field] != null && item[field] !== '', `item missing ${field}`);
+      }
+    }
+  });
+
   // ───────────── service naming ─────────────
 
   test('service names drop the Amazon/AWS prefix', () => {

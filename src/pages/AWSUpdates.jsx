@@ -186,7 +186,10 @@ export default function AWSUpdates() {
 // =================================================================
 
 function UpdateCard({ update, saved, onSave }) {
-  const tag = UPDATE_TAGS[update.tag];
+  // Fall back rather than crash: an item carrying a tag outside the
+  // taxonomy — from the live feed, or a future one — should render
+  // plainly, not throw and take the entire page with it.
+  const tag = UPDATE_TAGS[update.tag] || UPDATE_TAGS.news;
   const affectedCerts = (update.affects?.certs || []).map(getCert).filter(Boolean);
   return (
     <motion.li
