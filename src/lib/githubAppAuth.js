@@ -1,4 +1,5 @@
 import { STORAGE_KEY } from './constants.js';
+import { safeSetOrWarn } from './safeStorage.js';
 
 const KEY = `${STORAGE_KEY}::github-app`;
 /**
@@ -55,7 +56,7 @@ function saveTokenResponse(data) {
     tokenType: data.token_type || 'bearer',
     savedAt: new Date(now).toISOString(),
   };
-  localStorage.setItem(KEY, JSON.stringify(next));
+  safeSetOrWarn(KEY, JSON.stringify(next), 'your GitHub sign-in');
   window.dispatchEvent(new Event('github-auth-change'));
   return next;
 }

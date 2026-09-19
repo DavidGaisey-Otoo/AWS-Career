@@ -19,6 +19,7 @@
  */
 import { STORAGE_KEY } from './constants.js';
 import { whoAmI } from './githubPush.js';
+import { safeSetOrWarn } from './safeStorage.js';
 
 const KEY = `${STORAGE_KEY}::github`;
 
@@ -136,7 +137,7 @@ export function writeToken(patch) {
   const current = readToken() || {};
   const next = { ...current, ...patch };
   if (patch.token && !current.savedAt) next.savedAt = new Date().toISOString();
-  localStorage.setItem(KEY, JSON.stringify(next));
+  safeSetOrWarn(KEY, JSON.stringify(next), 'your GitHub token');
   return next;
 }
 

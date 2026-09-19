@@ -28,6 +28,7 @@ import { STORAGE_KEY } from './constants.js';
 import {
   clearGithubAppSession, getGithubAccessToken, readGithubAppSession,
 } from './githubAppAuth.js';
+import { safeSetOrWarn } from './safeStorage.js';
 
 const SYNC_REPO_NAME   = 'aws-career-launchpad-sync';
 const SYNC_REPO_DESC   = 'Private cross-device state for AWS Career Launchpad Pro';
@@ -171,7 +172,7 @@ function getDeviceId() {
   let id = localStorage.getItem(DEVICE_ID_KEY);
   if (!id) {
     id = `device-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
-    localStorage.setItem(DEVICE_ID_KEY, id);
+    safeSetOrWarn(DEVICE_ID_KEY, id, 'this device id');
   }
   return id;
 }
@@ -285,7 +286,7 @@ export function getStoredSyncRepo() {
 }
 
 function setStoredSyncRepo(fullName) {
-  if (fullName) localStorage.setItem(SYNC_REPO_KEY, fullName);
+  if (fullName) safeSetOrWarn(SYNC_REPO_KEY, fullName, 'the sync repository name');
   else localStorage.removeItem(SYNC_REPO_KEY);
 }
 
