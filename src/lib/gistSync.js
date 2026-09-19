@@ -43,6 +43,9 @@ const SYNC_BASELINE_KEY = `${STORAGE_KEY}::sync::baseline`;
 // Stamped whenever remote data is written into this browser, so other
 // same-origin windows can tell an incoming restore from a local edit.
 export const SYNC_RESTORE_KEY = `${STORAGE_KEY}::sync::restoredAt`;
+// A copy of this device's data taken immediately before any restore, so
+// an unwanted overwrite is always undoable.
+export const SYNC_ROLLBACK_KEY = `${STORAGE_KEY}::sync::rollback`;
 
 // Keys we deliberately exclude from sync (sensitive + ephemeral)
 const SYNC_BLOCKLIST = [
@@ -59,6 +62,7 @@ const SYNC_BLOCKLIST = [
   `${STORAGE_KEY}::sync::deviceId`,
   `${STORAGE_KEY}::sync::baseline`,
   `${STORAGE_KEY}::sync::restoredAt`,
+  `${STORAGE_KEY}::sync::rollback`,
 ];
 
 // Field names that must never appear inside a synced JSON blob, wherever
@@ -561,6 +565,79 @@ export async function pushSnapshot() {
  * Strategy: if remote.timestamp is newer than our last known local snapshot,
  * AND it's from a different device, restore it.
  */
+/**
+ * What identifies an account inside a snapshot, and how much it holds.
+ * Used to decide whether an incoming copy may replace this device's data
+ * without asking first.
+ */
+export function describeSnapshot(data = {}) {
+  const read = (k) => {
+    try { return JSON.parse(data[`${STORAGE_KEY}::${k}`]); } catch { return null; }
+  };
+  const profile = read('profile') || {};
+  const exam = read('exam') || {};
+  const attempts = exam?.certs?.['saa-c03']?.attempts || [];
+  let bytes = 0;
+  for (const v of Object.values(data)) if (typeof v === 'string') bytes += v.length;
+  return {
+    name: (profile.name || '').trim() || null,
+    questions: attempts.reduce((n, a) => n + (a.total || 0), 0),
+    keys: Object.keys(data).length,
+    bytes,
+  };
+}
+
+/**
+ * May `remote` silently replace `local`?
+ *
+ * Sync used to answer this with a timestamp alone: newer wins. That is
+ * wrong whenever the two copies are not the same account. A profile
+ * created five minutes ago on a throwaway origin is newer than a year of
+ * real work, and it replaced it without a word.
+ *
+ * Losing data must never be the quiet default, so anything that looks
+ * like a different account — or a materially smaller one — stops and
+ * asks instead of overwriting.
+ */
+export function assessIncoming(localData = {}, remoteData = {}) {
+  const local = describeSnapshot(localData);
+  const remote = describeSnapshot(remoteData);
+  const reasons = [];
+
+  if (local.name && remote.name && local.name !== remote.name) {
+    reasons.push(`The cloud copy belongs to "${remote.name}", but this device is "${local.name}".`);
+  }
+  if (local.questions > remote.questions) {
+    reasons.push(`It has fewer answered questions (${remote.questions} vs ${local.questions} here).`);
+  }
+  if (local.bytes > 4096 && remote.bytes < local.bytes * 0.6) {
+    reasons.push('It holds substantially less data than this device.');
+  }
+  return { safe: reasons.length === 0, reasons, local, remote };
+}
+
+/** Snapshot this device before a restore, so the restore can be undone. */
+export function writeRollback(data) {
+  try { localStorage.setItem(SYNC_ROLLBACK_KEY, JSON.stringify({ at: Date.now(), data })); }
+  catch { /* quota — a missing rollback must not block the restore */ }
+}
+
+export function readRollback() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SYNC_ROLLBACK_KEY) || 'null');
+    return parsed && parsed.data ? parsed : null;
+  } catch { return null; }
+}
+
+/** Put back whatever this device held before the last restore. */
+export function undoLastRestore() {
+  const roll = readRollback();
+  if (!roll) throw new Error('Nothing to undo — no pre-restore copy was saved.');
+  restoreLocalStorage({ data: roll.data }, { mergeStrategy: 'replace' });
+  setSyncEnabled(false);   // do not let sync immediately undo the undo
+  return { ok: true, at: roll.at, keys: Object.keys(roll.data).length };
+}
+
 export async function syncOnOpen() {
   if (!isSyncEnabled()) return { applied: false, reason: 'disabled' };
   if (!await getToken()) return { applied: false, reason: 'no-token' };
@@ -586,6 +663,22 @@ export async function syncOnOpen() {
       return { applied: false, reason: 'same-device', remoteTimestamp: remoteTs };
     }
 
+    // Never replace this device's data with a different or smaller
+    // account without asking. Newer is not the same as correct.
+    const localData = snapshotLocalStorage().data;
+    const verdict = assessIncoming(localData, pulled.snapshot.data);
+    if (!verdict.safe) {
+      writeSyncMeta({ lastError: null, conflictAt: new Date().toISOString() });
+      return {
+        applied: false,
+        reason: 'conflict',
+        conflict: verdict,
+        remoteTimestamp: remoteTs,
+        repoUrl: pulled.repoUrl,
+      };
+    }
+
+    writeRollback(localData);
     restoreLocalStorage(pulled.snapshot, { mergeStrategy: 'replace' });
     writeSyncBaseline(pulled.snapshot.data);
     writeSyncMeta({ lastPullAt: new Date().toISOString(), remoteTimestamp: remoteTs, lastError: null });

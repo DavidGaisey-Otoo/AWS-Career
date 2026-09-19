@@ -69,6 +69,8 @@ function safeReload() {
 export function SyncProvider({ children }) {
   const [status, setStatus] = useState('idle');      // idle | syncing | synced | error | disabled | no-token
   const [meta, setMeta] = useState(() => readSyncMeta());
+  // Set when the cloud copy looks like a different or smaller account.
+  const [conflict, setConflict] = useState(null);
   const [enabled, setEnabled] = useState(() => isSyncEnabled());
   const [openModal, setOpenModal] = useState(false);
   const [appliedOnOpen, setAppliedOnOpen] = useState(null);
@@ -105,6 +107,10 @@ export function SyncProvider({ children }) {
           setAppliedOnOpen(result);
           // Force reload so context providers re-read the restored state
           setTimeout(safeReload, 400);
+        } else if (result.reason === 'conflict') {
+          // Do not overwrite and do not pretend everything matched.
+          setConflict(result.conflict);
+          setStatus('conflict');
         } else if (result.reason === 'no-token' || isAuthError(result.error)) {
           setStatus('no-token');
         } else if (result.reason === 'error') {
@@ -218,6 +224,10 @@ export function SyncProvider({ children }) {
         if (result.applied) {
           setStatus('synced');
           safeReload();
+        } else if (result.reason === 'conflict') {
+          // Do not overwrite and do not pretend everything matched.
+          setConflict(result.conflict);
+          setStatus('conflict');
         } else if (result.reason === 'no-token' || isAuthError(result.error)) {
           setStatus('no-token');
         } else if (result.reason === 'error') {
@@ -324,6 +334,7 @@ export function SyncProvider({ children }) {
   const value = useMemo(() => ({
     status, meta, enabled, appliedOnOpen,
     openModal, setOpenModal,
+    conflict, clearConflict: () => setConflict(null),
     pushNow, pullNow, enable, disable, stopAndDelete,
   }), [status, meta, enabled, appliedOnOpen, openModal, pushNow, pullNow, enable, disable, stopAndDelete]);
 

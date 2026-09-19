@@ -25,6 +25,7 @@ import {
 import { hasGithubAppSession } from '../../lib/githubAppAuth.js';
 import { cn } from '../../lib/utils.js';
 import { ConnectGithubInline } from './ConnectGithubInline.jsx';
+import { SyncConflictPanel } from './SyncConflictPanel.jsx';
 
 export function SyncModal() {
   const {
@@ -143,6 +144,9 @@ export function SyncModal() {
         )}
 
         {/* ── STATE 2: SYNC OFF — show the 3-step setup ─────────────── */}
+        {/* A mismatch outranks every other panel here. */}
+        <SyncConflictPanel />
+
         {(!enabled || !hasToken || status === 'no-token') && !hasScopeError && (
           <div className="space-y-3">
             <p className="text-[12.5px] text-muted leading-relaxed">

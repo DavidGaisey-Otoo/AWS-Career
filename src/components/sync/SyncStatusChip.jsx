@@ -69,6 +69,9 @@ export function SyncStatusChip() {
     synced:     { class: 'border-success/40 bg-success/10 text-success',          Icon: CheckCircle2, label: 'Synced' },
     idle:       { class: 'border-success/40 bg-success/10 text-success',          Icon: CheckCircle2, label: 'Synced' },
     error:      { class: 'border-danger/40 bg-danger/10 text-danger',             Icon: AlertCircle,  label: 'Sync issue' },
+    // A cloud copy that does not match this device is not an error and
+    // definitely not 'synced' — it is a decision waiting for the user.
+    conflict:   { class: 'border-danger/50 bg-danger/10 text-danger',            Icon: AlertCircle,  label: 'Check sync' },
     'no-token': { class: 'border-warning/40 bg-warning/10 text-warning',          Icon: KeyRound,     label: 'Connect GitHub' },
     disabled:   { class: 'border-token opacity-60',                                Icon: CloudOff,     label: 'Off' },
   };
