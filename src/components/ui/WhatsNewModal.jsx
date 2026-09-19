@@ -4,9 +4,19 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 // Bump this string when you want to show the modal again to everyone.
-export const CURRENT_VERSION = '2026.05.19';
+export const CURRENT_VERSION = '2026.09.19';
 
 const WHATS_NEW = {
+  '2026.09.19': {
+    title: 'Safer accounts, honest costs, one app.',
+    bullets: [
+      'New: Resource Search — read-only search of your live AWS account.',
+      'Fixed: new accounts are recognised as AWS’s six-month credits plan, not the retired 12-month Free Tier.',
+      'Fixed: sync can no longer replace your account with a different or smaller one without asking.',
+      'Fixed: PDF export, and text that used to print washed out.',
+      'New: drag a backup file straight onto Settings → Data management to restore.',
+    ],
+  },
   '2026.05.19': {
     title: 'The Master Dashboard is here.',
     bullets: [
@@ -24,11 +34,16 @@ export function WhatsNewModal() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Show only if user hasn't seen the current version.
-    if ((prefs?.meta?.lastWhatsNewSeen || null) !== CURRENT_VERSION) {
-      const t = setTimeout(() => setOpen(true), 800);
-      return () => clearTimeout(t);
-    }
+    if ((prefs?.meta?.lastWhatsNewSeen || null) === CURRENT_VERSION) return undefined;
+    // Release notes must never land on top of someone doing real work.
+    // Interrupting a gig brief with a changelog is bad on its own, and
+    // in front of a client it is worse than bad. Announce on the home
+    // pages only; the work pages stay clear.
+    const path = window.location.hash.replace(/^#/, '').split('?')[0];
+    const isWorkPage = !['/', '/career-dashboard', '/profile'].includes(path);
+    if (isWorkPage) return undefined;
+    const t = setTimeout(() => setOpen(true), 800);
+    return () => clearTimeout(t);
   }, [prefs?.meta?.lastWhatsNewSeen]);
 
   const dismiss = () => {

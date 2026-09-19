@@ -9,16 +9,32 @@ import { LEVELS } from '../../data/gamification.js';
  * Full-screen level-up celebration. Fires confetti + side cannons.
  * Subscribes to pendingLevelUp and shows it once.
  */
+/**
+ * Home-ish routes where a celebration is welcome. Everywhere else the
+ * user is doing something — writing a brief, building a solution, in
+ * front of a client — and a full-screen confetti modal on top of that
+ * is an interruption, not a reward. The level-up is not discarded; it
+ * stays queued until they are somewhere it can land well.
+ */
+const CELEBRATION_ROUTES = ['/', '/career-dashboard', '/profile'];
+
+function onCelebrationRoute() {
+  if (typeof window === 'undefined') return true;
+  const path = window.location.hash.replace(/^#/, '').split('?')[0] || '/';
+  return CELEBRATION_ROUTES.includes(path);
+}
+
 export function LevelUpModal() {
   const { pendingLevelUp, consumeLevelUp } = useGamification();
+  const canCelebrate = onCelebrationRoute();
 
   useEffect(() => {
-    if (!pendingLevelUp) return;
+    if (!pendingLevelUp || !canCelebrate) return;
     sideCannons();
     setTimeout(() => fireConfetti({ origin: { y: 0.35 } }), 200);
-  }, [pendingLevelUp]);
+  }, [pendingLevelUp, canCelebrate]);
 
-  if (!pendingLevelUp) return null;
+  if (!pendingLevelUp || !canCelebrate) return null;
   const lvl = LEVELS.find((l) => l.n === pendingLevelUp.to) || LEVELS[0];
 
   return (
