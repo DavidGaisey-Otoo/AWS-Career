@@ -309,6 +309,53 @@ export const ACTIONS = {
     docsUrl: 'https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html',
   },
 
+  // ─────────── RESOURCE SEARCH (read-only) ───────────
+  // Cost note, stated precisely because the distinction matters:
+  // running these API calls is free. AWS Config RECORDING is not — it
+  // bills per configuration item and per rule evaluation. Enabling the
+  // recorder is a decision the user makes in the console, not something
+  // this app does for them.
+  'config.recorder-status': {
+    service: 'Config', tier: 'READ',
+    summary: 'Check whether the AWS Config recorder is on in this region.',
+    params: [
+      { id: 'region', label: 'Region', type: 'region', required: true, default: 'eu-west-1' },
+    ],
+    cost: { typical: 0, max: 0, free: true },
+    costNote: 'This check is free. Config recording itself bills per configuration item recorded.',
+    reversible: true,
+    consoleUrl: ({ region }) => `https://${region || 'eu-west-1'}.console.aws.amazon.com/config/home?region=${region || 'eu-west-1'}#/settings`,
+    docsUrl: 'https://docs.aws.amazon.com/config/latest/developerguide/stop-start-recorder.html',
+  },
+  'config.advanced-query': {
+    service: 'Config', tier: 'READ',
+    summary: 'Run a read-only SQL query over recorded AWS resource configuration.',
+    params: [
+      { id: 'query',  label: 'Query',  type: 'text',   required: true },
+      { id: 'region', label: 'Region', type: 'region', required: true, default: 'eu-west-1' },
+      { id: 'limit',  label: 'Max rows', type: 'number', default: 100 },
+    ],
+    cost: { typical: 0, max: 0, free: true },
+    costNote: 'Advanced queries are free to run. They only see resources the Config recorder has recorded.',
+    reversible: true,
+    consoleUrl: ({ region }) => `https://${region || 'eu-west-1'}.console.aws.amazon.com/config/home?region=${region || 'eu-west-1'}#/query`,
+    docsUrl: 'https://docs.aws.amazon.com/config/latest/developerguide/querying-AWS-resources.html',
+  },
+  'tagging.get-resources': {
+    service: 'Resource Groups', tier: 'READ',
+    summary: 'Find resources by tag via the Resource Groups Tagging API.',
+    params: [
+      { id: 'tagKey',   label: 'Tag key',   type: 'text', required: false },
+      { id: 'tagValue', label: 'Tag value', type: 'text', required: false },
+      { id: 'region',   label: 'Region',    type: 'region', required: true, default: 'eu-west-1' },
+    ],
+    cost: { typical: 0, max: 0, free: true },
+    costNote: 'Free. Needs no Config recorder, but only sees resources that carry tags.',
+    reversible: true,
+    consoleUrl: ({ region }) => `https://${region || 'eu-west-1'}.console.aws.amazon.com/resource-groups/tag-editor/find-resources?region=${region || 'eu-west-1'}`,
+    docsUrl: 'https://docs.aws.amazon.com/resourcegroupstagging/latest/APIReference/API_GetResources.html',
+  },
+
   // ─────────── ⛔ BLOCKED — hardcoded fuses ───────────
   // These appear in the registry so the UI can SHOW them as "console only",
   // but the executor refuses to run them no matter what.

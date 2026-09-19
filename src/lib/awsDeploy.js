@@ -20,6 +20,8 @@
  * here — invoking them returns a hardcoded refusal in DeployContext.
  */
 
+import { assertReadOnlyQuery, taggingRowsFrom } from './resourceSearch.js';
+
 // ---------------- shared helpers ----------------
 
 function mkLog(level, msg) {
@@ -123,6 +125,168 @@ export async function budgets_list({ creds, region }) {
     result: { count: list.length, budgets: list },
     raw: trimResponse(raw),
     log: [mkLog('info', `Found ${list.length} budget${list.length === 1 ? '' : 's'}.`)],
+  };
+}
+
+// ---------------- resource search (read-only) ----------------
+
+/**
+ * Is the AWS Config recorder actually on?
+ *
+ * This exists because of one specific trap: an advanced query against an
+ * account with no recorder SUCCEEDS and returns zero rows. That is
+ * indistinguishable from "you own nothing" unless you ask this question
+ * first. The UI calls this before its first query so it can tell the user
+ * which of the two they are looking at.
+ */
+export async function config_recorder_status({ creds, region }) {
+  const { ConfigServiceClient, DescribeConfigurationRecordersCommand, DescribeConfigurationRecorderStatusCommand } =
+    await import('@aws-sdk/client-config-service');
+  const client = new ConfigServiceClient({ region, credentials: creds });
+
+  const recorders = await client.send(new DescribeConfigurationRecordersCommand({}));
+  const configured = (recorders.ConfigurationRecorders || []).length > 0;
+  if (!configured) {
+    return {
+      ok: true,
+      result: { region, configured: false, recording: false, recorders: [] },
+      raw: trimResponse(recorders),
+      log: [mkLog('warn', `No AWS Config recorder exists in ${region}. Advanced queries will return zero rows.`)],
+    };
+  }
+
+  // IAM roles, users and policies are GLOBAL resources. Config records
+  // them only if the recorder opts in, so without this the IAM query
+  // returns zero rows and reads as "you have no roles" — the same trap
+  // this whole function exists to close, one level down.
+  const group = (recorders.ConfigurationRecorders || [])[0]?.recordingGroup || {};
+  const includesGlobal =
+    group.includeGlobalResourceTypes === true ||
+    (group.resourceTypes || []).some((t) => String(t).startsWith('AWS::IAM::'));
+
+  const status = await client.send(new DescribeConfigurationRecorderStatusCommand({}));
+  const list = (status.ConfigurationRecordersStatus || []).map((s) => ({
+    name: s.name,
+    recording: !!s.recording,
+    lastStatus: s.lastStatus || null,
+    lastErrorMessage: s.lastErrorMessage || null,
+  }));
+  const recording = list.some((s) => s.recording);
+  return {
+    ok: true,
+    result: { region, configured: true, recording, includesGlobal, recorders: list },
+    raw: trimResponse(status),
+    log: [
+      mkLog(
+        recording ? 'success' : 'warn',
+        recording
+          ? `Config recorder is running in ${region}.`
+          : `A Config recorder exists in ${region} but is NOT recording. Queries will return stale or zero rows.`
+      ),
+    ],
+  };
+}
+
+/**
+ * Run one AWS Config advanced query.
+ *
+ * `assertReadOnlyQuery` runs again here even though the caller already
+ * validated: this is the function that actually reaches AWS, so the
+ * guarantee is enforced at the boundary that matters rather than trusted
+ * from upstream.
+ */
+export async function config_advanced_query({ creds, region, params }) {
+  const expression = assertReadOnlyQuery(params?.query);
+  const { ConfigServiceClient, SelectResourceConfigCommand } = await import('@aws-sdk/client-config-service');
+  const client = new ConfigServiceClient({ region, credentials: creds });
+
+  // SelectResourceConfig caps Limit at 100; asking for more is an error.
+  const limit = Math.min(Math.max(Number(params?.limit) || 100, 1), 100);
+  const raw = await client.send(
+    new SelectResourceConfigCommand({
+      Expression: expression,
+      Limit: limit,
+      ...(params?.nextToken ? { NextToken: params.nextToken } : {}),
+    })
+  );
+
+  const results = raw.Results || [];
+  return {
+    ok: true,
+    // `result` is the ONLY field DeployContext writes to the audit log, so
+    // it carries the shape of the answer and never the rows themselves.
+    // A 100-row result set is ~57KB of JSON; at that size a few dozen
+    // searches exhaust the browser's localStorage quota, and
+    // useLocalStorage swallows that failure silently — so the audit log
+    // would quietly stop persisting and take the rest of the app's saved
+    // state with it. The rows travel in `raw`, which is never audited.
+    result: {
+      region,
+      query: expression,
+      count: results.length,
+      nextToken: raw.NextToken || null,
+      // Config reports the columns it actually selected — useful when a
+      // query silently returns fewer fields than the caller expected.
+      selectedFields: (raw.QueryInfo?.SelectFields || []).map((f) => f.Name).filter(Boolean),
+    },
+    raw: { Results: results, NextToken: raw.NextToken || null },
+    log: [
+      mkLog(
+        results.length ? 'success' : 'info',
+        results.length
+          ? `Query returned ${results.length} row${results.length === 1 ? '' : 's'} from ${region}.`
+          : `Query returned no rows in ${region}. Check the Config recorder before concluding the account is empty.`
+      ),
+    ],
+  };
+}
+
+/**
+ * Tag-based lookup via the Resource Groups Tagging API.
+ *
+ * Complements Config rather than duplicating it: this needs no recorder
+ * and costs nothing, but it only sees tagged resources and only knows
+ * their ARN and tags.
+ */
+export async function tagging_get_resources({ creds, region, params }) {
+  const { ResourceGroupsTaggingAPIClient, GetResourcesCommand } = await import(
+    '@aws-sdk/client-resource-groups-tagging-api'
+  );
+  const client = new ResourceGroupsTaggingAPIClient({ region, credentials: creds });
+
+  const tagKey = (params?.tagKey || '').trim();
+  const tagValue = (params?.tagValue || '').trim();
+  const raw = await client.send(
+    new GetResourcesCommand({
+      ...(tagKey ? { TagFilters: [{ Key: tagKey, ...(tagValue ? { Values: [tagValue] } : {}) }] } : {}),
+      ...(params?.resourceTypes?.length ? { ResourceTypeFilters: params.resourceTypes } : {}),
+      ResourcesPerPage: Math.min(Math.max(Number(params?.limit) || 100, 1), 100),
+      ...(params?.paginationToken ? { PaginationToken: params.paginationToken } : {}),
+    })
+  );
+
+  const rows = taggingRowsFrom(raw.ResourceTagMappingList || []);
+  // The API returns an empty-string token, not null, when exhausted.
+  const nextToken = raw.PaginationToken || null;
+  return {
+    ok: true,
+    // Summary only — see the note in config_advanced_query for why the
+    // rows must not end up in the audited `result`.
+    result: {
+      region,
+      tagKey: tagKey || null,
+      tagValue: tagValue || null,
+      count: rows.length,
+      nextToken,
+    },
+    raw: { rows, PaginationToken: nextToken },
+    log: [
+      mkLog(
+        'info',
+        `Tagging API returned ${rows.length} resource${rows.length === 1 ? '' : 's'} in ${region}` +
+          (tagKey ? ` with tag "${tagKey}".` : ' (all tagged resources).')
+      ),
+    ],
   };
 }
 
@@ -512,6 +676,10 @@ export const EXECUTORS = {
   'ec2.list-instances':             ec2_list_instances,
   'lambda.list-functions':          lambda_list_functions,
   'budgets.list':                   budgets_list,
+
+  'config.recorder-status':         config_recorder_status,
+  'config.advanced-query':          config_advanced_query,
+  'tagging.get-resources':          tagging_get_resources,
 
   's3.create-bucket':               s3_create_bucket,
   's3.upload-files':                s3_upload_files,
