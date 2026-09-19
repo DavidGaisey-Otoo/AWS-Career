@@ -47,7 +47,24 @@ const DEFAULT_STATE = {
 };
 
 export function PortfolioProvider({ children }) {
-  const [state, setState] = useLocalStorage(`${STORAGE_KEY}::portfolio`, DEFAULT_STATE);
+  const [rawState, setRawState] = useLocalStorage(`${STORAGE_KEY}::portfolio`, DEFAULT_STATE);
+
+  // Defensive merge, the same guard EarnContext already carries.
+  // useLocalStorage returns whatever is stored, verbatim. A record that
+  // predates a new key — or arrives partial from a sync, an import or a
+  // write cut short by the storage quota — then has `undefined` where an
+  // array is expected, and the first component to call .reduce or .find
+  // on it takes the whole app down. A partial record must degrade, not
+  // crash.
+  const state = useMemo(() => ({ ...DEFAULT_STATE, ...(rawState || {}) }), [rawState]);
+
+  const setState = useCallback((updater) => {
+    setRawState((s) => {
+      const merged = { ...DEFAULT_STATE, ...(s || {}) };
+      return typeof updater === 'function' ? updater(merged) : updater;
+    });
+  }, [setRawState]);
+
 
   const getProjectState = useCallback((projectId) => {
     const projectDefaults = listCustomProjects().find((project) => project.id === projectId);
