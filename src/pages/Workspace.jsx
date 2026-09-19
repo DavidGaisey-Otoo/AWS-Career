@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Boxes, FileText, FolderOpen, Layers, Mail, Receipt, ScrollText,
-  Presentation as Deck, Network, FileCode, ClipboardList, Search,
+  Presentation as Deck, Network, FileCode, ClipboardList, Search, BookOpen, Inbox,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
@@ -24,11 +24,13 @@ import { useEarn } from '../context/EarnContext.jsx';
 import { useFreelance } from '../context/FreelanceContext.jsx';
 import { usePortfolio } from '../context/PortfolioContext.jsx';
 import { listSolutions } from '../lib/solutionStore.js';
+import { ASSESSMENT_DOCUMENTS, COMPLETED_CASE_STUDIES } from '../data/completedCaseStudies.js';
 import { buildWorkspace, pool, WORKSPACE_KINDS } from '../lib/projectWorkspace.js';
 import { cn } from '../lib/utils.js';
 
 const KIND_META = {
   solution:     { label: 'Solutions',     icon: Layers,        to: '/solution' },
+  caseStudy:    { label: 'Case studies',  icon: BookOpen,      to: '/documents' },
   architecture: { label: 'Architecture',  icon: Network,       to: '/architecture' },
   proposal:     { label: 'Proposals',     icon: ScrollText,    to: '/freelance?tab=myproposals' },
   email:        { label: 'Emails',        icon: Mail,          to: '/email' },
@@ -45,7 +47,8 @@ const titleOf = (item, kind) =>
   item?.title || item?.gigTitle || item?.subject || item?.name ||
   item?.projectTitle || item?.brief || `${KIND_META[kind]?.label || kind} record`;
 
-const whenOf = (item) => item?.updatedAt || item?.createdAt || item?.at || item?.date || null;
+const whenOf = (item) =>
+  item?.updatedAt || item?.completedAt || item?.createdAt || item?.at || item?.date || null;
 
 export default function Workspace() {
   const [view, setView] = useState('projects');
@@ -59,10 +62,14 @@ export default function Workspace() {
 
   const workspace = useMemo(() => buildWorkspace({
     solutions: listSolutions() || [],
+    // Work that is already recorded in the app but lived only on the
+    // documents page, so the workspace reported nothing while real,
+    // delivered AWS work existed.
+    caseStudies: COMPLETED_CASE_STUDIES,
     proposals: freelance?.state?.proposals || [],
     emails: earn?.state?.emails || [],
     portfolio: portfolio?.state?.projects || {},
-    documents: earn?.state?.deliveries || [],
+    documents: [...(earn?.state?.deliveries || []), ...ASSESSMENT_DOCUMENTS],
     decks: earn?.state?.decks || [],
     contracts: earn?.state?.contracts || [],
     invoices: freelance?.state?.invoices || [],
@@ -83,6 +90,15 @@ export default function Workspace() {
     if (!q) return all;
     return all.filter((x) => (titleOf(x, kind) + ' ' + (x.__project || '')).toLowerCase().includes(q));
   }, [workspace, kind, query]);
+
+  // buildWorkspace deliberately refuses to file an artifact under a project
+  // it only half-matches. That is the right call, but the page then dropped
+  // those items entirely — so work the user had done was neither filed nor
+  // shown. Kept out of a project, still listed.
+  const unplaced = useMemo(
+    () => WORKSPACE_KINDS.filter((k) => workspace.unassigned?.[k]?.length),
+    [workspace],
+  );
 
   const nothingYet = workspace.totals.projects === 0 &&
     WORKSPACE_KINDS.every((k) => workspace.totals[k] === 0);
@@ -170,6 +186,43 @@ export default function Workspace() {
               {filteredProjects.length === 0 && (
                 <p className="text-sm text-muted">No project matches that search.</p>
               )}
+            </section>
+          )}
+
+          {view === 'projects' && !open && unplaced.length > 0 && (
+            <section className="surface rounded-2xl p-4">
+              <div className="flex items-center gap-2">
+                <Inbox size={14} className="text-muted" />
+                <h3 className="text-[11px] font-extrabold uppercase tracking-widest">
+                  Not linked to a project
+                </h3>
+              </div>
+              <p className="text-[11px] text-muted mt-1 mb-3">
+                These exist, but nothing records which job they belong to — so they are listed
+                here rather than filed under a guess.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {unplaced.map((k) => {
+                  const meta = KIND_META[k] || { label: k, icon: FileText, to: '/' };
+                  const Icon = meta.icon;
+                  return (
+                    <div key={k}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Icon size={12} className="text-aws-orange" />
+                        <span className="text-[11px] font-bold">{meta.label}</span>
+                        <span className="text-[10px] text-muted">{workspace.unassigned[k].length}</span>
+                      </div>
+                      <ul className="space-y-0.5">
+                        {workspace.unassigned[k].map((item, i) => (
+                          <li key={item?.id || i} className="text-[12px] text-muted truncate">
+                            {titleOf(item, k)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
             </section>
           )}
 

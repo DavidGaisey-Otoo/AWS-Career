@@ -58,7 +58,7 @@ export function titlesMatch(a, b) {
 }
 
 const ARTIFACT_KINDS = [
-  'solution', 'architecture', 'proposal', 'email', 'portfolio',
+  'solution', 'caseStudy', 'architecture', 'proposal', 'email', 'portfolio',
   'document', 'deck', 'contract', 'invoice', 'plan', 'script',
 ];
 
@@ -83,7 +83,7 @@ const time = (v) => {
  */
 export function buildWorkspace(stores = {}) {
   const {
-    solutions = [], proposals = [], emails = [], portfolio = {},
+    solutions = [], caseStudies = [], proposals = [], emails = [], portfolio = {},
     documents = [], decks = [], contracts = [], invoices = [], plans = [],
   } = stores;
 
@@ -120,6 +120,20 @@ export function buildWorkspace(stores = {}) {
     p.client = p.client || s.client || s.clientName || null;
     p.createdAt = p.createdAt || s.createdAt || s.at || null;
     p.updatedAt = Math.max(time(p.updatedAt), time(s.updatedAt || s.createdAt || s.at)) || p.updatedAt;
+  }
+
+  // A completed case study is a finished piece of work, so it anchors a
+  // project in the same way a solution does. Without this the app knows
+  // about real, delivered AWS work — it is catalogued and rendered on the
+  // documents page — while the workspace reports having none.
+  for (const c of caseStudies) {
+    const title = c.title || c.name || 'Untitled case study';
+    const p = locate(c.id, title, { create: true });
+    p.artifacts.caseStudy.push(c);
+    p.region = p.region || c.region || null;
+    p.client = p.client || c.client || null;
+    p.createdAt = p.createdAt || c.completedAt || c.createdAt || null;
+    p.updatedAt = Math.max(time(p.updatedAt), time(c.completedAt || c.createdAt)) || p.updatedAt;
   }
 
   // Portfolio entries are projects in their own right.

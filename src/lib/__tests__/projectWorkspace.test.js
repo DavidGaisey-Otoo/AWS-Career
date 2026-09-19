@@ -144,5 +144,42 @@ export function runProjectWorkspaceTests() {
     assert(/networking/i.test(ws.projects[0].title), `wrong order: ${ws.projects.map((p) => p.title)}`);
   });
 
+  // ───────────── work the app already knew about ─────────────
+
+  test('a completed case study is a project, not just a document', () => {
+    // Real delivered work was catalogued and rendered on the documents
+    // page, while the workspace reported having no projects at all.
+    const ws = buildWorkspace({
+      caseStudies: [{
+        id: 'aws-static-hosting-lifecycle-2026',
+        title: 'AWS Static Application Hosting — Deploy, Validate and Teardown',
+        completedAt: '2026-09-12',
+      }],
+    });
+    assert(ws.projects.length === 1, `expected 1 project, got ${ws.projects.length}`);
+    assert(ws.projects[0].artifacts.caseStudy.length === 1, 'the case study was not filed');
+    assert(ws.projects[0].createdAt === '2026-09-12', `date lost: ${ws.projects[0].createdAt}`);
+    assert(ws.totals.projects === 1, 'the project was not counted');
+  });
+
+  test('a case study and a solution for the same job stay one project', () => {
+    const ws = buildWorkspace({
+      solutions: [{ id: 'sol-9', title: 'Secure static website for UK retailer', region: 'eu-west-2' }],
+      caseStudies: [{ id: 'cs-9', title: 'Secure static website for UK retailer', completedAt: '2026-09-12' }],
+    });
+    assert(ws.projects.length === 1, `the same job split into ${ws.projects.length} projects`);
+    assert(ws.projects[0].region === 'eu-west-2', 'the region was lost when merging');
+  });
+
+  test('a document matching no project is surfaced, not attached to unrelated work', () => {
+    const ws = buildWorkspace({
+      caseStudies: [{ id: 'cs-1', title: 'AWS Static Application Hosting — Deploy, Validate and Teardown' }],
+      documents: [{ id: 'doc-1', title: 'AWS Identity and Account Security Assessment' }],
+    });
+    assert(ws.projects[0].artifacts.document.length === 0, 'an unrelated document was filed under the hosting project');
+    assert(ws.unassigned.document.length === 1, 'the document vanished instead of being listed');
+    assert(ws.totals.document === 1, 'an unassigned document was not counted');
+  });
+
   return { allPassed: results.every((r) => r.pass), results };
 }
