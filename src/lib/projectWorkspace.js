@@ -142,6 +142,13 @@ export function buildWorkspace(stores = {}) {
     const p = locate(pid, title, { create: true });
     p.artifacts.portfolio.push({ id: pid, ...entry });
     p.client = p.client || entry?.clientName || null;
+    // A portfolio entry is keyed by the catalogue project id and stores
+    // only progress, so its name and services come from the catalogue.
+    // Without them the project shows as a raw slug like 'p-s3-cf'.
+    if (Array.isArray(entry?.services) && entry.services.length) {
+      p.services = [...new Set([...p.services, ...entry.services.map((x) => x?.id || x?.name || x)])].filter(Boolean);
+    }
+    p.updatedAt = Math.max(time(p.updatedAt), time(entry?.updatedAt || entry?.startedAt)) || p.updatedAt;
   }
 
   const place = (kind, item, { projectId, title }) => {

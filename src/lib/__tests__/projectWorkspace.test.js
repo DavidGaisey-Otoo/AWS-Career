@@ -181,5 +181,24 @@ export function runProjectWorkspaceTests() {
     assert(ws.totals.document === 1, 'an unassigned document was not counted');
   });
 
+  test('a portfolio entry carries its title and services into the project', () => {
+    // The store keys entries by catalogue id and saves only progress, so
+    // a project rendered straight from it showed as the slug 'p-s3-cf'
+    // with one row reading 'Portfolio record'.
+    const ws = buildWorkspace({
+      portfolio: {
+        'p-s3-cf': {
+          title: 'S3 Static Website with CloudFront',
+          services: ['s3', 'cloudfront', 'route53', 'acm'],
+          status: 'in-progress',
+        },
+      },
+    });
+    assert(ws.projects.length === 1, 'no project was created from the portfolio entry');
+    assert(ws.projects[0].title === 'S3 Static Website with CloudFront', `title not used: ${ws.projects[0].title}`);
+    assert(ws.projects[0].services.includes('cloudfront'), `services lost: ${ws.projects[0].services}`);
+    assert(ws.projects[0].artifacts.portfolio[0].id === 'p-s3-cf', 'the id needed for the deep link was lost');
+  });
+
   return { allPassed: results.every((r) => r.pass), results };
 }

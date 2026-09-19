@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Boxes, FileText, FolderOpen, Layers, Mail, Receipt, ScrollText,
-  Presentation as Deck, Network, FileCode, ClipboardList, Search, BookOpen, Inbox,
+  Presentation as Deck, Network, FileCode, ClipboardList, Search, BookOpen, Inbox, ChevronRight,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
@@ -25,6 +25,7 @@ import { useFreelance } from '../context/FreelanceContext.jsx';
 import { usePortfolio } from '../context/PortfolioContext.jsx';
 import { listSolutions } from '../lib/solutionStore.js';
 import { ASSESSMENT_DOCUMENTS, COMPLETED_CASE_STUDIES } from '../data/completedCaseStudies.js';
+import { PROJECTS } from '../data/projects.js';
 import { buildWorkspace, pool, WORKSPACE_KINDS } from '../lib/projectWorkspace.js';
 import { cn } from '../lib/utils.js';
 
@@ -47,6 +48,11 @@ const titleOf = (item, kind) =>
   item?.title || item?.gigTitle || item?.subject || item?.name ||
   item?.projectTitle || item?.brief || `${KIND_META[kind]?.label || kind} record`;
 
+const linkFor = (item, kind) => {
+  if (kind === 'portfolio' && item?.id) return `/portfolio/${item.id}`;
+  return KIND_META[kind]?.to || '/';
+};
+
 const whenOf = (item) =>
   item?.updatedAt || item?.completedAt || item?.createdAt || item?.at || item?.date || null;
 
@@ -60,6 +66,23 @@ export default function Workspace() {
   const freelance = useFreelance();
   const portfolio = usePortfolio();
 
+  // The portfolio store is keyed by catalogue project id and holds only
+  // progress — no title, no services. Shown raw it reads as "p-s3-cf",
+  // and its one row reads as "Portfolio record".
+  const portfolioEntries = useMemo(() => {
+    const saved = portfolio?.state?.projects || {};
+    const out = {};
+    for (const [id, entry] of Object.entries(saved)) {
+      const cat = PROJECTS.find((x) => x.id === id);
+      out[id] = {
+        ...(entry || {}),
+        title: entry?.title || cat?.title || id,
+        services: entry?.services || cat?.services || [],
+      };
+    }
+    return out;
+  }, [portfolio?.state]);
+
   const workspace = useMemo(() => buildWorkspace({
     solutions: listSolutions() || [],
     // Work that is already recorded in the app but lived only on the
@@ -68,12 +91,12 @@ export default function Workspace() {
     caseStudies: COMPLETED_CASE_STUDIES,
     proposals: freelance?.state?.proposals || [],
     emails: earn?.state?.emails || [],
-    portfolio: portfolio?.state?.projects || {},
+    portfolio: portfolioEntries,
     documents: [...(earn?.state?.deliveries || []), ...ASSESSMENT_DOCUMENTS],
     decks: earn?.state?.decks || [],
     contracts: earn?.state?.contracts || [],
     invoices: freelance?.state?.invoices || [],
-  }), [earn?.state, freelance?.state, portfolio?.state]);
+  }), [earn?.state, freelance?.state, portfolioEntries]);
 
   const open = workspace.projects.find((p) => p.id === openId) || null;
 
@@ -214,8 +237,14 @@ export default function Workspace() {
                       </div>
                       <ul className="space-y-0.5">
                         {workspace.unassigned[k].map((item, i) => (
-                          <li key={item?.id || i} className="text-[12px] text-muted truncate">
-                            {titleOf(item, k)}
+                          <li key={item?.id || i}>
+                            <Link
+                              to={linkFor(item, k)}
+                              className="group flex items-center gap-1 text-[12px] text-muted hover:text-aws-orange transition"
+                            >
+                              <span className="min-w-0 truncate">{titleOf(item, k)}</span>
+                              <ChevronRight size={11} className="shrink-0 opacity-0 group-hover:opacity-100" />
+                            </Link>
                           </li>
                         ))}
                       </ul>
@@ -257,13 +286,21 @@ export default function Workspace() {
                     </div>
                     <ul className="space-y-1">
                       {items.map((item, i) => (
-                        <li key={item?.id || i} className="text-[12px] flex items-start justify-between gap-3 py-1 border-b border-token/40 last:border-0">
-                          <span className="min-w-0 truncate">{titleOf(item, k)}</span>
-                          {whenOf(item) && (
-                            <span className="text-[10.5px] text-muted shrink-0">
-                              {new Date(whenOf(item)).toLocaleDateString()}
+                        <li key={item?.id || i} className="border-b border-token/40 last:border-0">
+                          <Link
+                            to={linkFor(item, k)}
+                            className="group flex items-start justify-between gap-3 py-1.5 px-1 -mx-1 rounded text-[12px] hover:bg-[var(--card-2)] transition"
+                          >
+                            <span className="min-w-0 truncate group-hover:text-aws-orange">{titleOf(item, k)}</span>
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              {whenOf(item) && (
+                                <span className="text-[10.5px] text-muted">
+                                  {new Date(whenOf(item)).toLocaleDateString()}
+                                </span>
+                              )}
+                              <ChevronRight size={12} className="text-muted group-hover:text-aws-orange" />
                             </span>
-                          )}
+                          </Link>
                         </li>
                       ))}
                     </ul>
@@ -287,18 +324,26 @@ export default function Workspace() {
               ) : (
                 <ul className="space-y-1">
                   {poolItems.map((item, i) => (
-                    <li key={item?.id || i} className="text-[12px] flex items-start justify-between gap-3 py-1.5 border-b border-token/40 last:border-0">
-                      <span className="min-w-0">
-                        <span className="block truncate">{titleOf(item, kind)}</span>
-                        <span className="text-[10.5px] text-muted">
-                          {item.__project || 'Not linked to a project'}
+                    <li key={item?.id || i} className="border-b border-token/40 last:border-0">
+                      <Link
+                        to={linkFor(item, kind)}
+                        className="group flex items-start justify-between gap-3 py-1.5 px-1 -mx-1 rounded text-[12px] hover:bg-[var(--card-2)] transition"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate group-hover:text-aws-orange">{titleOf(item, kind)}</span>
+                          <span className="text-[10.5px] text-muted">
+                            {item.__project || 'Not linked to a project'}
+                          </span>
                         </span>
-                      </span>
-                      {whenOf(item) && (
-                        <span className="text-[10.5px] text-muted shrink-0">
-                          {new Date(whenOf(item)).toLocaleDateString()}
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          {whenOf(item) && (
+                            <span className="text-[10.5px] text-muted">
+                              {new Date(whenOf(item)).toLocaleDateString()}
+                            </span>
+                          )}
+                          <ChevronRight size={12} className="text-muted group-hover:text-aws-orange" />
                         </span>
-                      )}
+                      </Link>
                     </li>
                   ))}
                 </ul>
