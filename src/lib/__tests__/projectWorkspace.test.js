@@ -1,0 +1,148 @@
+import { buildWorkspace, normaliseTitle, pool, titlesMatch } from '../projectWorkspace.js';
+
+/**
+ * Everything produced for one job lived in a different store, so nothing
+ * could answer "what do I have for this client?".
+ *
+ * The risk in joining them up is filing an artifact under the wrong
+ * project — a proposal shown against the wrong client is worse than one
+ * shown against none. These tests pin both halves: things that belong
+ * together are gathered, and things that do not are left unassigned.
+ */
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+export function runProjectWorkspaceTests() {
+  const results = [];
+  const test = (name, fn) => {
+    try { fn(); results.push({ name, pass: true }); }
+    catch (error) { results.push({ name, pass: false, error: error.message }); }
+  };
+
+  // ───────────── title matching ─────────────
+
+  test('the same job written two ways is recognised', () => {
+    assert(titlesMatch('Secure static website on AWS', 'AWS secure static website'), 'word order defeated it');
+    assert(titlesMatch('Secure static site for a UK retailer', 'Secure static site'), 'a longer restatement was missed');
+  });
+
+  test('two different jobs are not merged', () => {
+    assert(!titlesMatch('Secure static website', 'Kubernetes cluster migration'), 'unrelated jobs were merged');
+    assert(!titlesMatch('S3 backup automation', 'RDS performance tuning'), 'unrelated jobs were merged');
+  });
+
+  test('filler words do not make everything match', () => {
+    // Without stripping, "AWS project for the client" matches almost
+    // anything; with it, near-empty titles must not match at all.
+    assert(!titlesMatch('AWS project', 'AWS solution'), 'two content-free titles were merged');
+    assert(normaliseTitle('AWS Project for the Client').length < 10, 'filler words survived normalisation');
+  });
+
+  // ───────────── gathering ─────────────
+
+  const stores = {
+    solutions: [{
+      id: 'sol-1', title: 'Secure static website for UK retailer',
+      region: 'eu-west-2', services: ['s3', 'cloudfront'],
+      createdAt: '2026-09-10T09:00:00Z', architecture: { nodes: 3 },
+    }],
+    proposals: [
+      { id: 'p-1', gigTitle: 'Secure static website for UK retailer', createdAt: '2026-09-11T09:00:00Z' },
+      { id: 'p-2', gigTitle: 'Kubernetes cluster migration', createdAt: '2026-09-12T09:00:00Z' },
+    ],
+    emails: [
+      { id: 'e-1', projectId: 'sol-1', subject: 'Following up', at: '2026-09-12T10:00:00Z' },
+      { id: 'e-2', subject: 'Unrelated enquiry about something else entirely', at: '2026-09-13T10:00:00Z' },
+    ],
+    invoices: [{ id: 'i-1', projectTitle: 'Secure static website for UK retailer', amount: 800 }],
+    documents: [{ id: 'd-1', name: 'Secure static website for UK retailer — runbook' }],
+    portfolio: { 'port-1': { title: 'Secure static website for UK retailer', status: 'complete' } },
+  };
+
+  test('everything for one job lands in one container', () => {
+    const ws = buildWorkspace(stores);
+    const project = ws.projects.find((p) => /static website/i.test(p.title));
+    assert(project, 'the project was not created');
+    assert(project.artifacts.solution.length === 1, 'solution missing');
+    assert(project.artifacts.proposal.length === 1, `expected 1 proposal, got ${project.artifacts.proposal.length}`);
+    assert(project.artifacts.email.length === 1, 'email not linked by projectId');
+    assert(project.artifacts.invoice.length === 1, 'invoice missing');
+    assert(project.artifacts.document.length === 1, 'document missing');
+    assert(project.artifacts.portfolio.length === 1, 'portfolio entry missing');
+    assert(project.artifacts.architecture.length === 1, 'architecture missing');
+  });
+
+  test('the container carries the job\'s facts', () => {
+    const p = buildWorkspace(stores).projects.find((x) => /static website/i.test(x.title));
+    assert(p.region === 'eu-west-2', `region lost: ${p.region}`);
+    assert(p.services.includes('s3') && p.services.includes('cloudfront'), `services lost: ${p.services}`);
+    assert(p.artifactCount >= 7, `artifact count wrong: ${p.artifactCount}`);
+  });
+
+  test('an unrelated proposal is not filed under the wrong project', () => {
+    const ws = buildWorkspace(stores);
+    const wrong = ws.projects.find((p) => /static website/i.test(p.title))
+      .artifacts.proposal.some((x) => /kubernetes/i.test(x.gigTitle));
+    assert(!wrong, 'a Kubernetes proposal was filed under the static website job');
+  });
+
+  test('what cannot be placed is listed as unassigned, not hidden', () => {
+    const ws = buildWorkspace(stores);
+    const orphanEmails = ws.unassigned.email.length;
+    assert(orphanEmails === 1, `expected 1 unassigned email, got ${orphanEmails}`);
+    const allProposals = ws.projects.flatMap((p) => p.artifacts.proposal).length + ws.unassigned.proposal.length;
+    assert(allProposals === 2, 'a proposal went missing entirely');
+  });
+
+  // ───────────── the pool view ─────────────
+
+  test('the pool shows every item of a kind with its project', () => {
+    const ws = buildWorkspace(stores);
+    const all = pool(ws, 'proposal');
+    assert(all.length === 2, `pool lost a proposal: ${all.length}`);
+    const linked = all.find((x) => /static website/i.test(x.gigTitle));
+    assert(linked.__project, 'a linked proposal lost its project label');
+    const orphan = all.find((x) => /kubernetes/i.test(x.gigTitle));
+    assert(orphan.__project === null, 'an unassigned proposal was given a project');
+  });
+
+  test('totals count everything, assigned or not', () => {
+    const t = buildWorkspace(stores).totals;
+    assert(t.proposal === 2, `proposal total wrong: ${t.proposal}`);
+    assert(t.email === 2, `email total wrong: ${t.email}`);
+    assert(t.projects >= 1, 'no projects counted');
+  });
+
+  // ───────────── it must not fall over ─────────────
+
+  test('an empty app produces an empty workspace, not an error', () => {
+    const ws = buildWorkspace({});
+    assert(Array.isArray(ws.projects) && ws.projects.length === 0, 'empty stores did not give an empty list');
+    assert(ws.totals.projects === 0, 'counted projects that do not exist');
+    assert(Array.isArray(pool(ws, 'proposal')), 'pool broke on an empty workspace');
+  });
+
+  test('malformed records do not take the workspace down', () => {
+    const ws = buildWorkspace({
+      solutions: [{}, { id: 'x' }],
+      proposals: [{}, null].filter(Boolean),
+      emails: [{ id: 'e' }],
+      portfolio: { bad: null },
+    });
+    assert(Array.isArray(ws.projects), 'workspace failed on malformed input');
+  });
+
+  test('projects are ordered with the most recent work first', () => {
+    const ws = buildWorkspace({
+      solutions: [
+        { id: 'old', title: 'Older job about databases', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'new', title: 'Newer job about networking', createdAt: '2026-09-01T00:00:00Z', updatedAt: '2026-09-01T00:00:00Z' },
+      ],
+    });
+    assert(/networking/i.test(ws.projects[0].title), `wrong order: ${ws.projects.map((p) => p.title)}`);
+  });
+
+  return { allPassed: results.every((r) => r.pass), results };
+}

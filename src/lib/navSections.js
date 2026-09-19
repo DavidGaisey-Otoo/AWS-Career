@@ -78,6 +78,8 @@ export const SECTIONS = [
     path: '/build',
     blurb: 'Portfolio projects + architecture studio + AWS account deploys.',
     children: [
+      { id: 'workspace',    label: '📦 My Workspace',    icon: Layers,      path: '/workspace',
+        hint: 'Every job in one place — its solution, architecture, proposal, emails, documents, contract and invoice' },
       { id: 'solution-studio', label: '⚡ Solution Studio', icon: Wand2,     path: '/solution',           // GIG-01
         hint: 'Paste a gig → get the architecture, plan, code, review + a build button' },
       { id: 'idea-studio',  label: 'Idea Studio',          icon: Sparkles,    path: '/idea-studio' },
