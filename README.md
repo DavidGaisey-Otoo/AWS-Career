@@ -4,7 +4,7 @@ An end-to-end platform for AWS career building — exam prep, project portfolio,
 
 **Author:** David Gaisey-Otoo
 **Repository:** https://github.com/DavidGaisey-Otoo/AWS-Career
-**License:** MIT (see [LICENSE](./LICENSE))
+**License:** All Rights Reserved — see [LICENSE](./LICENSE). Visible for reference; not licensed for reuse.
 
 ---
 
@@ -132,7 +132,9 @@ The repository contains only the application code. Personal data is never commit
 
 ## License
 
-MIT — see [LICENSE](./LICENSE). You're free to fork, modify, and use the code, with attribution.
+All Rights Reserved — see [LICENSE](./LICENSE).
+
+This repository is public so the work can be reviewed, but it is **not open source**. No permission is granted to copy, modify, redistribute or sell this code or any part of it. If you want to use something here, ask.
 
 ---
 
