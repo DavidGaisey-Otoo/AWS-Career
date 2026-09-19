@@ -33,6 +33,25 @@ export default function Settings() {
     return SECTIONS.some((s) => s.id === q) ? q : 'profile';
   });
 
+  /**
+   * Below `lg` the two-column layout stacks, so the six-item menu sits
+   * ABOVE the panel it controls. Picking a section then changes content
+   * that is off the bottom of the screen, and the click reads as having
+   * done nothing — which is exactly how someone fails to find a panel
+   * that is in fact right there.
+   *
+   * Only scrolls when the layout is actually stacked; on a wide screen
+   * both columns are already visible and moving the page would be rude.
+   */
+  const panelRef = useRef(null);
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(min-width: 1024px)').matches) return;
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [section]);
+
   // IN-01: react to ?section= deep-links from the Google OAuth callback,
   // GitHub PAT renewal page, etc.
   useEffect(() => {
@@ -68,8 +87,8 @@ export default function Settings() {
           </ul>
         </aside>
 
-        <motion.div key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}
-                    className="space-y-4">
+        <motion.div ref={panelRef} key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}
+                    className="scroll-mt-24 space-y-4">
           {section === 'profile'       && <ProfileSection />}
           {section === 'notifications' && <NotificationSection />}
           {section === 'display'       && <DisplaySection />}
