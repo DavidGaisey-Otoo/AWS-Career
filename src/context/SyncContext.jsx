@@ -16,6 +16,7 @@ import {
   restoreLocalStorage, setSyncEnabled as setEnabledRaw, snapshotLocalStorage, syncOnOpen, writeSyncMeta,
 } from '../lib/gistSync.js';
 import { hasGithubAppSession } from '../lib/githubAppAuth.js';
+import { STORAGE_KEY } from '../lib/constants.js';
 
 const SyncContext = createContext(null);
 
@@ -24,6 +25,46 @@ const LOCAL_CHANGE_SCAN_MS = 2000;
 const PULL_INTERVAL_MS = 30_000;
 const hasGithubAuth = () => hasGithubAppSession();
 const isAuthError = (value) => /GITHUB_AUTH_INVALID|No GitHub connection configured|no-token/i.test(String(value || ''));
+
+/**
+ * Reload circuit breaker.
+ *
+ * A pull that applies remote data reloads the page so providers re-read
+ * it. With two copies of the app open and synced, that is a loop: A
+ * applies and reloads, its push makes a newer remote, B applies and
+ * reloads, its push makes a newer remote, A applies again. Neither is
+ * wrong on its own; together they refresh forever.
+ *
+ * The guard is deliberately blunt — count sync-triggered reloads per
+ * session and stop reloading past a small number. Data still syncs; only
+ * the automatic page refresh stops, which is the part that made the app
+ * unusable. sessionStorage is the right home: it survives the reload we
+ * are counting and clears when the tab closes.
+ */
+const RELOAD_COUNT_KEY = 'awscl-sync-reloads';
+const RELOAD_WINDOW_MS = 60_000;
+const MAX_RELOADS = 2;
+
+function reloadAllowed() {
+  try {
+    const raw = sessionStorage.getItem(RELOAD_COUNT_KEY);
+    const now = Date.now();
+    let { n = 0, since = now } = raw ? JSON.parse(raw) : {};
+    if (now - since > RELOAD_WINDOW_MS) { n = 0; since = now; }
+    if (n >= MAX_RELOADS) {
+      console.warn('[sync] Reload suppressed — too many sync reloads. Data is still syncing; refresh manually if needed.');
+      return false;
+    }
+    sessionStorage.setItem(RELOAD_COUNT_KEY, JSON.stringify({ n: n + 1, since }));
+    return true;
+  } catch {
+    return true; // sessionStorage blocked — do not make things worse
+  }
+}
+
+function safeReload() {
+  if (reloadAllowed()) window.location.reload();
+}
 
 export function SyncProvider({ children }) {
   const [status, setStatus] = useState('idle');      // idle | syncing | synced | error | disabled | no-token
@@ -63,7 +104,7 @@ export function SyncProvider({ children }) {
         if (result.applied) {
           setAppliedOnOpen(result);
           // Force reload so context providers re-read the restored state
-          setTimeout(() => window.location.reload(), 400);
+          setTimeout(safeReload, 400);
         } else if (result.reason === 'no-token' || isAuthError(result.error)) {
           setStatus('no-token');
         } else if (result.reason === 'error') {
@@ -124,6 +165,13 @@ export function SyncProvider({ children }) {
       if (!e?.key || !e.key.startsWith('awscl-pro::v1::')) return;
       // Ignore sync infrastructure keys to avoid feedback loops
       if (e.key.includes('::sync::')) return;
+      // Data that just arrived FROM the remote is not a local edit. Pushing
+      // it back makes the other window pull again, and the two refresh each
+      // other forever. Restores are stamped; ignore writes right after one.
+      try {
+        const at = Number(localStorage.getItem(`${STORAGE_KEY}::sync::restoredAt`) || 0);
+        if (at && Date.now() - at < 10_000) return;
+      } catch { /* storage unavailable — fall through */ }
       // A same-origin window already sees the new localStorage value. Never
       // reload here: two open copies can otherwise trigger each other forever.
       schedulePush();
@@ -169,7 +217,7 @@ export function SyncProvider({ children }) {
         setMeta(readSyncMeta());
         if (result.applied) {
           setStatus('synced');
-          window.location.reload();
+          safeReload();
         } else if (result.reason === 'no-token' || isAuthError(result.error)) {
           setStatus('no-token');
         } else if (result.reason === 'error') {
@@ -236,7 +284,7 @@ export function SyncProvider({ children }) {
       setMeta(readSyncMeta());
       setStatus('synced');
       // Reload to flush React state
-      setTimeout(() => window.location.reload(), 400);
+      setTimeout(safeReload, 400);
       return { ok: true, applied: true, ...result };
     } catch (err) {
       const message = String(err.message || err);

@@ -40,6 +40,9 @@ const SYNC_META_KEY    = `${STORAGE_KEY}::sync::meta`;
 const SYNC_ENABLED_KEY = `${STORAGE_KEY}::sync::enabled`;
 const DEVICE_ID_KEY    = `${STORAGE_KEY}::sync::deviceId`;
 const SYNC_BASELINE_KEY = `${STORAGE_KEY}::sync::baseline`;
+// Stamped whenever remote data is written into this browser, so other
+// same-origin windows can tell an incoming restore from a local edit.
+export const SYNC_RESTORE_KEY = `${STORAGE_KEY}::sync::restoredAt`;
 
 // Keys we deliberately exclude from sync (sensitive + ephemeral)
 const SYNC_BLOCKLIST = [
@@ -55,6 +58,7 @@ const SYNC_BLOCKLIST = [
   `${STORAGE_KEY}::sync::enabled`,
   `${STORAGE_KEY}::sync::deviceId`,
   `${STORAGE_KEY}::sync::baseline`,
+  `${STORAGE_KEY}::sync::restoredAt`,
 ];
 
 // Field names that must never appear inside a synced JSON blob, wherever
@@ -136,6 +140,11 @@ export function restoreLocalStorage(snapshot, options = {}) {
     throw new Error('Invalid snapshot');
   }
   const { mergeStrategy = 'replace' } = options;
+  // Mark the restore BEFORE writing. Every write below fires a `storage`
+  // event in other same-origin windows; without this they read those as
+  // local edits and push them straight back, which makes this window pull
+  // again — two open copies refreshing each other indefinitely.
+  try { localStorage.setItem(SYNC_RESTORE_KEY, String(Date.now())); } catch { /* quota */ }
   let written = 0;
   for (const [key, value] of Object.entries(snapshot.data)) {
     if (typeof value !== 'string') continue;
