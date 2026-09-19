@@ -4,13 +4,14 @@ import {
   ExternalLink, Filter, GraduationCap, Megaphone, Newspaper, Save, Search,
   Sparkles, Star, Trash2, Wand2,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useAI } from '../context/AIContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { getCert } from '../data/certs.js';
 import { AWS_UPDATES, UPDATE_TAGS, examGuideChange, retiredServices } from '../data/awsUpdates.js';
+import { fetchAwsNews } from '../lib/awsNewsFeed.js';
 import { cn } from '../lib/utils.js';
 
 export default function AWSUpdates() {
@@ -27,13 +28,32 @@ export default function AWSUpdates() {
     );
   });
 
+  // Live AWS announcements. The curated entries stay as a labelled
+  // fallback — this page used to show only them, which meant it stated
+  // months-old items as current news with nothing to reveal their age.
+  const [feed, setFeed] = useState({ items: AWS_UPDATES, source: 'curated', fetchedAt: null, stale: true });
+  const [loadingFeed, setLoadingFeed] = useState(true);
+
+  const loadFeed = async (force = false) => {
+    setLoadingFeed(true);
+    try { setFeed(await fetchAwsNews({ force })); }
+    finally { setLoadingFeed(false); }
+  };
+
+  useEffect(() => { loadFeed(false); }, []);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return AWS_UPDATES
+    // Curated entries carry cert/opportunity tagging that the raw feed
+    // cannot, so both are shown; live items sort to the top by date.
+    const merged = feed.source === 'curated'
+      ? feed.items
+      : [...feed.items, ...AWS_UPDATES.filter((c) => !feed.items.some((l) => l.title === c.title))];
+    return merged
       .filter((u) => tag === 'all' || u.tag === tag)
-      .filter((u) => !q || (u.title + ' ' + u.summary + ' ' + u.service).toLowerCase().includes(q))
-      .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
-  }, [tag, search]);
+      .filter((u) => !q || ((u.title || '') + ' ' + (u.summary || '') + ' ' + (u.service || '')).toLowerCase().includes(q))
+      .sort((a, b) => new Date(b.dateISO || 0) - new Date(a.dateISO || 0));
+  }, [tag, search, feed]);
 
   const retired = retiredServices();
 
@@ -55,6 +75,32 @@ export default function AWSUpdates() {
         subtitle="Curated AWS announcements with cert impact + freelance-opportunity tagging. Save anything to your AI notes."
         icon={Newspaper}
       />
+
+      {/* Where these came from, and when. Never leave the age a mystery. */}
+      <div className="surface rounded-2xl px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px]">
+        <span className={cn('inline-flex items-center gap-1.5 font-extrabold',
+          feed.source === 'live' ? 'text-success' : feed.stale ? 'text-warning' : 'text-muted')}>
+          <span className={cn('w-1.5 h-1.5 rounded-full',
+            feed.source === 'live' ? 'bg-success' : feed.stale ? 'bg-warning' : 'bg-muted')} />
+          {loadingFeed ? 'Checking AWS…'
+            : feed.source === 'live' ? 'Live from AWS'
+            : feed.source === 'cache' ? 'Cached copy'
+            : 'Curated entries'}
+        </span>
+        <span className="text-muted">
+          {feed.fetchedAt
+            ? `Fetched ${new Date(feed.fetchedAt).toLocaleString()}`
+            : 'Not fetched from AWS'}
+        </span>
+        {feed.note && <span className="text-warning flex-1 min-w-[12rem]">{feed.note}</span>}
+        <button
+          onClick={() => loadFeed(true)}
+          disabled={loadingFeed}
+          className="ml-auto shrink-0 font-bold text-muted hover:text-aws-orange disabled:opacity-50"
+        >
+          {loadingFeed ? 'Refreshing…' : 'Refresh now'}
+        </button>
+      </div>
 
       {/* Retired-service banner (alerts) */}
       {retired.length > 0 && (
