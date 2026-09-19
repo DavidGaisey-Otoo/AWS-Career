@@ -306,7 +306,7 @@ export default function SolutionStudio() {
             <Sparkles size={18} className="text-aws-orange shrink-0 mt-0.5" />
             <div>
               <h2 className="text-[15px] font-extrabold">Describe the work — or paste the gig</h2>
-              <p className="text-[12.5px] opacity-75 mt-0.5 leading-relaxed">
+              <p className="text-[12.5px] text-muted mt-0.5 leading-relaxed">
                 Type one short idea or paste a complete job post. Use Professional Brief to expand a short idea
                 into questions, requirements, architecture, cost, security, evidence, rollback, and portfolio sections.
               </p>
@@ -361,7 +361,7 @@ export default function SolutionStudio() {
 
           {/* Examples */}
           <div className="pt-3 border-t border-token">
-            <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-60 mb-2">
+            <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted mb-2">
               Or try an example
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -380,7 +380,7 @@ export default function SolutionStudio() {
           {/* Saved solutions */}
           {savedList.length > 0 && (
             <div className="pt-3 border-t border-token">
-              <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-60 mb-2">
+              <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted mb-2">
                 Your solutions ({savedList.length})
               </div>
               <div className="space-y-1.5">
@@ -394,7 +394,7 @@ export default function SolutionStudio() {
                       <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="text-[12.5px] font-bold truncate">{s.projectName}</div>
-                        <div className="text-[10.5px] opacity-60 truncate">
+                        <div className="text-[10.5px] text-muted truncate">
                           {s.serviceLabels?.slice(0, 4).join(' · ')} · {s.region}
                         </div>
                       </div>
@@ -600,7 +600,7 @@ function AnalysingCard() {
             initial={{ opacity: 0.25 }}
             animate={{ opacity: [0.25, 1, 0.25] }}
             transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.22 }}
-            className="text-[11.5px] opacity-70"
+            className="text-[11.5px] text-muted"
           >
             {s}
           </motion.div>
@@ -628,7 +628,7 @@ function SolutionHeader({ solution, gigMeta, saved, onSave }) {
             {solution.blueprints.best ? 'Strong reusable blueprint match' : 'Custom architecture required'}
           </div>
           <h2 className="text-lg sm:text-xl font-black leading-tight">{solution.names.projectName}</h2>
-          <p className="text-[12px] opacity-80 mt-1">{solution.analysis.summary}</p>
+          <p className="text-[12px] text-muted mt-1">{solution.analysis.summary}</p>
           {gigMeta?.url && (
             <a
               href={gigMeta.url} target="_blank" rel="noopener noreferrer"
@@ -754,7 +754,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
 
       {/* Services */}
       <div>
-        <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-60 mb-1.5">
+        <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted mb-1.5">
           AWS services detected ({solution.services.length})
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -768,7 +768,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
             </span>
           ))}
           {solution.services.length === 0 && (
-            <span className="text-[12px] opacity-60 italic">
+            <span className="text-[12px] text-muted italic">
               No specific services detected — add more technical detail to the brief.
             </span>
           )}
@@ -803,7 +803,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
       {/* Missing info */}
       {analysis.missingQuestions?.length > 0 && (
         <div className="rounded-lg border border-token bg-[var(--card-2)]/40 p-2.5">
-          <div className="flex items-center gap-1.5 font-extrabold text-[11.5px] mb-1 opacity-80">
+          <div className="flex items-center gap-1.5 font-extrabold text-[11.5px] mb-1 text-muted">
             <Info size={13} /> Ask the client these before you quote
           </div>
           <ul className="space-y-0.5 pl-4 list-disc text-[11.5px] opacity-85 leading-relaxed">
@@ -822,7 +822,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
             <div className="flex items-center gap-1.5 text-aws-orange font-extrabold text-[12px]">
               <Sparkles size={14} /> Recommended planning decisions
             </div>
-            <p className="text-[11px] opacity-75 mt-1">
+            <p className="text-[11px] text-muted mt-1">
               The app prepared these values. Review or change them, then approve once. Suggestions are not client facts until you approve them.
             </p>
           </div>
@@ -895,7 +895,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
               </label>
             </div>
           </div>
-          <div className="space-y-1 text-[10.5px] opacity-75 leading-relaxed">
+          <div className="space-y-1 text-[10.5px] text-muted leading-relaxed">
             <p><strong>Environment:</strong> {recommendation.environmentReason}</p>
             <p><strong>Region:</strong> {recommendation.regionReason}</p>
             <p><strong>Budget:</strong> {recommendation.budgetReason}</p>
@@ -904,7 +904,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
           <button onClick={() => onApprovePlanning(planning)} className="btn btn-primary !text-[12px] tap-44 gap-1.5">
             <CheckCircle2 size={14} /> Approve environment and planning decisions
           </button>
-          <p className="text-[10px] opacity-60">This approves planning facts only. AWS deployment still requires a separate explicit approval.</p>
+          <p className="text-[10px] text-muted">This approves planning facts only. AWS deployment still requires a separate explicit approval.</p>
         </div>
       )}
 
@@ -913,7 +913,7 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
           <div className="flex items-center gap-1.5 text-warning font-extrabold text-[11.5px] mb-1">
             <AlertTriangle size={13} /> Assumptions requiring client confirmation
           </div>
-          <p className="text-[11px] opacity-75 mb-1.5">
+          <p className="text-[11px] text-muted mb-1.5">
             These are unknowns, not facts. The solution is not client-ready until they are answered.
           </p>
           <ul className="space-y-1 pl-4 list-disc text-[11.5px] opacity-90 leading-relaxed">
@@ -959,7 +959,7 @@ function ClientDiscoveryForm({ solution, onApply }) {
       </button>
       {open && (
         <div className="px-3.5 pb-3.5 space-y-3">
-          <p className="text-[11px] opacity-75 leading-relaxed">
+          <p className="text-[11px] text-muted leading-relaxed">
             The app generated this form from facts missing in this exact project. Copy the blank form for the client, or complete it during a discovery call. Never enter passwords, access keys, health records, card data, or other secrets.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -1004,7 +1004,7 @@ function ClientDiscoveryForm({ solution, onApply }) {
             className="btn btn-primary !text-[12px] tap-44 gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed">
             <CheckCircle2 size={14} /> {simulatedLearning ? 'Approve safe lab answers and continue' : 'Apply confirmed client answers and rebuild'}
           </button>
-          <p className="text-[10px] opacity-60">Answers update the brief and regenerate the design. They do not authorize deployment or prove that anything was built.</p>
+          <p className="text-[10px] text-muted">Answers update the brief and regenerate the design. They do not authorize deployment or prove that anything was built.</p>
         </div>
       )}
     </div>
@@ -1048,7 +1048,7 @@ function BlueprintPanel({ solution }) {
                 Best match · {blueprints.best.score}% fit
               </div>
               <h4 className="text-[14.5px] font-extrabold mt-0.5">{blueprints.best.project.title}</h4>
-              <p className="text-[12px] opacity-80 mt-0.5">{blueprints.best.project.tagline}</p>
+              <p className="text-[12px] text-muted mt-0.5">{blueprints.best.project.tagline}</p>
             </div>
             <Link
               to={`/portfolio/${blueprints.best.project.id}`}
@@ -1064,7 +1064,7 @@ function BlueprintPanel({ solution }) {
               </li>
             ))}
           </ul>
-          <div className="mt-2 pt-2 border-t border-aws-orange/20 flex flex-wrap gap-3 text-[11px] opacity-80">
+          <div className="mt-2 pt-2 border-t border-aws-orange/20 flex flex-wrap gap-3 text-[11px] text-muted">
             <span><strong>{blueprints.best.project.estLabel}</strong> typical build</span>
             <span className="capitalize"><strong>{blueprints.best.project.difficulty}</strong> level</span>
             {blueprints.best.project.freeTier && <span className="text-success font-bold">Free Tier friendly</span>}
@@ -1075,7 +1075,7 @@ function BlueprintPanel({ solution }) {
           <div className="flex items-center gap-1.5 font-extrabold text-[13px]">
             <Sparkles size={14} className="text-aws-orange" /> Custom architecture
           </div>
-          <p className="text-[12px] opacity-80 mt-1 leading-relaxed">
+          <p className="text-[12px] text-muted mt-1 leading-relaxed">
             This gig doesn&apos;t map cleanly onto one of the 8 standard blueprints, so the plan and
             code below were built specifically from the services detected in the brief.
           </p>
@@ -1129,7 +1129,7 @@ function NamesPanel({ solution }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[12px] opacity-75 leading-relaxed">
+      <p className="text-[12px] text-muted leading-relaxed">
         Naming things is the annoying part. These are already valid for AWS (length, characters,
         prefixes) — just copy them.
       </p>
@@ -1156,7 +1156,7 @@ function ApproachPanel({ solution }) {
   const rec = solution.approach.recommended;
   return (
     <div className="space-y-2.5">
-      <p className="text-[12px] opacity-80 leading-relaxed">{solution.approach.rationale}</p>
+      <p className="text-[12px] text-muted leading-relaxed">{solution.approach.rationale}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {solution.approach.allOptions.map((opt) => {
           const isRec = opt.id === rec;
@@ -1182,7 +1182,7 @@ function ApproachPanel({ solution }) {
                   <span className="text-[10px] font-mono opacity-50">{scored.score}</span>
                 )}
               </div>
-              <p className="text-[11.5px] opacity-80 mt-1 leading-relaxed">{opt.fullBlurb || opt.blurb}</p>
+              <p className="text-[11.5px] text-muted mt-1 leading-relaxed">{opt.fullBlurb || opt.blurb}</p>
             </div>
           );
         })}
@@ -1202,7 +1202,7 @@ function PlanPanel({ solution }) {
   const { plan } = solution;
   return (
     <div className="space-y-2.5">
-      <div className="flex flex-wrap gap-3 text-[11.5px] opacity-80">
+      <div className="flex flex-wrap gap-3 text-[11.5px] text-muted">
         <span><strong>{plan.phases.length}</strong> phases</span>
         <span><strong>{plan.totalTasks}</strong> tasks</span>
         <span><strong>~{plan.estimatedDays}</strong> days</span>
@@ -1306,7 +1306,7 @@ function ReviewPanel({ solution }) {
   const [showAll, setShowAll] = useState(false);
 
   if (!expert) {
-    return <p className="text-[12px] opacity-70">Review unavailable for this solution.</p>;
+    return <p className="text-[12px] text-muted">Review unavailable for this solution.</p>;
   }
 
   const findings = [...(expert.findings || []), ...(deployReview?.findings || [])];
@@ -1323,7 +1323,7 @@ function ReviewPanel({ solution }) {
           <div className={cn('text-[12px] font-extrabold', deliveryStatus.clientReady ? 'text-success' : 'text-warning')}>
             {deliveryStatus.reviewStatus}
           </div>
-          <div className="text-[11.5px] opacity-80">{deliveryStatus.reviewSummary}</div>
+          <div className="text-[11.5px] text-muted">{deliveryStatus.reviewSummary}</div>
         </div>
       </div>
 
@@ -1379,7 +1379,7 @@ function FindingRow({ f }) {
   return (
     <div className={cn('rounded-lg border border-token border-l-4 bg-[var(--card-2)]/30', tone)}>
       <button onClick={() => setOpen((o) => !o)} className="w-full text-left p-2.5 flex items-start gap-2 tap-44">
-        <span className="text-[9.5px] font-black uppercase opacity-60 shrink-0 mt-0.5 w-12">{f.severity}</span>
+        <span className="text-[9.5px] font-black uppercase text-muted shrink-0 mt-0.5 w-12">{f.severity}</span>
         <span className="flex-1 text-[12px] font-bold leading-snug">{f.title}</span>
         <ChevronDown size={12} className={cn('opacity-40 shrink-0 mt-0.5 transition', open && 'rotate-180')} />
       </button>
@@ -1492,7 +1492,7 @@ function BuildPanel({ solution, onDeploy }) {
             </div>
           )}
           {cov && cov.autoAdded.length > 0 && (
-            <p className="text-[11px] opacity-70 leading-relaxed">
+            <p className="text-[11px] text-muted leading-relaxed">
               Added automatically because the design needs them:{' '}
               <strong>{cov.autoAdded.join(', ')}</strong>.
             </p>
@@ -1505,14 +1505,14 @@ function BuildPanel({ solution, onDeploy }) {
           >
             <Rocket size={16} /> {localOnly ? 'AWS deployment disabled — Strict $0 Local Lab' : canDeploy ? 'Build verified coverage on AWS' : 'Deployment unavailable — resolve coverage/review gates'}
           </button>
-          <p className="text-[10.5px] opacity-60 text-center leading-relaxed">
+          <p className="text-[10.5px] text-muted text-center leading-relaxed">
             {localOnly
               ? 'Local mode creates no AWS resources. Downloaded AWS templates remain reference artifacts and are not executed by the app.'
               : <>Opens the deploy panel. You&apos;ll enter AWS keys there — they stay in memory, are never saved, and go only to AWS. Teardown reduces cost but cannot guarantee a $0 bill.</>}
           </p>
 
           <div className="pt-2 border-t border-token">
-            <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-60 mb-2">
+            <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted mb-2">
               Or take the code and run it yourself
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -1554,14 +1554,14 @@ function TeardownPanel({ solution, liveStacks, onTeardown }) {
 
   return (
     <div className="space-y-2.5">
-      <p className="text-[12px] opacity-80 leading-relaxed">
+      <p className="text-[12px] text-muted leading-relaxed">
         Everything this app deploys goes into a single CloudFormation stack. Deleting the stack
         removes <strong>every resource in it</strong> — that&apos;s the whole point: no surprise bills,
         no orphaned resources you forgot about.
       </p>
 
       {mine.length === 0 ? (
-        <div className="rounded-lg border border-token bg-[var(--card-2)]/40 p-3 text-[11.5px] opacity-70">
+        <div className="rounded-lg border border-token bg-[var(--card-2)]/40 p-3 text-[11.5px] text-muted">
           Nothing deployed from this solution yet. Once you build it in step 7, the teardown button
           appears here.
         </div>
@@ -1583,7 +1583,7 @@ function TeardownPanel({ solution, liveStacks, onTeardown }) {
         ))
       )}
 
-      <div className="text-[10.5px] opacity-60 leading-relaxed">
+      <div className="text-[10.5px] text-muted leading-relaxed">
         Tip: always tear down test builds the same day. Set a billing alarm at $1 in{' '}
         <Link to="/aws-accounts" className="text-aws-orange font-bold hover:underline">AWS Account Manager</Link>{' '}
         so nothing can creep up on you.
@@ -1651,7 +1651,7 @@ function NextActions({ solution }) {
   ];
   return (
     <section className="surface rounded-2xl p-4">
-      <div className="text-[10.5px] font-extrabold uppercase tracking-widest opacity-60 mb-2.5">
+      <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted mb-2.5">
         Guided gig delivery — keep this order
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1665,7 +1665,7 @@ function NextActions({ solution }) {
             <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-aws-orange/15 text-[10px] font-black text-aws-orange">{a.n}</span>
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] font-extrabold">{a.label}</div>
-              <div className="text-[10.5px] opacity-60">{a.hint}</div>
+              <div className="text-[10.5px] text-muted">{a.hint}</div>
             </div>
             <ArrowRight size={13} className="opacity-30 group-hover:opacity-100 group-hover:text-aws-orange transition shrink-0" />
           </Link>

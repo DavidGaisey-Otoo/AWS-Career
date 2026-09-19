@@ -22,6 +22,7 @@ import {
   readToken, expirySeverity, expiryLabel, isSnoozed, snoozeWarning,
   GITHUB_TOKEN_PAGE,
 } from '../../lib/githubToken.js';
+import { hasGithubAppSession } from '../../lib/githubAppAuth.js';
 
 const TONES = {
   unknown:  { bg: 'bg-electric/10 border-electric/40 text-electric',   canSnooze: true,  Icon: Clock },
@@ -46,6 +47,12 @@ export function TokenExpiryBanner() {
 
   // No token at all? Then there's nothing to warn about.
   if (!t?.token) return null;
+  // A connected GitHub App session supersedes the legacy PAT: pushes
+  // prefer it and it renews itself, so the PAT's expiry no longer breaks
+  // anything. Warning about it then is pure noise — and worse, it reads
+  // as "GitHub is set up" while sync may still be disconnected, which is
+  // the opposite of what the user needs to know.
+  if (hasGithubAppSession()) return null;
   // Token is fresh OR severity has no tone defined → hidden.
   if (!tone) return null;
   // Snoozed and severity allows snoozing? Hide.
@@ -75,14 +82,19 @@ export function TokenExpiryBanner() {
           <Github size={12} className="shrink-0" />
           <span className="flex-1 min-w-0">
             {isUnknown && (
-              <>GitHub token saved, but no expiry date recorded. Set it in Settings so we can warn you before it dies.</>
+              <>Legacy GitHub token saved, but no expiry date recorded. It covers repository pushes only — <strong>not</strong> cross-device sync.</>
             )}
             {!isUnknown && !isExpired && (
-              <>GitHub token {label.toLowerCase()} — regenerate before then to avoid broken pushes.</>
+              <>Legacy GitHub token {label.toLowerCase()} — regenerate before then to avoid broken pushes.</>
             )}
             {isExpired && (
-              <>GitHub token {label.toLowerCase()}. Pushes will fail until you renew.</>
+              <>Legacy GitHub token {label.toLowerCase()}. Pushes will fail until you renew.</>
             )}
+            {' '}
+            <Link to="/settings?section=integrations" className="underline hover:no-underline">
+              Connect GitHub
+            </Link>{' '}
+            instead — it renews itself and turns on sync.
           </span>
           <Link
             to="/renew-github"

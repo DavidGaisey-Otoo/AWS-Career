@@ -21,7 +21,36 @@ const TONES = {
   danger: 'text-danger',
 };
 
-export function StatChip({ icon: Icon, label, value, tone = 'default', className = '' }) {
+/**
+ * `layout` picks between the two shapes that already existed in the app:
+ *
+ *   inline  — label row on top, value beneath. Right for a dense row of
+ *             counters, as in the Deploy Console audit summary.
+ *   stacked — icon, then a large number, then the label. Right for the
+ *             headline figures on a dashboard.
+ *
+ * These were separate components (`StatChip` and SAAHome's `Metric`)
+ * doing the same job in two shapes, which is how the app ended up with
+ * four different stat tiles and no way to know which to reach for.
+ */
+export function StatChip({
+  icon: Icon,
+  label,
+  value,
+  tone = 'default',
+  layout = 'inline',
+  className = '',
+}) {
+  if (layout === 'stacked') {
+    return (
+      <div className={cn('surface rounded-2xl p-4', className)}>
+        {Icon && <Icon size={16} className="text-aws-orange" />}
+        <div className={cn('mt-3 text-2xl font-black tabular-nums', TONES[tone] || '')}>{value}</div>
+        <div className="text-[11px] text-muted font-bold">{label}</div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('surface rounded-xl p-3', className)}>
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-muted">

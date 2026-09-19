@@ -107,8 +107,7 @@ is how three different `StatCard`s happened.
 |---|---|
 | `PageHeader` | Every page's title block |
 | `EmptyState` | "Nothing here yet". `tone="brand"` to invite action, `tone="quiet"` for a secondary panel |
-| `StatCard` | Large dashboard tile — gradient wash, delta, optional sparkline. 3–4 hero figures |
-| `StatChip` | Compact counter. A row of six |
+| `StatChip` | Every stat tile. `layout="stacked"` for dashboard headline figures, `layout="inline"` for a dense row of counters |
 | `Button` | Every button. Variants: primary, ghost, glass, danger, outline |
 | `Modal` | Every dialog |
 | `Skeleton` | Loading states |
