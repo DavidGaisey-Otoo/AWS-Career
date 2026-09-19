@@ -588,12 +588,30 @@ function DataSection() {
 
   return (
     <>
-      <Section title="Backup + restore" subtitle="JSON file you can take with you. Import wipes existing data.">
+      <Section title="Backup + restore" subtitle="A complete copy of this browser's data, as a file you keep. Import replaces what is here.">
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={exportJson} icon={Download}>Export everything (JSON)</Button>
           <Button variant="ghost" icon={Upload} onClick={() => fileRef.current?.click()}>Import backup</Button>
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden"
                  onChange={(e) => onImport(e.target.files?.[0])} />
+        </div>
+
+        {/*
+          This export has no blocklist — unlike sync, which scrubs secrets
+          before anything leaves the device. That is the right behaviour for
+          a backup meant to restore an account completely, but it means the
+          file is credential material and the UI has to say so.
+        */}
+        <div className="mt-3 rounded-xl border border-warning/40 bg-warning/5 p-3 text-[11px] leading-relaxed">
+          <div className="font-extrabold text-warning flex items-center gap-1.5">
+            <KeyRound size={12} /> This file contains your credentials
+          </div>
+          <p className="text-muted mt-1">
+            Unlike cross-device sync, which strips secrets before uploading, this backup copies
+            everything — including your encrypted AWS vault and any saved GitHub or Google tokens.
+            That is what makes it a complete restore. Keep it somewhere private, never commit it
+            to a repository, and delete it once you have imported it.
+          </p>
         </div>
         <div className="mt-3 text-[11px] text-muted">
           Browser storage used: <strong className="text-current">{formatBytes(storageUsage)}</strong>
