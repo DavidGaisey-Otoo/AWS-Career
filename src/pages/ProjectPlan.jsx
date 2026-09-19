@@ -28,6 +28,33 @@ const PHASE_COLOR_TOKEN = {
   rose:    { bg: 'bg-rose-500/15',   text: 'text-rose-300',   border: 'border-rose-500/40',   bar: '#FB7185' },
 };
 
+/**
+ * A start date that reaches the client must be a real date.
+ *
+ * `new Date(x).toISOString()` throws RangeError on an unparseable value,
+ * which crashed plan generation outright; and it happily accepts absurd
+ * ones, so a mistyped year produced a plan whose window read
+ * "2 Feb 60922 → 9 Feb 60922". Either is bad in something a client signs
+ * off, so the date is checked rather than trusted.
+ *
+ * Returns { iso } on success or { error } with something the user can act on.
+ */
+function normaliseStartDate(raw) {
+  if (!raw) return { iso: new Date().toISOString() };
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) {
+    return { error: 'That start date could not be read. Pick a date from the calendar.' };
+  }
+  const year = d.getUTCFullYear();
+  const thisYear = new Date().getUTCFullYear();
+  // Generous but sane: a project may be backdated a little or planned
+  // years ahead, but not in 1904 and not in the year 60922.
+  if (year < thisYear - 5 || year > thisYear + 10) {
+    return { error: `Start date year ${year} looks wrong. Pick a date from the calendar.` };
+  }
+  return { iso: d.toISOString() };
+}
+
 export default function ProjectPlan() {
   const [params] = useSearchParams();
   const toast = useToast();
@@ -82,6 +109,11 @@ export default function ProjectPlan() {
 
   // ----- actions -----
   const generate = () => {
+    const startDate = normaliseStartDate(form.startDate);
+    if (startDate.error) {
+      toast.error(startDate.error);
+      return;
+    }
     setGenerating(true);
     setTimeout(() => {
       const next = buildPlan({
@@ -92,7 +124,7 @@ export default function ProjectPlan() {
           budget: form.budget ? +form.budget : null,
           currency: form.currency || 'USD',
           hourlyRate: +form.hourlyRate || 85,
-          startDate: form.startDate ? new Date(form.startDate).toISOString() : new Date().toISOString(),
+          startDate: startDate.iso,
         },
         client: { name: client?.name || form.clientName, company: client?.company || form.clientCompany },
       });

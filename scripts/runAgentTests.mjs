@@ -26,6 +26,7 @@ import { runAccountTierTests } from '../src/lib/__tests__/accountTier.test.js';
 import { runBackupRoundTripTests } from '../src/lib/__tests__/backupRoundTrip.test.js';
 import { runSyncGuardTests } from '../src/lib/__tests__/syncGuard.test.js';
 import { runSafeStorageTests } from '../src/lib/__tests__/safeStorage.test.js';
+import { runProjectPlanDateTests } from '../src/lib/__tests__/projectPlanDate.test.js';
 
 const agents = runAllTests();
 console.log(printReport(agents));
@@ -203,6 +204,13 @@ console.log('  STORAGE QUOTA SAFETY TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of safeStorage.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
+const planDate = runProjectPlanDateTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  PROJECT PLAN DATE TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of planDate.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
 const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
 const syncOk = sync.allPassed;
@@ -227,7 +235,8 @@ const accountTierOk = accountTier.allPassed;
 const backupRoundTripOk = backupRoundTrip.allPassed;
 const syncGuardOk = syncGuard.allPassed;
 const safeStorageOk = safeStorage.allPassed;
-const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk;
+const planDateOk = planDate.allPassed;
+const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk;
 
 console.log('');
 console.log(allOk
@@ -235,6 +244,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} awsEnvironmentPolicy:${awsEnvironmentPolicyOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);
