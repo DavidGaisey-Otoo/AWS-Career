@@ -72,8 +72,16 @@ export function AppShell() {
           bar and buttons, worst at narrow widths where the banner wraps
           to several lines. Sticking them together makes the header sit
           below the banner however tall it grows.
+
+          The wrapper carries `glass`, not the header. `backdrop-filter`
+          blurs whatever is painted behind an element *in its own stacking
+          context*; a sticky, z-indexed wrapper creates one, so a blurred
+          child inside it has nothing left to blur. The header then showed
+          only its 6%-opaque background and page content scrolled straight
+          through it. Whichever element establishes the context is the one
+          that has to do the blurring.
         */}
-        <div className="sticky top-0 z-30">
+        <div className="sticky top-0 z-30 app-bar border-b border-token">
           <TokenExpiryBanner />
           <Header onMobileMenu={() => setMobileOpen(true)} />
         </div>
