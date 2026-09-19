@@ -575,6 +575,10 @@ function DataSection() {
 
   const onImport = (file) => {
     if (!file) return;
+    if (!/\.json$/i.test(file.name)) {
+      toast.error('That is not a .json backup file.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -584,7 +588,20 @@ function DataSection() {
         toast.error(`Import failed: ${e.message}`);
       }
     };
+    reader.onerror = () => toast.error('Could not read that file.');
     reader.readAsText(file);
+  };
+
+  /**
+   * Drag-and-drop, because the file picker is the hardest part of this
+   * for anyone who does not already know where the file is. Dragging it
+   * from the desktop onto the page skips navigating a dialog entirely.
+   */
+  const [dragging, setDragging] = useState(false);
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    onImport(e.dataTransfer?.files?.[0]);
   };
 
   const formatBytes = (n) => {
@@ -613,6 +630,26 @@ function DataSection() {
           <Button variant="ghost" icon={Upload} onClick={() => fileRef.current?.click()}>Import backup</Button>
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden"
                  onChange={(e) => onImport(e.target.files?.[0])} />
+        </div>
+
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          className={cn(
+            'mt-3 rounded-xl border-2 border-dashed p-5 text-center transition',
+            dragging
+              ? 'border-aws-orange bg-aws-orange/10'
+              : 'border-token bg-[var(--card-2)]/40'
+          )}
+        >
+          <Upload size={18} className={cn('mx-auto mb-1.5', dragging ? 'text-aws-orange' : 'text-muted')} />
+          <div className="text-[12.5px] font-bold">
+            {dragging ? 'Drop to restore' : 'Or drag your backup file here'}
+          </div>
+          <p className="text-[11px] text-muted mt-0.5">
+            Drag the .json file straight from your desktop — no file picker needed.
+          </p>
         </div>
 
         {/*
