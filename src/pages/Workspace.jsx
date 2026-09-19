@@ -163,7 +163,7 @@ export default function Workspace() {
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-extrabold text-sm leading-snug">{p.title}</h3>
                     <span className="chip border border-token bg-[var(--card-2)] text-[10px] font-bold shrink-0">
-                      {p.artifactCount} items
+                      {p.artifactCount} item{p.artifactCount === 1 ? '' : 's'}
                     </span>
                   </div>
                   <div className="text-[11px] text-muted mt-1 flex flex-wrap gap-x-3">
@@ -236,7 +236,7 @@ export default function Workspace() {
                   {open.client && <span>Client: <strong className="text-current">{open.client}</strong></span>}
                   {open.region && <span>Region: <strong className="text-current">{open.region}</strong></span>}
                   {open.services.length > 0 && <span>{open.services.join(' · ')}</span>}
-                  <span>{open.artifactCount} items</span>
+                  <span>{open.artifactCount} item{open.artifactCount === 1 ? '' : 's'}</span>
                 </div>
               </div>
 
