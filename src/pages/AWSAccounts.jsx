@@ -768,6 +768,34 @@ function FreeTierMonitor() {
   const { state, usagePct } = useAWS();
   if (state.activeProfile !== 'free') return null;
   const profile = state.profiles[state.activeProfile];
+  // The 750-hour monthly buckets these bars illustrate belong to the
+  // legacy 12-month Free Tier. A credits-based Free Plan has none of
+  // them — every eligible hour draws down the credit balance instead.
+  // Showing the bars anyway teaches the wrong mental model to exactly
+  // the person who most needs the right one.
+  const onCreditsPlan = profile?.accountPlan === 'free-6-month';
+
+  if (onCreditsPlan) {
+    return (
+      <section className="surface rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles size={14} className="text-electric" />
+          <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Free Tier usage does not apply</h3>
+        </div>
+        <p className="text-[12px] text-muted leading-relaxed">
+          This account is on AWS&rsquo;s six-month, credits-based Free Plan, which has
+          <strong className="text-current"> no 750-hour monthly buckets</strong>. There is no per-service
+          allowance to track — every eligible service draws down one shared credit balance,
+          and the plan ends when the credits or the six months run out, whichever comes first.
+        </p>
+        <p className="text-[12px] text-muted leading-relaxed mt-2">
+          Track the balance in <strong className="text-current">Billing and Cost Management</strong>,
+          and record it in Verified account facts above so the countdown stays accurate.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="surface rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
@@ -775,7 +803,7 @@ function FreeTierMonitor() {
           <Sparkles size={14} className="text-aws-orange" />
           <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Illustrative service usage</h3>
         </div>
-        <span className="text-[11px] text-muted">Demo data · not read from AWS</span>
+        <span className="text-[11px] text-muted">Demo data · legacy Free Tier · not read from AWS</span>
       </div>
       <ul className="space-y-1.5">
         {Object.entries(usagePct).map(([k, v]) => {
