@@ -22,3 +22,8 @@ tmp/
 
 # Local data snapshots captured by the dev server — contain credentials
 local-backups/
+
+# Personal assessment documents and evidence — never publish these
+documentation/
+evidence/
+~$*
