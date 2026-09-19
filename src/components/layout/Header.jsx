@@ -13,7 +13,7 @@ export function Header({ onMobileMenu }) {
   const [notifsOpen, setNotifsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 glass border-b border-token safe-top">
+    <header className="glass border-b border-token safe-top">
       <div className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-5 h-16">
         {/* Mobile menu */}
         <button

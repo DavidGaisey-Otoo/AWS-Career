@@ -75,12 +75,12 @@ export function TokenExpiryBanner() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
-        className={`sticky top-0 z-30 border-b backdrop-blur-md ${tone.bg}`}
+        className={`border-b backdrop-blur-md ${tone.bg}`}
       >
-        <div className="max-w-screen-2xl mx-auto px-4 py-2 text-xs font-bold flex items-center gap-3">
+        <div className="max-w-screen-2xl mx-auto px-4 py-2 text-xs font-bold flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <Icon size={14} className="shrink-0" />
           <Github size={12} className="shrink-0" />
-          <span className="flex-1 min-w-0">
+          <span className="flex-1 min-w-[16rem] leading-snug">
             {isUnknown && (
               <>Legacy GitHub token saved, but no expiry date recorded. It covers repository pushes only — <strong>not</strong> cross-device sync.</>
             )}
@@ -98,7 +98,7 @@ export function TokenExpiryBanner() {
           </span>
           <Link
             to="/renew-github"
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-current/15 hover:bg-current/25 text-current font-extrabold"
+            className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-current/15 hover:bg-current/25 text-current font-extrabold"
           >
             <RefreshCw size={10} /> Renew step-by-step
           </Link>
@@ -106,7 +106,7 @@ export function TokenExpiryBanner() {
             href={GITHUB_TOKEN_PAGE}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-current/15 hover:bg-current/25 text-current"
+            className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-current/15 hover:bg-current/25 text-current"
           >
             <ExternalLink size={10} /> GitHub
           </a>

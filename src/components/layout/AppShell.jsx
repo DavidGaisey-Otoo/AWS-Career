@@ -65,8 +65,18 @@ export function AppShell() {
 
       {/* Main column */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <TokenExpiryBanner />
-        <Header onMobileMenu={() => setMobileOpen(true)} />
+        {/*
+          One sticky container, not two. The banner and the header were
+          each `sticky top-0`, so both pinned to the same spot and drew
+          over each other — the banner's text landed on top of the search
+          bar and buttons, worst at narrow widths where the banner wraps
+          to several lines. Sticking them together makes the header sit
+          below the banner however tall it grows.
+        */}
+        <div className="sticky top-0 z-30">
+          <TokenExpiryBanner />
+          <Header onMobileMenu={() => setMobileOpen(true)} />
+        </div>
         <main className="flex-1 min-w-0 relative">
           <AnimatePresence mode="wait">
             <motion.div

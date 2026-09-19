@@ -41,7 +41,7 @@ export function RoadmapFilters({
 
   return (
     <div className="surface rounded-2xl p-3 sm:p-4 sticky top-20 z-20">
-      <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
         <div className="flex-1 flex items-center gap-2 surface-2 rounded-xl px-3">
           <Search size={16} className="text-aws-orange" />
           <input
