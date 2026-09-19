@@ -36,6 +36,14 @@ export function runPlanningRecommendationTests() {
     assert(solution.deploy.environmentMode === 'aws-short-lived', 'AWS environment was not retained');
   });
 
+  test('client approval wording preserves an explicitly approved AWS region', () => {
+    const solution = runPipeline(`Build a Windows Server training lab.
+Client-approved discovery answers:
+- [Cost & residency] Which AWS region is approved?
+  Confirmed answer: Project owner approves eu-north-1 (Europe Stockholm) for this synthetic learning lab.`);
+    assert(solution.region.primary === 'eu-north-1', `approved region changed to ${solution.region.primary}`);
+  });
+
   test('strict zero-cost local lab mechanically disables AWS deployment', () => {
     const brief = appendApprovedPlanningDecisions('Build a Windows Server lab using EC2, IAM, Systems Manager, CloudWatch, and AWS Backup.', {
       environmentMode: 'local-zero', labDurationHours: 2,

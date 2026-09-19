@@ -186,12 +186,13 @@ function errorsFromReview(review) {
  * @param {string} [opts.title] optional explicit title
  * @returns {Object} a project in data/projects.js shape
  */
-export function generateCustomProject({ brief, title } = {}) {
+export function generateCustomProject({ brief, title, sourceSolution = null } = {}) {
   const text = String(brief || '').trim();
   if (!text) throw new Error('Describe what you want to build.');
 
   // Reuse the full pipeline: region, names, plan, review
-  const solution = runPipeline(text, { mode: 'test' });
+  const solution = sourceSolution || runPipeline(text, { mode: 'test' });
+  const localOnly = solution.deploy?.localOnly || solution.deploy?.environmentMode === 'local-zero';
   const analysis = analyseProject(text, {});
 
   // Service detection needs BOTH detectors. The pipeline's matches AWS
@@ -200,10 +201,11 @@ export function generateCustomProject({ brief, title } = {}) {
   // reads product language instead. Union of the two, because a brief can
   // legitimately contain both registers.
   const requirements = mapRequirements(text);
-  const serviceIds = [...new Set([
-    ...solution.services.map((s) => s.id),
-    ...requirements.serviceIds,
-  ])];
+  // A saved Solution Studio result is authoritative. Re-inferring product
+  // requirements here previously added unrelated services to its portfolio.
+  const serviceIds = sourceSolution
+    ? [...new Set(solution.services.map((s) => s.id))]
+    : [...new Set([...solution.services.map((s) => s.id), ...requirements.serviceIds])];
   const services = serviceIds
     .map((id) => SERVICE_MATRIX[id] || { id, label: id })
     .filter(Boolean);
@@ -232,15 +234,18 @@ export function generateCustomProject({ brief, title } = {}) {
     names: solution.names,
   });
 
-  const estMinutes = Math.max(120, plan.estimatedDays * 8 * 60);
-  const hours = Math.round(estMinutes / 60);
-
   // Plan phases → build steps, in the exact shape the detail page ticks off
-  const buildSteps = plan.phases.map((phase, i) => ({
+  const localSteps = localOnly ? (solution.deliveryStandard?.consoleRunbook || []).map((step) => ({
+    title: step.service,
+    tasks: step.steps || [],
+  })) : null;
+  const buildSteps = (localSteps || plan.phases).map((phase, i) => ({
     id: `cst-${i + 1}`,
     title: phase.title,
     subs: phase.tasks.map((t, j) => ({ id: `cst-${i + 1}-s${j + 1}`, title: t })),
   }));
+  const estMinutes = localOnly ? 12 * 60 : Math.max(120, plan.estimatedDays * 8 * 60);
+  const hours = Math.round(estMinutes / 60);
 
   const skills = [...new Set(services.map((s) => s.label).filter(Boolean))].slice(0, 8);
   const freeTier = !services.some((s) => s.freeTier === 'costs-money');
@@ -250,7 +255,7 @@ export function generateCustomProject({ brief, title } = {}) {
     n: 0,                                   // ordering handled by the board
     isCustom: true,
     title: (title || solution.names.projectName || 'My AWS Project').slice(0, 80),
-    tagline: `${services.length} AWS service${services.length === 1 ? '' : 's'} · ${solution.region.primary}`,
+    tagline: localOnly ? 'Strict $0 local Windows Server lab · no AWS resources' : `${services.length} AWS service${services.length === 1 ? '' : 's'} · ${solution.region.primary}`,
     summary: analysis.summary || text.slice(0, 200),
     businessCase: text.slice(0, 600),
     difficulty,
@@ -259,25 +264,26 @@ export function generateCustomProject({ brief, title } = {}) {
     estMinutes,
     estLabel: `${Math.max(2, hours - 2)}–${hours + 2} hours`,
     clientAppeal: Math.min(10, 4 + services.length),
-    certs: ['Solutions Architect Associate'],
-    costNotes: freeTier
+    certs: localOnly ? [] : ['Solutions Architect Associate'],
+    costNotes: localOnly
+      ? 'AWS spend: $0. This project uses a local VM and creates no AWS resources.'
+      : freeTier
       ? `Free Tier covers most of this at low usage. Estimated test cost: ${solution.analysis.testDeployment?.cost || '$0'}.`
       : `Some services here bill from the first hour. Estimated test cost: ${solution.analysis.testDeployment?.cost || 'see Cost Estimator'}. Tear down when finished.`,
     freeTier,
     companies: [],
     architecture: buildArchitecture(services),
     prerequisites: [
-      'AWS account with billing alerts configured',
-      `Region chosen: ${solution.region.primary}`,
+      ...(localOnly ? ['Local virtualization support', 'Approved Windows Server evaluation media'] : ['AWS account with billing alerts configured', `Region chosen: ${solution.region.primary}`]),
       ...(analysis.missingQuestions || []).slice(0, 2),
     ],
     buildSteps,
     commonErrors: errorsFromReview(review),
     presentation: [
-      `Uses ${services.length} AWS services: ${skills.slice(0, 4).join(', ')}.`,
-      `Deployed to ${solution.region.primary}.`,
+      localOnly ? 'Built as an isolated local Windows Server virtual lab; AWS deployment was prohibited.' : `Uses ${services.length} AWS services: ${skills.slice(0, 4).join(', ')}.`,
+      localOnly ? 'AWS services are architecture references only; zero AWS resources were created.' : `Designed for ${solution.region.primary}; deployment must be proven by evidence.`,
       review ? `Reviewed by ${review.expertCount} architecture specialists — scored ${review.score}/100.` : null,
-      freeTier ? 'Runs inside the AWS Free Tier at low usage.' : 'Costed before build; tear down after demo.',
+      localOnly ? 'AWS spend is mechanically held at $0.' : freeTier ? 'Free Tier eligibility must be verified against the account before deployment.' : 'Costed before build; tear down after demo.',
     ].filter(Boolean),
 
     // Provenance so the UI can show where it came from and re-open the solution
@@ -288,6 +294,8 @@ export function generateCustomProject({ brief, title } = {}) {
     approach: solution.approach.recommended,
     region: solution.region.primary,
     stackName: solution.names.stackName,
+    localOnly,
+    environmentMode: solution.deploy?.environmentMode,
 
     // Why each service is here, in the user's own words — so the plan is
     // inspectable rather than an unexplained list.

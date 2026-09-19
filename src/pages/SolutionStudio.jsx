@@ -196,7 +196,7 @@ export default function SolutionStudio() {
     const rec = saveSolution(solution);
     if (rec) {
       try {
-        const project = generateCustomProject({ brief: solution.input.brief, title: solution.names.projectName });
+        const project = generateCustomProject({ brief: solution.input.brief, title: solution.names.projectName, sourceSolution: solution });
         saveCustomProject({
           ...project,
           id: `custom-solution-${solution.id}`,
@@ -1453,13 +1453,13 @@ function BuildPanel({ solution, onDeploy }) {
           )}
 
           <div className="rounded-xl border border-token bg-[var(--card-2)]/40 p-3 space-y-1 text-[11.5px]">
-            <Row k="Stack name" v={solution.deploy.stackName} mono />
-            <Row k="Region" v={solution.deploy.region} mono />
+            <Row k={localOnly ? 'Project name' : 'Stack name'} v={localOnly ? solution.names.projectName : solution.deploy.stackName} mono={!localOnly} />
+            <Row k={localOnly ? 'Execution location' : 'Region'} v={localOnly ? 'Local workstation' : solution.deploy.region} mono={!localOnly} />
             <Row k="Environment" v={localOnly ? 'Strict $0 Local Lab — no AWS resources' : 'Short-lived AWS Lab — charges may occur'} />
-            <Row k="Resources" v={`${cov?.resourceCount ?? 0} AWS resources`} />
-            <Row k="Mode" v={solution.mode === 'test' ? 'Test — Free Tier substitutions applied' : 'Client — exact specs'} />
+            <Row k="Resources" v={localOnly ? '0 AWS resources; local VM only' : `${cov?.resourceCount ?? 0} AWS resources`} />
+            <Row k="Mode" v={localOnly ? 'Local validation — AWS deployment prohibited' : solution.mode === 'test' ? 'Test — Free Tier substitutions applied' : 'Client — exact specs'} />
             <Row k="Support status" v={(readiness?.classification || 'planning-only').replace(/-/g, ' ')} />
-            <Row k="Pre-deploy review" v={readiness?.clientReady ? 'Passed — AWS validation evidence still required' : 'Blocked — review the open gates below'} />
+            <Row k={localOnly ? 'Pre-build review' : 'Pre-deploy review'} v={localOnly ? 'Passed — local validation evidence still required' : readiness?.clientReady ? 'Passed — AWS validation evidence still required' : 'Blocked — review the open gates below'} />
           </div>
 
           {readiness && (
@@ -1677,20 +1677,28 @@ function NextActions({ solution }) {
 
 function buildAIReviewText(solution) {
   const lines = [];
+  const localOnly = solution.deploy.localOnly || solution.deploy.environmentMode === 'local-zero';
   const services = (solution.services || []).map((s) => s.label || s.id).join(', ') || 'None detected';
   const architecture = solution.deliveryStandard?.architecture || {};
   const findings = solution.review?.expert?.findings || [];
   lines.push(`# Independent AI verification package — ${solution.names.projectName}`);
   lines.push('', '## Reviewer instructions', 'Act as an independent AWS solutions architect, security reviewer, FinOps reviewer and technical-documentation auditor. Do not trust generated claims without evidence. Never request credentials, secret keys, session tokens, passwords or MFA codes. Return PASS, PASS WITH CONDITIONS, or FAIL; list blocking findings, corrections, retests and prioritized improvements.');
   lines.push('', '## Original brief', solution.input.brief);
-  lines.push('', '## Scope summary', solution.analysis.summary, `Region: ${solution.region.primary}`, `Services: ${services}`, `Execution mode: ${solution.deploy.environmentMode}`, `One-click AWS deployment enabled: ${solution.deploy.canOneClick ? 'Yes' : 'No'}`);
+  lines.push('', '## Scope summary', solution.analysis.summary, localOnly ? 'Execution location: Local workstation' : `Region: ${solution.region.primary}`, `${localOnly ? 'AWS services used as architecture references only' : 'Services'}: ${services}`, `Execution mode: ${solution.deploy.environmentMode}`, `One-click AWS deployment enabled: ${solution.deploy.canOneClick ? 'Yes' : 'No'}`);
   lines.push('', '## Proposal and delivery lifecycle');
   for (const item of solution.deliveryStandard?.lifecycle || []) lines.push(`- ${item.label}: ${item.evidence}`);
   lines.push('', '## Architecture', `Boundaries: ${(architecture.boundaries || []).join(' → ')}`, `Required diagram panels: ${(architecture.panels || []).join('; ')}`);
   lines.push('', '## Implementation plan');
-  for (const phase of solution.plan?.phases || []) {
-    lines.push(`### ${phase.title}`);
-    for (const task of phase.tasks || []) lines.push(`- ${task}`);
+  if (localOnly) {
+    for (const step of solution.deliveryStandard?.consoleRunbook || []) {
+      lines.push(`### ${step.service}`);
+      for (const action of step.steps || []) lines.push(`- ${action}`);
+    }
+  } else {
+    for (const phase of solution.plan?.phases || []) {
+      lines.push(`### ${phase.title}`);
+      for (const task of phase.tasks || []) lines.push(`- ${task}`);
+    }
   }
   lines.push('', '## Practical console and CLI runbook');
   for (const step of solution.deliveryStandard?.consoleRunbook || []) {
@@ -1706,8 +1714,10 @@ function buildAIReviewText(solution) {
   for (const gate of solution.review?.readiness?.evidenceGates || []) lines.push(`- ${gate.passed ? 'PASS' : 'OPEN'} — ${gate.label}`);
   lines.push('', '## Evidence and tests required');
   for (const item of solution.deliveryStandard?.evidenceRequired || []) lines.push(`- ${item}`);
-  lines.push('', '## Cost and teardown', `Cost statement: ${solution.deploy.readOnlyAssessment ? 'This workflow is query-only and intentionally creates no AWS resources. Existing account usage may still have charges.' : 'Validate all estimates against the account before deployment.'}`, 'Do not accept completion until the final inventory and teardown evidence match the approved scope.');
-  lines.push('', '## Portfolio claim to verify', `Designed and documented ${solution.names.projectName} using ${services}. Performed only the actions supported by attached redacted evidence; do not describe generated plans as completed deployment experience.`);
+  lines.push('', '## Cost and teardown', `Cost statement: ${localOnly ? 'AWS spend is $0 because AWS deployment is mechanically prohibited. Local hardware, electricity, storage, and licensing remain outside AWS billing.' : solution.deploy.readOnlyAssessment ? 'This workflow is query-only and intentionally creates no AWS resources. Existing account usage may still have charges.' : 'Validate all estimates against the account before deployment.'}`, 'Do not accept completion until the final inventory and teardown evidence match the approved scope.');
+  lines.push('', '## Portfolio claim to verify', localOnly
+    ? `Designed, documented, and—only where supported by attached evidence—validated ${solution.names.projectName} in an isolated local Windows Server virtual lab. AWS services were architecture references only; no AWS resources were deployed.`
+    : `Designed and documented ${solution.names.projectName} using ${services}. Performed only the actions supported by attached redacted evidence; do not describe generated plans as completed deployment experience.`);
   lines.push('', '## Required reviewer response', '### Verdict', '### Blocking findings', '### Non-blocking improvements', '### Contradictions or unsupported claims', '### Requirement-to-test-to-evidence coverage', '### Exact corrections', '### Retests required', '### Final next-action checklist');
   return lines.join('\n');
 }

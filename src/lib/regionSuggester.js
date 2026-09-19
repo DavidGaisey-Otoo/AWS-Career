@@ -104,7 +104,10 @@ export function suggestRegion({ brief = '', audience = null, compliance = [], ne
   // A region the user/client explicitly approved is a fact, not another
   // heuristic signal. Keep this ahead of compliance and audience inference so
   // rebuilding an approved plan cannot silently move it to another region.
-  const approvedRegion = text.match(/\b(?:approved\s+)?(?:aws\s+)?region\s*(?:is|:)?\s*([a-z]{2}(?:-gov)?-[a-z]+-\d)\b/i)?.[1]?.toLowerCase();
+  const approvedRegion = (
+    text.match(/\b(?:approved\s+)?(?:aws\s+)?region\s*(?:is|:)?\s*([a-z]{2}(?:-gov)?-[a-z]+-\d)\b/i)
+    || text.match(/\b(?:approves?|approved)\b[^.\n]{0,80}\b([a-z]{2}(?:-gov)?-[a-z]+-\d)\b/i)
+  )?.[1]?.toLowerCase();
   if (approvedRegion) {
     reasons.push(`AWS Region ${approvedRegion} was explicitly stated in the brief.`);
     return finalize({

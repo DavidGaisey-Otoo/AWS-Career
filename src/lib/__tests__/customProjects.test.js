@@ -35,6 +35,8 @@ installShim();
 
 const { mapRequirements, detectCapabilities } = await import('../requirementMapper.js');
 const { generateCustomProject } = await import('../customProjects.js');
+const { runPipeline } = await import('../gigSolutionPipeline.js');
+const { appendApprovedPlanningDecisions } = await import('../planningRecommendations.js');
 
 const BRIEFS = {
   barber: 'A booking system for my barber shop. Customers pick a slot online, get an SMS reminder, and the barber sees the day appointments on a phone. Maybe 500 customers. Keep it cheap.',
@@ -198,6 +200,30 @@ const CHECKS = [
       assert(a.services.join() === b.services.join(), 'service list drifted between runs');
       assert(a.buildSteps.length === b.buildSteps.length, 'plan length drifted between runs');
       assert(a.difficulty === b.difficulty, 'difficulty drifted between runs');
+    },
+  },
+  {
+    name: 'saved local-zero solutions stay local and preserve their exact service scope',
+    run: () => {
+      const brief = appendApprovedPlanningDecisions(
+        'Build a secure Windows Server administration lab using EC2, IAM, SSM, CloudWatch, CloudTrail, AWS Backup, and KMS.',
+        {
+          environmentMode: 'local-zero', region: 'eu-north-1', monthlyBudget: 0, timelineWeeks: 2,
+          dataClassification: 'Synthetic, non-sensitive learning data only',
+          backupRetentionDays: 7, rpoHours: 24, rtoHours: 4,
+        },
+      );
+      const solution = runPipeline(brief, { mode: 'test' });
+      const p = generateCustomProject({ brief, title: 'Windows Server Administration Lab', sourceSolution: solution });
+      const expectedServices = solution.services.map((s) => s.id).sort().join(',');
+
+      assert(p.localOnly && p.environmentMode === 'local-zero', 'local-zero execution mode was not preserved');
+      assert(p.services.slice().sort().join(',') === expectedServices,
+        `portfolio service scope drifted: expected ${expectedServices}; got ${p.services.slice().sort().join(',')}`);
+      assert(p.costNotes.includes('$0') && p.costNotes.includes('no AWS resources'), 'portfolio does not state its zero-AWS-cost boundary');
+      assert(!p.prerequisites.some((item) => /AWS account/i.test(item)), 'local portfolio still requires an AWS account');
+      assert(!p.presentation.some((item) => /deployed to/i.test(item)), 'local portfolio makes a false AWS deployment claim');
+      assert(p.buildSteps.length >= 4, 'local console runbook was not converted into build steps');
     },
   },
   {
