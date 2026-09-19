@@ -411,9 +411,9 @@ img{max-width:100%;height:auto}
         }
       />
 
-      <div className="grid gap-3 lg:grid-cols-[230px_1fr_320px]">
+      <div className="grid gap-3 xl:grid-cols-[230px_1fr_320px]">
         {/* PALETTE */}
-        <aside className="surface rounded-2xl p-3 flex flex-col gap-2 lg:max-h-[calc(100vh-12rem)] lg:overflow-hidden">
+        <aside className="surface rounded-2xl p-3 flex flex-col gap-2 xl:max-h-[calc(100vh-12rem)] xl:overflow-hidden">
           <div>
             <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-2">
               Templates
@@ -468,7 +468,10 @@ img{max-width:100%;height:auto}
         </aside>
 
         {/* CANVAS */}
-        <div className="space-y-2">
+        {/* min-w-0: a grid item defaults to min-content width, so without
+            this the canvas and its toolbar push the whole three-column row
+            wider than the window and the page scrolls sideways. */}
+        <div className="min-w-0 space-y-2">
           <div className="surface rounded-2xl p-2 flex flex-wrap items-center gap-1.5">
             <Toolbar
               connectingFrom={connectingFrom}
@@ -644,7 +647,7 @@ img{max-width:100%;height:auto}
         </div>
 
         {/* SIDEBAR */}
-        <aside className="space-y-3">
+        <aside className="min-w-0 space-y-3">
           {/* Stage 11 — AI generator + intelligence (Well-Architected, Cost, Security, Anti-patterns) */}
           <StudioIntelligence
             nodes={nodes}
