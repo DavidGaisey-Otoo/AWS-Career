@@ -1,9 +1,32 @@
 import { STORAGE_KEY } from './constants.js';
 
 const KEY = `${STORAGE_KEY}::github-app`;
-const DEFAULT_API_BASE = typeof window !== 'undefined' && window.location.hostname.endsWith('github.io')
-  ? 'https://aws-career.vercel.app'
-  : '';
+/**
+ * Where the two GitHub OAuth functions live.
+ *
+ * They are hosted on Vercel because GitHub Pages cannot run serverless
+ * functions. Any origin that does not serve `/api` itself must therefore
+ * call Vercel directly.
+ *
+ * localhost is exactly such an origin: the Vite dev server serves the app
+ * but has no `/api` routes, so the previous same-origin default turned
+ * every local sign-in into a 404 against the dev server. That made GitHub
+ * connection — and therefore sync — impossible during local development,
+ * while looking like a sync bug rather than a routing one.
+ */
+const GITHUB_AUTH_API = 'https://aws-career.vercel.app';
+
+function defaultApiBase() {
+  if (typeof window === 'undefined') return '';
+  const { hostname } = window.location;
+  const needsRemoteApi =
+    hostname.endsWith('github.io') ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1';
+  return needsRemoteApi ? GITHUB_AUTH_API : '';
+}
+
+const DEFAULT_API_BASE = defaultApiBase();
 // `import.meta.env` is injected by Vite in the browser, but is absent when
 // the pure modules are imported by the Node test runner.
 const API_BASE = (import.meta.env?.VITE_GITHUB_AUTH_API || DEFAULT_API_BASE).replace(/\/$/, '');
@@ -76,4 +99,31 @@ export async function getGithubAccessToken() {
 
 export function hasGithubAppSession() {
   return Boolean(readGithubAppSession()?.accessToken);
+}
+
+/**
+ * The connected GitHub account's public identity — login, display name,
+ * avatar. Deliberately returns no token material, so the result is safe
+ * to store in the synced profile.
+ *
+ * Used to fill in a real full name instead of leaving each device to be
+ * named by hand, which is how one browser ended up calling the same
+ * person something different from another.
+ */
+export async function fetchGithubIdentity() {
+  const token = await getGithubAccessToken();
+  if (!token) return null;
+  const res = await fetch('https://api.github.com/user', {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
+  });
+  if (!res.ok) return null;
+  const user = await res.json().catch(() => null);
+  if (!user) return null;
+  return {
+    login: user.login || null,
+    // `name` is the user's chosen display name and is often their full
+    // name; `login` is the handle. Prefer the former, fall back to it.
+    name: user.name || user.login || null,
+    avatarUrl: user.avatar_url || null,
+  };
 }

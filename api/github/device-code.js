@@ -1,19 +1,34 @@
 // The app itself is served from GitHub Pages; this Vercel deployment
 // exists only to run these two functions, because Pages cannot.
-// The dev-server ports must match vite.config.js (port 5273) — they did
-// not, which silently broke GitHub sign-in during local development.
 const ALLOWED_ORIGINS = new Set([
   'https://davidgaisey-otoo.github.io',
-  'http://localhost:5273',
-  'http://127.0.0.1:5273',
-  // Vite falls back to the next free port when 5273 is taken.
-  'http://localhost:5274',
-  'http://127.0.0.1:5274',
 ]);
+
+/**
+ * Local development is allowed on ANY localhost port.
+ *
+ * Pinning exact ports here was a silent failure: the list named 5173
+ * while vite.config.js serves 5273, so GitHub sign-in — and therefore
+ * sync — could never complete during local development, with only an
+ * opaque CORS error to show for it. Vite also falls back to the next
+ * free port when its preferred one is busy, so any fixed list is one
+ * busy port away from breaking again.
+ *
+ * This is safe: the device flow is useless without the user approving
+ * the code on github.com, and anything running on the user's own machine
+ * could call GitHub's API directly anyway — browser CORS is not what
+ * stops it.
+ */
+const LOCAL_ORIGIN = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
+
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  return ALLOWED_ORIGINS.has(origin) || LOCAL_ORIGIN.test(origin);
+}
 
 function cors(req, res) {
   const origin = req.headers.origin;
-  if (ALLOWED_ORIGINS.has(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
+  if (isAllowedOrigin(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -24,7 +39,7 @@ export default async function handler(req, res) {
   cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!ALLOWED_ORIGINS.has(req.headers.origin)) return res.status(403).json({ error: 'Origin not allowed' });
+  if (!isAllowedOrigin(req.headers.origin)) return res.status(403).json({ error: 'Origin not allowed' });
 
   const upstream = await fetch('https://github.com/login/device/code', {
     method: 'POST',

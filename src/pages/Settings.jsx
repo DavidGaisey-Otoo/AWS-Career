@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Bell, Brain, Briefcase, Camera, ClipboardCopy, Database, Download, Eye, EyeOff, Globe2, KeyRound, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon, Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2 } from 'lucide-react';
 import { Github, Linkedin } from '../components/common/BrandIcons.jsx';
 import { BuildStamp } from '../components/common/BuildStamp.jsx';
+import { fetchGithubIdentity, hasGithubAppSession } from '../lib/githubAppAuth.js';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { fireConfetti } from '../components/ui/Confetti.js';
@@ -90,6 +91,31 @@ function ProfileSection() {
   const { profile, updateProfile } = useApp();
   const toast = useToast();
   const fileRef = useRef(null);
+  const [namingFromGithub, setNamingFromGithub] = useState(false);
+
+  /**
+   * Take the full name straight from the connected GitHub account.
+   *
+   * The display name is per-profile and travels with sync, so setting it
+   * once here settles it on every device rather than each browser being
+   * named by hand and drifting apart.
+   */
+  const useGithubName = async () => {
+    setNamingFromGithub(true);
+    try {
+      const identity = await fetchGithubIdentity();
+      if (!identity?.name) {
+        toast.error('GitHub did not return a name. Add one to your GitHub profile, or type it here.');
+        return;
+      }
+      updateProfile({ name: identity.name });
+      toast.success(`Name set to ${identity.name}. Sync will carry it to your other devices.`);
+    } catch (err) {
+      toast.error(err.message || 'Could not read your GitHub profile.');
+    } finally {
+      setNamingFromGithub(false);
+    }
+  };
 
   const onAvatar = (file) => {
     if (!file) return;
@@ -112,7 +138,19 @@ function ProfileSection() {
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
                onChange={(e) => onAvatar(e.target.files?.[0])} />
         <div className="flex-1 w-full grid sm:grid-cols-2 gap-3">
-          <Field label="Display name" value={profile.name} onChange={(v) => updateProfile({ name: v })} wide />
+          <div className="sm:col-span-2 space-y-1.5">
+            <Field label="Display name" value={profile.name} onChange={(v) => updateProfile({ name: v })} wide />
+            {hasGithubAppSession() && (
+              <button
+                onClick={useGithubName}
+                disabled={namingFromGithub}
+                className="text-[11px] font-bold text-muted hover:text-aws-orange inline-flex items-center gap-1.5 disabled:opacity-60"
+              >
+                <Github size={11} />
+                {namingFromGithub ? 'Reading GitHub…' : 'Use my full name from GitHub'}
+              </button>
+            )}
+          </div>
           <Field label="Bio" as="textarea" value={profile.bio || ''} onChange={(v) => updateProfile({ bio: v })} wide />
           <Field label="Country" value={profile.country || 'Ghana'} onChange={(v) => updateProfile({ country: v })} />
           <Field label="Timezone" value={profile.timezone || 'GMT'} onChange={(v) => updateProfile({ timezone: v })} />

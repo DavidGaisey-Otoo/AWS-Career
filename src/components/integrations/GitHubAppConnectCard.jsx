@@ -3,15 +3,17 @@ import { Github } from '../common/BrandIcons.jsx';
 import { useEffect, useState } from 'react';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
-  clearGithubAppSession, hasGithubAppSession, pollGithubDeviceFlow,
-  readGithubAppSession, startGithubDeviceFlow,
+  clearGithubAppSession, fetchGithubIdentity, hasGithubAppSession,
+  pollGithubDeviceFlow, readGithubAppSession, startGithubDeviceFlow,
 } from '../../lib/githubAppAuth.js';
+import { useApp } from '../../context/AppContext.jsx';
 import { pullSnapshot, restoreLocalStorage, setSyncEnabled } from '../../lib/gistSync.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function GitHubAppConnectCard() {
   const toast = useToast();
+  const { profile, updateProfile } = useApp();
   const [connected, setConnected] = useState(() => hasGithubAppSession());
   const [connecting, setConnecting] = useState(false);
   const [code, setCode] = useState('');
@@ -54,6 +56,10 @@ export function GitHubAppConnectCard() {
               toast.success('GitHub connected. Your synced data is restored.');
               setTimeout(() => window.location.reload(), 500);
             } else {
+              // No snapshot to restore, so this device names itself. Take the
+              // full name from the GitHub account rather than leaving a blank
+              // field for each browser to fill in differently.
+              await adoptGithubName();
               toast.success('GitHub connected. Future access tokens renew automatically.');
             }
           } catch (syncError) {
@@ -75,6 +81,20 @@ export function GitHubAppConnectCard() {
       setConnecting(false);
     }
   };
+
+  /**
+   * Use the GitHub account's real name when this device has no name yet.
+   * Never overwrites a name the user has already chosen.
+   */
+  async function adoptGithubName() {
+    try {
+      if (profile?.name && profile.name.trim().length > 1) return;
+      const identity = await fetchGithubIdentity();
+      if (identity?.name) updateProfile({ name: identity.name });
+    } catch {
+      /* naming is a convenience — never fail the connection over it */
+    }
+  }
 
   const copyCode = async () => {
     if (!code || !navigator.clipboard?.writeText) return;
