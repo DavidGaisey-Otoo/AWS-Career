@@ -1,11 +1,9 @@
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  Bell, Brain, Briefcase, Camera, ClipboardCopy, Database, Download, Eye, EyeOff,
-  Github, Globe2, KeyRound, Linkedin, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon,
-  Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2,
-} from 'lucide-react';
+import { Bell, Brain, Briefcase, Camera, ClipboardCopy, Database, Download, Eye, EyeOff, Globe2, KeyRound, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon, Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2 } from 'lucide-react';
+import { Github, Linkedin } from '../components/common/BrandIcons.jsx';
+import { BuildStamp } from '../components/common/BuildStamp.jsx';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { fireConfetti } from '../components/ui/Confetti.js';
@@ -77,6 +75,9 @@ export default function Settings() {
           {section === 'study'         && <StudySection />}
           {section === 'integrations'  && <IntegrationSection />}
           {section === 'data'          && <DataSection />}
+
+          {/* Always visible: lets two open windows be told apart. */}
+          <BuildStamp />
         </motion.div>
       </div>
     </div>
@@ -472,7 +473,7 @@ function GitHubTokenPanel({ currentToken, onSave }) {
               onChange={(e) => setTokenMeta((s) => ({ ...s, expiresAt: e.target.value }))}
               className="bg-[var(--card)] border border-token rounded-md px-2 py-1.5 text-xs focus-ring focus:border-aws-orange"
             />
-            <span className="text-[10px] opacity-60">Pick the date GitHub showed in the "Expires" column. Click Save above to persist.</span>
+            <span className="text-[10px] text-muted">Pick the date GitHub showed in the "Expires" column. Click Save above to persist.</span>
           </div>
         </label>
 

@@ -1,8 +1,12 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "echo 'API-only deployment. The app itself is served from GitHub Pages.'",
+  "outputDirectory": "vercel-static",
+  "framework": null,
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    }
+  ]
 }

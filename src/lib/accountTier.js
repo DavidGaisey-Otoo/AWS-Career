@@ -17,9 +17,50 @@
  * The header status badge + every cost-aware suggestion reads from here.
  */
 
-import { AWS_REGIONS } from '../context/AWSContext.jsx';
+/**
+ * ════════════════════════════════════════════════════════════════════
+ * WHICH AWS FREE PROGRAMME IS THIS ACCOUNT ON?
+ * ════════════════════════════════════════════════════════════════════
+ * AWS replaced the legacy 12-month Free Tier with a six-month,
+ * credits-based Free Plan for accounts created from 15 Jul 2025.
+ *
+ * This distinction is the whole ballgame: an account opened last week is
+ * NOT on a 12-month Free Tier with ~365 days left, it is on a six-month
+ * plan that also ends when the credits run out. Treating a new account as
+ * legacy tells the user they have a year of free EC2 hours they do not
+ * have — which is the most expensive kind of wrong this app can be.
+ *
+ * Account age alone cannot answer this. The CREATION DATE can.
+ */
+export const CREDITS_PROGRAMME_START = new Date('2025-07-15T00:00:00Z').getTime();
+export const FREE_PLAN_MONTHS = 6;
+export const LEGACY_FREE_TIER_MONTHS = 12;
 
-const NEW_ACCOUNT_FLOOR = new Date('2025-07-15T00:00:00Z').getTime();
+/** 'credits-6-month' | 'legacy-12-month' | null when the date is unusable. */
+export function programmeForCreatedAt(createdAt) {
+  const ms = createdAt ? new Date(createdAt).getTime() : NaN;
+  if (!Number.isFinite(ms)) return null;
+  return ms >= CREDITS_PROGRAMME_START ? 'credits-6-month' : 'legacy-12-month';
+}
+
+/** Calendar-accurate plan end date — months, not a 365/183-day approximation. */
+export function planEndsAt(createdAt, programme) {
+  const start = createdAt ? new Date(createdAt) : null;
+  if (!start || Number.isNaN(start.getTime())) return null;
+  const end = new Date(start);
+  const months = programme === 'credits-6-month' ? FREE_PLAN_MONTHS : LEGACY_FREE_TIER_MONTHS;
+  end.setMonth(end.getMonth() + months);
+  return end;
+}
+
+/** Whole days remaining in the plan, floored at 0. Null when undeterminable. */
+export function planDaysLeft(createdAt, programme, now = Date.now()) {
+  const end = planEndsAt(createdAt, programme);
+  if (!end) return null;
+  return Math.max(0, Math.ceil((end.getTime() - now) / 86400000));
+}
+
+const NEW_ACCOUNT_FLOOR = CREDITS_PROGRAMME_START;
 
 export const ACCOUNT_TYPES = {
   A: { id: 'A', label: 'Free Tier Active',  color: 'success',  badge: 'green',
@@ -83,20 +124,53 @@ export function classifyAccount(profile) {
   }
 
   const t = profile.tierInfo || {};
-  // Tier-info from AWSContext detector
-  if (t.freeTier12mActive === true) {
+
+  // WHICH PROGRAMME beats HOW OLD. A two-month-old account created after
+  // 15 Jul 2025 is on the six-month credits plan — it does NOT have ten
+  // months of Free Tier left. Deriving the programme from the stored
+  // creation date means profiles saved before this fix are re-classified
+  // correctly without the user having to re-run Test Connection.
+  //
+  // Caveat, stated because it matters: oldestUserCreatedAt is the first
+  // IAM user, a proxy that can only be LATER than the real account
+  // creation. So an account opened just before the cutoff whose first IAM
+  // user came after it can read as new. That window is days wide, and the
+  // manual override in Account Manager settles it.
+  const programme = t.programme || programmeForCreatedAt(t.oldestUserCreatedAt);
+
+  if (programme === 'credits-6-month') {
+    const daysLeft = t.planDaysLeft ?? planDaysLeft(t.oldestUserCreatedAt, 'credits-6-month');
+    if (daysLeft === 0) {
+      return {
+        type: 'B',
+        meta: ACCOUNT_TYPES.B,
+        daysLeft: 0,
+        reason: 'Six-month AWS Free Plan has ended. Only always-free services are zero-cost now.',
+      };
+    }
     return {
-      type: 'A',
-      meta: ACCOUNT_TYPES.A,
-      daysLeft: t.daysLeftInFreeTier ?? null,
-      reason: `Legacy account ${t.ageDays} days old · ${t.daysLeftInFreeTier} days of Free Tier remaining.`,
+      type: 'C',
+      meta: ACCOUNT_TYPES.C,
+      daysLeft,
+      creditsRemaining: profile.creditsRemaining ?? null,
+      reason: `Account created after AWS's switch to the credits-based Free Plan · six-month plan${daysLeft == null ? '' : ` · ${daysLeft} days remaining`}. No 750-hour Free Tier buckets.`,
     };
   }
-  if (t.freeTier12mActive === false) {
+
+  if (programme === 'legacy-12-month') {
+    const daysLeft = t.daysLeftInFreeTier ?? planDaysLeft(t.oldestUserCreatedAt, 'legacy-12-month');
+    if (daysLeft && daysLeft > 0) {
+      return {
+        type: 'A',
+        meta: ACCOUNT_TYPES.A,
+        daysLeft,
+        reason: `Legacy account ${t.ageDays} days old · ${daysLeft} days of 12-month Free Tier remaining.`,
+      };
+    }
     return {
       type: 'B',
       meta: ACCOUNT_TYPES.B,
-      reason: `Legacy account ${t.ageDays} days old · past 12-month Free Tier window.`,
+      reason: `Legacy account ${t.ageDays} days old · past the 12-month Free Tier window.`,
     };
   }
 
@@ -136,4 +210,3 @@ export function checkServiceCostSafety(service, classification) {
 /**
  * Catalogue of all valid AWS regions (re-exported for convenience).
  */
-export { AWS_REGIONS };

@@ -1,7 +1,14 @@
+// The app itself is served from GitHub Pages; this Vercel deployment
+// exists only to run these two functions, because Pages cannot.
+// The dev-server ports must match vite.config.js (port 5273) — they did
+// not, which silently broke GitHub sign-in during local development.
 const ALLOWED_ORIGINS = new Set([
   'https://davidgaisey-otoo.github.io',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
+  'http://localhost:5273',
+  'http://127.0.0.1:5273',
+  // Vite falls back to the next free port when 5273 is taken.
+  'http://localhost:5274',
+  'http://127.0.0.1:5274',
 ]);
 
 function cors(req, res) {

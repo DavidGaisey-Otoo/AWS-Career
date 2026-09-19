@@ -668,10 +668,18 @@ function TierStatusCard({ profileId }) {
           {/* What this means for your work */}
           <div className="mt-3 rounded-lg border border-token bg-[var(--card)] p-3 text-[11px] leading-relaxed space-y-1">
             <div className="font-extrabold">What this means for your work:</div>
-            {t.tier === 'free' && (
+            {t.tier === 'free' && t.accountType === 'C' && (
+              <>
+                <div>• You are on AWS's <strong>six-month, credits-based Free Plan</strong> — not the legacy 12-month Free Tier.</div>
+                <div>• There are <strong>no 750-hour monthly buckets</strong>. Every eligible service draws down your credit balance instead.</div>
+                <div>• The plan ends when the six months expire <strong>or</strong> the credits run out — whichever comes first.</div>
+                <div>• Set a $5 billing alarm so you never accidentally exceed limits — see Roadmap → Phase 1.</div>
+              </>
+            )}
+            {t.tier === 'free' && t.accountType !== 'C' && (
               <>
                 <div>• Architecture Studio + StepGuide will recommend <strong>Free Tier specs</strong> (t2.micro, db.t2.micro, single-AZ, NAT instance).</div>
-                <div>• Cost estimator will assume <strong>Free Tier credits cover the first 12 months</strong> on eligible services.</div>
+                <div>• Cost estimator will assume the <strong>legacy 12-month Free Tier</strong> covers eligible services.</div>
                 <div>• Set a $5 billing alarm so you never accidentally exceed limits — see Roadmap → Phase 1.</div>
               </>
             )}

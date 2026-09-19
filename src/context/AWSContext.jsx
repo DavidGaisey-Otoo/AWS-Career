@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLocalStorage } from '../hooks/useLocalStorage.js';
 import { STORAGE_KEY } from '../lib/constants.js';
 import { uid } from '../lib/utils.js';
+import { classifyAccount, planDaysLeft, planEndsAt, programmeForCreatedAt } from '../lib/accountTier.js';
 
 const AWSContext = createContext(null);
 
@@ -175,15 +176,29 @@ async function detectTierInfo({ region, creds }) {
     }
 
     const ageDays = Math.floor((Date.now() - oldestDate.getTime()) / 86400000);
-    const freeTier12mActive = ageDays < 365;
-    const daysLeftInFreeTier = freeTier12mActive ? 365 - ageDays : 0;
+
+    // Age alone cannot tell you which programme an account is on. AWS
+    // replaced the 12-month Free Tier with a six-month credits-based Free
+    // Plan for accounts created from 15 Jul 2025, so "younger than a year"
+    // stopped meaning "has Free Tier left" on that date. Deciding from the
+    // creation date instead is what stops a brand-new account being told
+    // it has ~365 days of free EC2 hours it does not have.
+    const programme = programmeForCreatedAt(oldestDate.toISOString());
+    const isLegacy = programme === 'legacy-12-month';
+    const remaining = planDaysLeft(oldestDate.toISOString(), programme);
 
     return {
       accountAlias,
       oldestUserCreatedAt: oldestDate.toISOString(),
       ageDays,
-      freeTier12mActive,
-      daysLeftInFreeTier,
+      programme,
+      planDaysLeft: remaining,
+      planEndsAt: planEndsAt(oldestDate.toISOString(), programme)?.toISOString() ?? null,
+      // Legacy fields kept so older saved profiles and any remaining
+      // readers stay coherent — but they are only meaningful for accounts
+      // actually on the 12-month programme.
+      freeTier12mActive: isLegacy ? remaining > 0 : false,
+      daysLeftInFreeTier: isLegacy ? remaining : 0,
       source: 'heuristic via oldest IAM user CreateDate',
       detectedAt: new Date().toISOString(),
     };
@@ -610,43 +625,29 @@ export function AWSProvider({ children }) {
     setState(DEFAULT_STATE);
   }, [setState]);
 
-  // Derived "effective tier" — combines detection + manual override + profile choice
+  /**
+   * Derived "effective tier".
+   *
+   * This used to be a second, parallel copy of the classification rules —
+   * which meant the badge and the cost warnings could disagree about the
+   * same account, and a fix to one silently missed the other. It now
+   * delegates to classifyAccount() and only maps the result into the
+   * { tier: free|paid|unknown } shape its callers expect.
+   *
+   * classifyAccount is the single source of truth. Add rules there.
+   */
   const effectiveTier = useMemo(() => {
-    const p = activeProfile;
-    if (!p) return { tier: 'unknown', reason: 'No active profile.' };
-    if (p.accountPlan === 'free-6-month') {
-      const expires = p.planExpiresAt ? new Date(p.planExpiresAt).getTime() : null;
-      const daysLeft = expires == null || Number.isNaN(expires)
-        ? null
-        : Math.max(0, Math.ceil((expires - Date.now()) / 86400000));
-      return {
-        tier: daysLeft === 0 ? 'paid' : 'free',
-        reason: daysLeft === 0
-          ? 'AWS Free Plan period has ended. Confirm closure or upgrade status in AWS before deploying.'
-          : `AWS Free Plan verified manually${daysLeft == null ? '' : ` — ${daysLeft} days remaining`}. Credits and service eligibility must still be checked in AWS.`,
-        daysLeft,
-        creditsRemaining: p.creditsRemaining,
-        planType: 'free-6-month',
-      };
-    }
-    if (p.accountPlan === 'paid') return { tier: 'paid', reason: 'AWS Paid Plan recorded for this profile.' };
-    if (p.tierOverride === 'free') return { tier: 'free', reason: 'Manually set to Free Tier.' };
-    if (p.tierOverride === 'paid') return { tier: 'paid', reason: 'Manually set to Paid (past Free Tier).' };
-    if (p.tierInfo?.freeTier12mActive === true) {
-      return {
-        tier: 'free',
-        reason: `Detected — account is ${p.tierInfo.ageDays} days old, ${p.tierInfo.daysLeftInFreeTier} days left in 12-month Free Tier.`,
-        daysLeft: p.tierInfo.daysLeftInFreeTier,
-      };
-    }
-    if (p.tierInfo?.freeTier12mActive === false) {
-      return {
-        tier: 'paid',
-        reason: `Detected — account is ${p.tierInfo.ageDays} days old (past 12-month Free Tier window).`,
-      };
-    }
-    if (!p.connected) return { tier: 'unknown', reason: 'Account not linked yet.' };
-    return { tier: 'unknown', reason: 'Could not auto-detect — set manually below.' };
+    const c = classifyAccount(activeProfile);
+    const TIER_FOR_TYPE = { A: 'free', B: 'paid', C: 'free', UNKNOWN: 'unknown' };
+    return {
+      tier: TIER_FOR_TYPE[c.type] || 'unknown',
+      reason: c.reason,
+      daysLeft: c.daysLeft ?? null,
+      creditsRemaining: c.creditsRemaining ?? null,
+      // Type C is the credits-based six-month plan; A/B are the legacy tier.
+      planType: c.type === 'C' ? 'free-6-month' : null,
+      accountType: c.type,
+    };
   }, [activeProfile]);
 
   const value = useMemo(() => ({
