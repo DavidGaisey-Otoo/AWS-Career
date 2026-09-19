@@ -38,13 +38,31 @@ const CACHE_KEY = `${STORAGE_KEY}::aws-news-cache`;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;   // AWS ships daily; six hours is plenty
 const MAX_ITEMS = 40;
 
+/**
+ * Our own endpoint comes first.
+ *
+ * The public CORS proxies this used to rely on have both stopped working
+ * for this feed — corsproxy.io answers 403 and allorigins 520 — so the
+ * page quietly fell back to its curated list and looked fine while being
+ * months out of date. Depending on strangers' infrastructure for a core
+ * feature was the mistake; the Vercel deployment that already runs the
+ * GitHub functions can fetch the feed itself.
+ *
+ * The public proxies stay on as a last resort, because a feed that is
+ * merely unreachable is better than one that is unreachable for two
+ * reasons at once.
+ */
+const OWN_API = 'https://aws-career.vercel.app/api/aws-news';
+
 const PUBLIC_PROXIES = [
   (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
 ];
 
 function proxyChain() {
-  const chain = [...PUBLIC_PROXIES];
+  // `() => OWN_API` ignores the target because that endpoint serves this
+  // one feed and nothing else — it cannot be used as an open proxy.
+  const chain = [() => OWN_API, ...PUBLIC_PROXIES];
   const custom = getCustomProxy();
   if (custom) chain.unshift((url) => `${custom}${encodeURIComponent(url)}`);
   return chain;
