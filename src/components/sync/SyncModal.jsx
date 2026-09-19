@@ -24,6 +24,7 @@ import {
 } from '../../lib/gistSync.js';
 import { hasGithubAppSession } from '../../lib/githubAppAuth.js';
 import { cn } from '../../lib/utils.js';
+import { ConnectGithubInline } from './ConnectGithubInline.jsx';
 
 export function SyncModal() {
   const {
@@ -150,22 +151,29 @@ export function SyncModal() {
 
             <SetupSteps hasToken={hasToken} />
 
+            {/*
+              Without a GitHub session the only thing worth offering is the
+              connection itself, done here rather than pointed at. Once
+              connected, the normal "turn on sync" control takes over.
+            */}
+            {!hasToken ? (
+              <ConnectGithubInline label="Connect GitHub and turn on sync" />
+            ) : (
             <button
               onClick={() => withBusy('toggle', enable)}
-              disabled={busy || !hasToken}
+              disabled={busy}
               className={cn(
                 'w-full btn btn-primary !text-[13px] !py-3 tap-44 gap-2',
-                (busy || !hasToken) && 'opacity-50 cursor-not-allowed'
+                busy && 'opacity-50 cursor-not-allowed'
               )}
             >
               {busy ? (
                 <><Loader2 size={14} className="animate-spin" /> Setting up…</>
-              ) : !hasToken ? (
-                <>Connect GitHub first</>
               ) : (
                 <><Cloud size={14} /> Turn on sync</>
               )}
             </button>
+            )}
           </div>
         )}
 
@@ -324,7 +332,7 @@ function ContinueOnPhoneCard() {
       </div>
       <ol className="text-[11.5px] leading-relaxed space-y-1 pl-1">
         <li><strong>1.</strong> Open the app URL on your other device.</li>
-        <li><strong>2.</strong> Settings → Integrations → <strong>Connect GitHub</strong> and approve that browser once.</li>
+        <li><strong>2.</strong> Choose <strong>Restore my account from GitHub</strong> on the welcome screen — or press the sync chip in the header — and approve the code once.</li>
         <li><strong>3.</strong> Your data restores automatically and the app reloads. No separate sync step.</li>
       </ol>
     </div>
