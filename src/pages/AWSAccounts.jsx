@@ -621,9 +621,16 @@ function TierStatusCard({ profileId }) {
   if (!profile?.connected) return null;
 
   const t = effectiveTier;
+  // The credits-based Free Plan and the legacy 12-month Free Tier are both
+  // "free", but they are not the same thing and must not share a label.
+  // Calling a credits account "FREE TIER ACTIVE" contradicted the very
+  // next line of this panel, which correctly said it has no 750-hour
+  // buckets — and implied monthly allowances that do not exist.
+  const isCredits = t.accountType === 'C';
   const tone =
-    t.tier === 'free' ? { border: 'border-success/40', bg: 'bg-success/5', text: 'text-success', label: 'FREE TIER ACTIVE', icon: '🟢' }
-    : t.tier === 'paid' ? { border: 'border-warning/40', bg: 'bg-warning/5', text: 'text-warning', label: 'PAID — PAST 12-MONTH FREE TIER', icon: '🟡' }
+    isCredits ? { border: 'border-electric/40', bg: 'bg-electric/5', text: 'text-electric', label: 'FREE PLAN — CREDITS', icon: '🔵' }
+    : t.tier === 'free' ? { border: 'border-success/40', bg: 'bg-success/5', text: 'text-success', label: 'FREE TIER ACTIVE (LEGACY 12-MONTH)', icon: '🟢' }
+    : t.tier === 'paid' ? { border: 'border-warning/40', bg: 'bg-warning/5', text: 'text-warning', label: 'PAID — FREE ALLOWANCE ENDED', icon: '🟡' }
     : { border: 'border-muted/40', bg: 'bg-[var(--card-2)]/30', text: 'text-muted', label: 'TIER UNKNOWN', icon: '⚪' };
 
   const info = profile.tierInfo;
@@ -642,9 +649,15 @@ function TierStatusCard({ profileId }) {
                 alias: {info.accountAlias}
               </span>
             )}
-            {t.tier === 'free' && t.daysLeft != null && (
-              <span className="chip border border-success/40 bg-success/10 text-success text-[10px] font-bold">
-                {t.daysLeft} days left in Free Tier
+            {t.daysLeft != null && (
+              <span className={cn('chip border text-[10px] font-bold',
+                isCredits ? 'border-electric/40 bg-electric/10 text-electric' : 'border-success/40 bg-success/10 text-success')}>
+                {t.daysLeft} days left on {isCredits ? 'the Free Plan' : 'Free Tier'}
+              </span>
+            )}
+            {isCredits && t.creditsRemaining != null && (
+              <span className="chip border border-electric/40 bg-electric/10 text-electric text-[10px] font-bold">
+                ${Number(t.creditsRemaining).toFixed(2)} credits left
               </span>
             )}
           </div>
