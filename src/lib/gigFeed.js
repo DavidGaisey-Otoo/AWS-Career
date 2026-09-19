@@ -44,8 +44,24 @@ export function setCustomProxy(prefix) {
   } catch { /* quota */ }
 }
 
-function proxyChain() {
+/**
+ * Our own endpoint, which fetches an allowlisted source server-side.
+ *
+ * The two public proxies below have both broken for these sources —
+ * corsproxy.io answers 403, allorigins 520 — so Himalayas and We Work
+ * Remotely were silently returning nothing. The feed still looked like
+ * it worked, just with a third fewer jobs and no indication why.
+ *
+ * Both answer 200 to a plain server-side request, so the Vercel
+ * deployment that already runs the GitHub functions can fetch them. It
+ * takes a source NAME, never a URL, so it cannot be used as an open
+ * proxy. The public proxies stay behind it as a last resort.
+ */
+const OWN_FEED_API = 'https://aws-career.vercel.app/api/feed?source=';
+
+function proxyChain(sourceId) {
   const chain = [...PUBLIC_PROXIES];
+  if (sourceId) chain.unshift(() => `${OWN_FEED_API}${encodeURIComponent(sourceId)}`);
   const custom = getCustomProxy();
   if (custom) {
     // Custom proxy is "prefix + encoded url", tried first
@@ -168,7 +184,7 @@ export async function fetchAllGigs({ force = false } = {}) {
   await Promise.all(SOURCES.map(async (src) => {
     try {
       const urls = src.needsProxy
-        ? proxyChain().map((wrap) => wrap(src.url))
+        ? proxyChain(src.id).map((wrap) => wrap(src.url))
         : [src.url];
 
       let lastErr = null;
