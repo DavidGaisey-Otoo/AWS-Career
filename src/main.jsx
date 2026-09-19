@@ -5,6 +5,16 @@ import App from './App.jsx';
 import './index.css';
 import { isStaleChunkError, recoverStaleChunk } from './lib/lazyWithRecovery.js';
 
+// Development only: keep a copy of this browser's data on disk, because
+// localStorage on a dev origin has no other backup. Tree-shaken out of
+// production builds, and its endpoint only exists under `npm run dev`.
+if (import.meta.env.DEV) {
+  import('./lib/devBackup.js')
+    .then(({ captureDevBackup }) => import('./lib/constants.js')
+      .then(({ STORAGE_KEY }) => captureDevBackup(STORAGE_KEY)))
+    .catch(() => { /* never block startup for a backup helper */ });
+}
+
 // Non-route dynamic imports (PDF export, search data, AWS SDK actions) can
 // encounter the same old-tab/new-deploy mismatch. Recover those globally too.
 window.addEventListener('unhandledrejection', (event) => {

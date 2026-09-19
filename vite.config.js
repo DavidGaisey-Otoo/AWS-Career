@@ -40,10 +40,63 @@ const BUILD_STAMP = {
         : 'local',
 };
 
+/**
+ * Receives the browser's localStorage snapshot and writes it to disk.
+ *
+ * `apply: 'serve'` means this endpoint exists only under `npm run dev`.
+ * It is not part of any build and cannot reach a deployed site.
+ *
+ * It exists because localStorage on a dev-server origin is a fragile
+ * home for real work — one cleared browser and it is gone, with no copy
+ * anywhere. The app's Export button does the same job, but only if
+ * someone remembers to press it.
+ */
+function localBackupPlugin() {
+  return {
+    name: 'local-backup',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__local-backup', (req, res, next) => {
+        if (req.method !== 'POST') return next();
+
+        const chunks = [];
+        req.on('data', (c) => chunks.push(c));
+        req.on('end', async () => {
+          try {
+            const body = Buffer.concat(chunks).toString('utf8');
+            const parsed = JSON.parse(body);
+            const { mkdir, writeFile } = await import('node:fs/promises');
+            const path = await import('node:path');
+
+            const dir = path.resolve(process.cwd(), 'local-backups');
+            await mkdir(dir, { recursive: true });
+            const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const origin = String(parsed.origin || 'unknown').replace(/[^a-z0-9]+/gi, '-');
+            const file = path.join(dir, `backup-${origin}-${stamp}.json`);
+            await writeFile(file, JSON.stringify(parsed, null, 2), 'utf8');
+
+            // Also keep a stable "latest" copy that is easy to find.
+            await writeFile(path.join(dir, 'latest.json'), JSON.stringify(parsed, null, 2), 'utf8');
+
+            server.config.logger.info(
+              `[local-backup] ${parsed.keyCount} keys from ${parsed.origin} → local-backups/${path.basename(file)}`
+            );
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true, file: `local-backups/${path.basename(file)}` }));
+          } catch (err) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, error: String(err?.message || err) }));
+          }
+        });
+      });
+    },
+  };
+}
+
 export default defineConfig({
   base,
   define: { __BUILD_STAMP__: JSON.stringify(BUILD_STAMP) },
-  plugins: [react()],
+  plugins: [react(), localBackupPlugin()],
   server: {
     port: 5273,
     strictPort: false,

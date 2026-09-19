@@ -172,16 +172,23 @@ export function AppProvider({ children }) {
   }, [setProfile, setNotifications, setPrefs]);
 
   // ---------- export / import / storage usage ----------
+  /**
+   * localStorage holds strings. Schema 1 parsed each value when it could,
+   * and import then JSON.stringify'd everything back — so any key whose
+   * value was NOT JSON (a bare `project`, a device id, an OAuth client
+   * id) came back wrapped in literal quotes. Silent corruption of exactly
+   * the keys that identify a device or a Google client.
+   *
+   * Schema 2 stores the raw string verbatim, which is lossless because it
+   * is what localStorage actually contains.
+   */
   const exportAll = useCallback(() => {
     const out = {};
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith(STORAGE_KEY)) {
-        try { out[k] = JSON.parse(localStorage.getItem(k)); }
-        catch { out[k] = localStorage.getItem(k); }
-      }
+      if (k && k.startsWith(STORAGE_KEY)) out[k] = localStorage.getItem(k);
     }
-    return JSON.stringify({ exportedAt: new Date().toISOString(), schemaVersion: 1, data: out }, null, 2);
+    return JSON.stringify({ exportedAt: new Date().toISOString(), schemaVersion: 2, data: out }, null, 2);
   }, []);
 
   const importAll = useCallback((jsonString) => {
@@ -189,10 +196,16 @@ export function AppProvider({ children }) {
     try { parsed = JSON.parse(jsonString); }
     catch { throw new Error('Invalid JSON'); }
     if (!parsed?.data) throw new Error('Missing "data" key in backup');
+
+    const schema = Number(parsed.schemaVersion) || 1;
     for (const [k, v] of Object.entries(parsed.data)) {
       if (!k.startsWith(STORAGE_KEY)) continue;
-      try { localStorage.setItem(k, JSON.stringify(v)); }
-      catch { /* skip */ }
+      // Schema 2: already the exact string localStorage held.
+      // Schema 1: a string means it was stored raw; anything else was
+      // parsed on the way out and has to be re-encoded.
+      const raw = schema >= 2 || typeof v === 'string' ? String(v) : JSON.stringify(v);
+      try { localStorage.setItem(k, raw); }
+      catch { /* quota or blocked — skip this key rather than abort */ }
     }
     // Force a full reload so all providers re-hydrate.
     setTimeout(() => location.reload(), 100);
