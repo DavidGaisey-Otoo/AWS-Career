@@ -814,6 +814,27 @@ export function generateCloudFormation(services, opts = {}) {
     };
   }
 
+  // A template that references a parameter it never declares fails in
+  // CloudFormation with "Unresolved resource dependencies" — which is a
+  // worse outcome than declaring the service unsupported, because the
+  // generator claims it is deployable right up until AWS rejects it.
+  if (resources.SiteCertificate || resources.HostedZone) {
+    params.DomainName = {
+      Type: 'String',
+      Description: 'The domain this site is served from, without a protocol — for example yourstudio.co.uk',
+      AllowedPattern: '^(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(\.[a-zA-Z0-9-]{1,63})+$',
+      ConstraintDescription: 'Enter a bare domain such as yourstudio.co.uk — no https:// and no trailing slash.',
+    };
+  }
+  if (resources.NotificationIdentity) {
+    params.NotifyEmail = {
+      Type: 'String',
+      Description: 'Where contact-form enquiries are delivered. AWS sends this address a verification link first.',
+      AllowedPattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$',
+      ConstraintDescription: 'Enter a single email address.',
+    };
+  }
+
   // AWS Training Lab: an AWS-native lease stops EC2 even if the browser is
   // closed. This limits compute runtime; it is not a billing cap and does not
   // delete storage, snapshots, backups, logs, or the stack.
@@ -917,6 +938,58 @@ export function generateCloudFormation(services, opts = {}) {
 }
 
 const CFN_PER_SERVICE = {
+  // ─── Custom domain, certificate and outbound email ───────────────
+  //
+  // These three were designed but never generated, so a brief naming a
+  // domain produced a template that could not serve it. Costs differ and
+  // the templates say so rather than leaving it to be discovered on a
+  // bill: ACM public certificates are free, SES is free at this volume,
+  // and a Route 53 hosted zone is $0.50 per month — the only unavoidable
+  // charge here, and avoidable entirely by leaving DNS where it is.
+  acm: () => ({
+    SiteCertificate: {
+      Type: 'AWS::CertificateManager::Certificate',
+      Metadata: {
+        Cost: 'Public certificates are free. There is no charge for issuing or renewing.',
+        Region: 'A certificate used by CloudFront MUST be created in us-east-1, whatever region the rest of the stack uses. Deploy this resource there if the site sits behind CloudFront.',
+        Validation: 'DNS validation writes a CNAME. If Route 53 hosts the zone it is automatic; otherwise add the record shown in the ACM console at your registrar.',
+      },
+      Properties: {
+        DomainName: { Ref: 'DomainName' },
+        SubjectAlternativeNames: [{ 'Fn::Sub': 'www.${DomainName}' }],
+        ValidationMethod: 'DNS',
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+  route53: () => ({
+    HostedZone: {
+      Type: 'AWS::Route53::HostedZone',
+      Metadata: {
+        Cost: 'A hosted zone costs $0.50 per month, plus $0.40 per million queries. This is the only charge in a static-site design that no free tier covers.',
+        Alternative: 'Not required to use your own domain. Leave DNS at your existing registrar and add the CloudFront CNAME there instead, and this stack costs nothing.',
+      },
+      Properties: {
+        Name: { Ref: 'DomainName' },
+        HostedZoneConfig: {
+          Comment: { 'Fn::Sub': 'DNS for ${ProjectName}' },
+        },
+      },
+    },
+  }),
+  ses: () => ({
+    NotificationIdentity: {
+      Type: 'AWS::SES::EmailIdentity',
+      Metadata: {
+        Cost: 'Creating an identity is free. Sending is $0.10 per 1,000 emails beyond the free allowance — a contact form costs pennies a year.',
+        Verification: 'AWS emails this address a confirmation link. Nothing can be sent from it until that link is clicked.',
+        Sandbox: 'A new account is in the SES sandbox and can only send TO verified addresses. For a contact form that delivers to your own inbox that is sufficient; sending to the public requires production access.',
+      },
+      Properties: {
+        EmailIdentity: { Ref: 'NotifyEmail' },
+      },
+    },
+  }),
   vpc: () => ({
     Vpc: {
       Type: 'AWS::EC2::VPC',

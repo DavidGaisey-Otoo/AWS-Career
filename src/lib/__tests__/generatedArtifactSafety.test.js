@@ -5,6 +5,42 @@ function assert(condition, message) { if (!condition) throw new Error(message); 
 const service = (id, label = id.toUpperCase()) => ({ id, label, specs: {} });
 
 const checks = [
+  ['a generated template declares every parameter it references', () => {
+    // A template referencing an undeclared parameter fails in
+    // CloudFormation with "Unresolved resource dependencies" — worse than
+    // declaring the service unsupported, because the generator calls it
+    // deployable right until AWS rejects it.
+    const ids = ['s3', 'cloudfront', 'route53', 'acm', 'ses', 'lambda', 'apigw', 'dynamodb', 'vpc', 'rds'];
+    const out = generateCloudFormation(ids.map((id) => service(id)), { mode: 'prod' });
+    const block = (out.code.match(/Parameters:[\s\S]*?\nResources:/) || [''])[0];
+    const declared = new Set((block.match(/^ {2}(\w+):/gm) || []).map((s) => s.trim().replace(':', '')));
+    const resourceNames = new Set((out.code.match(/^ {2}(\w+):\n {4}Type: "?AWS::/gm) || [])
+      .map((s) => s.trim().split(':')[0]));
+    for (const ref of new Set([...out.code.matchAll(/Ref: (\w+)/g)].map((m) => m[1]))) {
+      if (ref.startsWith('AWS::')) continue;
+      assert(declared.has(ref) || resourceNames.has(ref),
+        ref + ' is referenced but never declared as a parameter or resource');
+    }
+  }],
+  ['a custom domain, certificate and email all generate', () => {
+    for (const id of ['route53', 'acm', 'ses']) {
+      const out = generateCloudFormation([service(id)], { mode: 'prod' });
+      assert(out.coverage.uncovered.length === 0, id + ' is still uncovered');
+      assert(/AWS::/.test(out.code), id + ' produced no resource');
+    }
+  }],
+  ['the one resource that costs money says so in the template', () => {
+    // A hosted zone is $0.50/month and no free tier covers it. Someone
+    // who asked for zero cost must not find that out on a bill.
+    const out = generateCloudFormation([service('route53')], { mode: 'prod' }).code;
+    assert(/0\.50/.test(out), 'the hosted zone charge is not stated in the template');
+    assert(/registrar/i.test(out), 'the free alternative to a hosted zone is not offered');
+  }],
+  ['a free resource is not described as if it cost something', () => {
+    const out = generateCloudFormation([service('acm')], { mode: 'prod' }).code;
+    assert(/free/i.test(out), 'ACM certificates are free and the template does not say so');
+    assert(/us-east-1/.test(out), 'the CloudFront certificate region constraint is not stated');
+  }],
   ['a client deliverable never names the tool that made it', () => {
     // These files are handed to clients. A template announcing it came
     // from someone's career-training app is not a deliverable.
