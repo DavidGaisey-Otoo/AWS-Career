@@ -31,7 +31,8 @@ import { listSolutions } from '../lib/solutionStore.js';
 import {
   artifactDate, artifactTitle, buildWorkspace, pool, WORKSPACE_KINDS,
 } from '../lib/projectWorkspace.js';
-import { ASSESSMENT_DOCUMENTS, COMPLETED_CASE_STUDIES } from '../data/completedCaseStudies.js';
+import { COMPLETED_CASE_STUDIES } from '../data/completedCaseStudies.js';
+import { MY_DOCUMENTS, MY_PROJECTS } from '../data/myWork.js';
 import { PROJECTS } from '../data/projects.js';
 import { cn } from '../lib/utils.js';
 
@@ -103,11 +104,11 @@ export default function Workspace() {
     solutions: listSolutions() || [],
     // Work already recorded in the app but living only on the documents
     // page, so the workspace reported nothing while real work existed.
-    caseStudies: COMPLETED_CASE_STUDIES,
+    caseStudies: [...COMPLETED_CASE_STUDIES, ...MY_PROJECTS],
     proposals: freelance?.state?.proposals || [],
     emails: earn?.state?.emails || [],
     portfolio: portfolioEntries,
-    documents: [...(earn?.state?.deliveries || []), ...ASSESSMENT_DOCUMENTS],
+    documents: [...(earn?.state?.deliveries || []), ...MY_DOCUMENTS],
     decks: earn?.state?.decks || [],
     contracts: earn?.state?.contracts || [],
     invoices: freelance?.state?.invoices || [],
