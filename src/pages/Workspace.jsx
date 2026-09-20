@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 import {
   Boxes, FileText, FolderOpen, Layers, Mail, Receipt, ScrollText,
   Presentation as Deck, Network, FileCode, ClipboardList, Search,
-  BookOpen, Inbox, ChevronRight, HelpCircle,
+  BookOpen, Inbox, ChevronRight, HelpCircle, Check, Copy,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
@@ -65,6 +65,43 @@ const linkFor = (item, kind) => {
   if (kind === 'portfolio' && item?.id) return `/portfolio/${item.id}`;
   return KIND_META[kind]?.to || '/';
 };
+
+/**
+ * The name to reuse.
+ *
+ * Artifacts are gathered by an explicit projectId first and by a matching
+ * title second. Most tools in this app write a title and no id, so in
+ * practice the title is what decides whether a new proposal or invoice
+ * lands in this container or sits on its own in "not linked to a
+ * project". That makes the exact wording worth handing over, rather than
+ * leaving someone to retype it and wonder why it did not appear.
+ */
+function NameToReuse({ title }) {
+  const [copied, setCopied] = useState(false);
+  if (!title) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-token bg-[var(--card-2)] px-2.5 py-1.5">
+      <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted">Name to reuse</span>
+      <code className="text-[11.5px] font-bold min-w-0 break-all">{title}</code>
+      <button
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(title);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1800);
+          } catch { setCopied(false); }
+        }}
+        className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-muted hover:text-aws-orange transition"
+      >
+        {copied ? <Check size={11} /> : <Copy size={11} />}{copied ? 'Copied' : 'Copy'}
+      </button>
+      <p className="basis-full text-[10.5px] text-muted">
+        Give a new proposal, email, invoice or solution this exact name and it lands in this
+        container by itself. A different name starts a separate project.
+      </p>
+    </div>
+  );
+}
 
 const dateLabel = (value) => {
   if (!value) return null;
@@ -296,6 +333,7 @@ function WorkspaceInner() {
                   {open.services.length > 0 && <span>{open.services.join(' · ')}</span>}
                   <span>{open.artifactCount} item{open.artifactCount === 1 ? '' : 's'}</span>
                 </div>
+                <NameToReuse title={open.title} />
                 <div className="inline-flex rounded-xl border border-token overflow-hidden mt-3">
                   {[['contents', 'Everything in this job'], ['intake', 'Ask the client']].map(([id, label]) => (
                     <button key={id} onClick={() => setTab(id)}

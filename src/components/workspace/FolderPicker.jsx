@@ -76,16 +76,23 @@ export function FolderPicker({ compact = false, expectedFolder = 'AWS-Career-Doc
               </span>
             )}
           </div>
-          {/* The dialog opens at Downloads and a Desktop with a hundred
-              items on it is no easier to search than a filing cabinet.
-              Every Windows and macOS folder dialog accepts a typed path,
-              which is the reliable way in. */}
+          {/* Two things about this dialog trip people up every time, and
+              neither is obvious from inside it. It lists only folders, so
+              a folder of documents looks empty and reads as a failure. And
+              it opens at Downloads, which is rarely where anything is. */}
           {!ready && (
-            <p className="text-[10.5px] text-muted mt-2">
-              Can't find it in the dialog? It opens at Downloads. Paste the full path
-              into the <strong className="text-current">Folder:</strong> box at the bottom instead
-              of browsing — or pick one folder, then the other; they add up.
-            </p>
+            <div className="text-[10.5px] text-muted mt-2 space-y-1">
+              <p>
+                <strong className="text-current">The dialog will look empty — that is normal.</strong>{' '}
+                It lists folders only, never files, so a folder full of documents shows nothing at all.
+                Open the folder, check its name is in the <strong className="text-current">Folder:</strong> box,
+                and press Upload anyway.
+              </p>
+              <p>
+                It opens at Downloads. You can paste a full path into that same box instead of
+                browsing — or pick one folder, then another; they add up.
+              </p>
+            </div>
           )}
           {ready && (
             <p className="text-[10.5px] text-muted mt-2">
