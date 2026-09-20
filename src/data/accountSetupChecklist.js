@@ -32,7 +32,7 @@ export const ACCOUNT_SETUP_CHECKLIST = [
     id: 'budgets-set', label: 'Zero-spend and $2 budget alerts created', category: 'Cost', severity: 'high', icon: '📊',
     why: 'Budgets provide early warnings, but they do not stop services or cap spending. Use both a near-zero alert and a project ceiling.',
     howTo: ['Billing and Cost Management → Budgets → Create budget', 'Create template: Zero spend budget', 'Create monthly cost budget: $2 USD', 'Send actual and forecast alerts to the lab email', 'Confirm the notification email'],
-    cliVerify: 'aws budgets describe-budgets --account-id 525426877687 --query "Budgets[].BudgetName"',
+    cliVerify: 'aws budgets describe-budgets --account-id $(aws sts get-caller-identity --query Account --output text) --query "Budgets[].BudgetName"',
     docsUrl: 'https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-create.html',
   },
   {

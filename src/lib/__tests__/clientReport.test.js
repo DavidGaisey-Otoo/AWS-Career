@@ -73,7 +73,7 @@ export function runClientReportTests() {
   });
 
   test('the scanner finds identifiers that must not travel', () => {
-    const text = 'Account: 851725590283 owned by someone@example.com, key AKIAIOSFODNN7EXAMPLE, host 10.0.4.19.';
+    const text = 'Account: 123456789012 owned by someone@example.com, key AKIAIOSFODNN7EXAMPLE, host 10.0.4.19.';
     const types = scanForSecrets(text).map((f) => f.type);
     for (const expected of ['AWS account number', 'AWS access key id', 'email address', 'IP address']) {
       assert(types.includes(expected), 'missed: ' + expected);
@@ -81,9 +81,9 @@ export function runClientReportTests() {
   });
 
   test('the scanner never prints the thing it is warning about', () => {
-    const findings = scanForSecrets('Account 851725590283 and mail dave@example.com');
+    const findings = scanForSecrets('Account 123456789012 and mail dave@example.com');
     for (const f of findings) {
-      assert(!/851725590283/.test(f.sample), 'the account number was printed in full');
+      assert(!/123456789012/.test(f.sample), 'the account number was printed in full');
       assert(!/dave@example\.com/.test(f.sample), 'the address was printed in full');
       assert(/\*/.test(f.sample), 'nothing was masked: ' + f.sample);
     }
