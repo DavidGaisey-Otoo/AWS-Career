@@ -108,6 +108,8 @@ export function classifyDocument(doc = {}) {
   return { clientSafe: true, ruleId: null, reason: null };
 }
 
+import { assumptionText, readableList, unsupportedText } from './readinessText.js';
+
 const list = (project, kind) => project?.artifacts?.[kind] || [];
 
 /**
@@ -136,19 +138,11 @@ export function auditForClient(project = {}) {
         detail: 'It has not been reviewed as client-ready. Sending it as finished work overstates it.',
       });
     }
-    for (const assumption of solution.readiness?.assumptions || []) {
-      findings.push({
-        level: 'warn',
-        message: 'An assumption has not been confirmed',
-        detail: assumption,
-      });
+    for (const detail of readableList(solution.readiness?.assumptions, assumptionText)) {
+      findings.push({ level: 'warn', message: 'An assumption has not been confirmed', detail });
     }
-    for (const claim of solution.readiness?.unsupported || []) {
-      findings.push({
-        level: 'block',
-        message: 'A claim is not supported by the evidence',
-        detail: claim,
-      });
+    for (const detail of readableList(solution.readiness?.unsupported, unsupportedText)) {
+      findings.push({ level: 'block', message: 'A claim is not supported by the evidence', detail });
     }
   }
 
@@ -241,7 +235,7 @@ export function buildClientReport(project = {}, options = {}) {
   }
 
   // ── Assumptions, stated rather than buried ──
-  const assumptions = solution?.readiness?.assumptions || [];
+  const assumptions = readableList(solution?.readiness?.assumptions, assumptionText);
   if (assumptions.length) {
     parts.push(heading('Assumptions'));
     parts.push('This work depends on the following being true. Please confirm or correct them.\n');

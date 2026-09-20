@@ -142,6 +142,50 @@ export function runClientReportTests() {
       'a report with nothing behind it was not questioned');
   });
 
+  test('a structured assumption renders as its sentence, never as an object', () => {
+    // assessDeliveryReadiness emits { id, statement, status, source }. The
+    // report rendered the record, so a client document listed seven
+    // assumptions reading "[object Object]".
+    const project = { ...PROJECT, artifacts: { ...PROJECT.artifacts,
+      solution: [{ readiness: { classification: 'review-required', assumptions: [
+        { id: 'assumption-1', statement: 'No confirmed answer was provided for: which domain?', status: 'needs-client-confirmation' },
+      ], unsupported: [] } }] } };
+    const body = buildClientReport(project, { author: 'D' }).markdown;
+    assert(!/\[object Object\]/.test(body), 'an object leaked into the client document');
+    assert(/which domain/.test(body), 'the assumption text was lost: ' + body.slice(0, 200));
+    const warn = auditForClient(project).find((f) => /assumption/i.test(f.message));
+    assert(!/\[object Object\]/.test(String(warn.detail)), 'an object leaked into the audit');
+    assert(/which domain/.test(warn.detail), 'the audit lost the assumption text');
+  });
+
+  test('an unsupported claim names the service and the reason', () => {
+    const project = { ...PROJECT, artifacts: { ...PROJECT.artifacts,
+      solution: [{ readiness: { classification: 'review-required', assumptions: [], unsupported: [
+        { serviceId: 'route53', reason: 'no verified implementation for this service' },
+      ] } }] } };
+    const block = auditForClient(project).find((f) => /not supported/i.test(f.message));
+    assert(!/\[object Object\]/.test(String(block.detail)), 'an object leaked into the audit');
+    assert(/route53/.test(block.detail) && /verified implementation/.test(block.detail),
+      'the claim lost its service or its reason: ' + block.detail);
+  });
+
+  test('older records holding plain strings still work', () => {
+    const project = { ...PROJECT, artifacts: { ...PROJECT.artifacts,
+      solution: [{ readiness: { classification: 'review-required', assumptions: ['The client owns the domain'], unsupported: [] } }] } };
+    const body = buildClientReport(project, { author: 'D' }).markdown;
+    assert(/client owns the domain/.test(body), 'a plain-string assumption was dropped');
+  });
+
+  test('an unreadable entry is dropped rather than printed', () => {
+    const project = { ...PROJECT, artifacts: { ...PROJECT.artifacts,
+      solution: [{ readiness: { classification: 'review-required', assumptions: [{}, null, '   '], unsupported: [] } }] } };
+    const body = buildClientReport(project, { author: 'D' }).markdown;
+    assert(!/\[object Object\]/.test(body), 'an unreadable entry was printed');
+    assert(!/^- *$/m.test(body), 'an empty bullet was emitted');
+    assert(!auditForClient(project).some((f) => /assumption/i.test(f.message)),
+      'an unreadable assumption was raised as a finding with nothing to say');
+  });
+
   // ───────── the document itself ─────────
 
   test('the report is built from records that exist', () => {

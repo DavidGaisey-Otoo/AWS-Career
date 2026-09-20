@@ -14,6 +14,7 @@ import {
 import { Link } from 'react-router-dom';
 import { Markdown } from '../ai/Markdown.jsx';
 import { LocalFileViewer } from './LocalFileViewer.jsx';
+import { assumptionText, readableList, unsupportedText } from '../../lib/readinessText.js';
 import { cn } from '../../lib/utils.js';
 
 /** A copyable block of code, commands or template. */
@@ -121,25 +122,25 @@ export function ArtifactViewer({ item, kind, to }) {
             <Fact label="Saved" value={when(item.savedAt)} />
             <Fact label="Source" value={item.sourceLabel} />
           </Facts>
-          {item.readiness?.assumptions?.length > 0 && (
+          {readableList(item.readiness?.assumptions, assumptionText).length > 0 && (
             <div className="surface rounded-xl p-3">
               <h4 className="text-[11px] font-extrabold uppercase tracking-widest text-warning mb-2">
                 Assumptions — confirm before quoting
               </h4>
               <ul className="space-y-1">
-                {item.readiness.assumptions.map((a, i) => (
+                {readableList(item.readiness.assumptions, assumptionText).map((a, i) => (
                   <li key={i} className="text-[12px] text-muted">• {a}</li>
                 ))}
               </ul>
             </div>
           )}
-          {item.readiness?.unsupported?.length > 0 && (
+          {readableList(item.readiness?.unsupported, unsupportedText).length > 0 && (
             <div className="surface rounded-xl p-3">
               <h4 className="text-[11px] font-extrabold uppercase tracking-widest text-danger mb-2">
                 Not supported by the evidence
               </h4>
               <ul className="space-y-1">
-                {item.readiness.unsupported.map((a, i) => (
+                {readableList(item.readiness.unsupported, unsupportedText).map((a, i) => (
                   <li key={i} className="text-[12px] text-muted">• {a}</li>
                 ))}
               </ul>
