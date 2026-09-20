@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { useApp } from '../context/AppContext.jsx';
 import {
   runPipeline, saveSolution, getSolution, listSolutions,
   recordDeployment, listLiveStacks, deleteSolution,
@@ -101,6 +102,7 @@ const EXAMPLES = [
 
 export default function SolutionStudio() {
   const toast = useToast();
+  const { profile } = useApp();
   const [params, setParams] = useSearchParams();
 
   const [brief, setBrief] = useState('');
@@ -157,7 +159,9 @@ export default function SolutionStudio() {
     // Let the spinner paint before the (synchronous) engines run
     setTimeout(() => {
       try {
-        const result = runPipeline(input);
+        // Generated templates go to clients and into their AWS tags, so
+        // they carry your name or none at all — never the tool's.
+        const result = runPipeline(input, { author: profile?.name });
         setSolution(result);
         if (typeof input !== 'string') setBrief(result.input.brief);
         if (!silent) toast?.success?.(`Solution ready — ${result.services.length} services, ${result.plan.phases.length} phases.`);

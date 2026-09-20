@@ -5,6 +5,44 @@ function assert(condition, message) { if (!condition) throw new Error(message); 
 const service = (id, label = id.toUpperCase()) => ({ id, label, specs: {} });
 
 const checks = [
+  ['a client deliverable never names the tool that made it', () => {
+    // These files are handed to clients. A template announcing it came
+    // from someone's career-training app is not a deliverable.
+    const services = [service('s3'), service('lambda')];
+    for (const [name, out] of [
+      ['terraform', generateTerraform(services, { mode: 'prod', author: 'David Gaisey-Otoo' }).code],
+      ['cloudformation', generateCloudFormation(services, { mode: 'prod', author: 'David Gaisey-Otoo' }).code],
+      ['cli', generateCli(services, { mode: 'prod', author: 'David Gaisey-Otoo' }).code],
+    ]) {
+      assert(!/Career Launchpad/i.test(out), name + ' still advertises the tool');
+      assert(!/Master Intelligence/i.test(out), name + ' still carries an internal product name');
+    }
+  }],
+  ['the author is credited when known', () => {
+    const out = generateTerraform([service('s3')], { mode: 'prod', author: 'David Gaisey-Otoo' }).code;
+    assert(/Prepared by David Gaisey-Otoo/.test(out), 'the author is not credited in the header');
+    assert(/PreparedBy\s*=\s*"David Gaisey-Otoo"/.test(out), 'the resource tag does not carry the author');
+  }],
+  ['with no author, nothing is attributed at all', () => {
+    // Silence is professional. The wrong attribution is not, and the tag
+    // would sit in the client's console and bill indefinitely.
+    const out = generateTerraform([service('s3')], { mode: 'prod' }).code;
+    assert(!/GeneratedBy/.test(out), 'an attribution tag was emitted with nobody to attribute to');
+    assert(!/PreparedBy/.test(out), 'an empty PreparedBy tag was emitted');
+    assert(!/Prepared by\s*$/m.test(out), 'a dangling "Prepared by" line was emitted');
+  }],
+  ['a client deliverable carries no emoji', () => {
+    const out = generateCli([service('s3')], { mode: 'prod', author: 'D' }).code;
+    assert(!/[\u{1F300}-\u{1FAFF}]/u.test(out), 'emoji leaked into a client deliverable');
+  }],
+  ['test-sized output still says so', () => {
+    // The marker is a safety signal, not decoration — losing it would let
+    // free-tier sizing reach production unremarked.
+    const out = generateTerraform([service('s3')], { mode: 'test' }).code;
+    assert(/TEST DEPLOYMENT/.test(out), 'the test marker was lost');
+    assert(/not for production/i.test(out), 'the test marker does not say why it matters');
+  }],
+
   ['a generated DynamoDB table is provisioned inside the free allowance', () => {
     // Both generators emitted PAY_PER_REQUEST while the surrounding text
     // called the table always-free. On-demand bills every read and write

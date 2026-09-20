@@ -557,6 +557,9 @@ export function runPipeline(gig, options = {}) {
     projectName: names.slug,
     environment: mode === 'test' ? 'test' : 'prod',
     brief,
+    // Whose work this is. Without it the generators fall silent on
+    // attribution rather than naming the tool — see preparedBy().
+    author: options.author || null,
   };
 
   const artifacts = {};
