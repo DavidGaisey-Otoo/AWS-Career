@@ -26,7 +26,13 @@ import { detectCompliance } from '../data/complianceRules.js';
 // ─────────────────── project-type detector ───────────────────
 
 const PROJECT_TYPES = [
-  { id: 'web-app',           label: 'Web Application',           test: /\b(website|web\s*app|frontend|backend|node\.?js|python|react|api|rest|http|next\.?js|express|django|flask|laravel|spring)\b/i, suggest: ['ec2', 'lambda', 'apigw'] },
+  // A site that serves pages and nothing else is not a web application.
+  // "website" alone fell through to web-app and proposed EC2 + Lambda +
+  // API Gateway — a virtual server billed by the hour, to a client who
+  // said they would not pay monthly fees. Static hosting is checked
+  // first, so the plainest brief in freelancing gets the right answer.
+  { id: 'static-site',       label: 'Static Website',            test: /\b(portfolio\s+(web)?site|static\s+(web)?site|landing\s+page|brochure\s+site|marketing\s+site|personal\s+(web)?site|one[-\s]?page\s+site|blog)\b/i, suggest: ['s3', 'cloudfront'] },
+  { id: 'web-app',           label: 'Web Application',           test: /\b(website|web\s*app|web\s+application|frontend|backend|node\.?js|python|react|api|rest|http|next\.?js|express|django|flask|laravel|spring)\b/i, suggest: ['ec2', 'lambda', 'apigw'] },
   { id: 'database',          label: 'Database-driven',           test: /\b(database|postgres(ql)?|mysql|mongodb|rds|dynamodb|data\s+storage|records|crud)\b/i, suggest: ['rds', 'dynamodb'] },
   { id: 'networking',        label: 'Networking Infrastructure', test: /\b(vpc|subnet|network|firewall|security\s+group|routing|connectivity|peering|transit\s+gateway|direct\s+connect|nat)\b/i, suggest: ['vpc', 'subnet', 'security-group'] },
   { id: 'serverless',        label: 'Serverless Architecture',   test: /\b(lambda|serverless|function|event[-\s]?driven|no\s+server|pay\s+per\s+request|step\s+functions)\b/i, suggest: ['lambda', 'apigw', 'dynamodb'] },
@@ -254,7 +260,10 @@ function missingQuestions(text, parsed, facts) {
 
   // Domain
   if (!/\b(?:custom\s+domain|domain\s+name|\.(?:com|co\.uk|io|net|org)|\w+\.\w+)\b/i.test(evidenceText) && Q.length < 10) {
-    if (parsed.projectTypes.some((p) => ['web-app'].includes(p.id))) {
+    // A static site needs this answered more than a web app does: it is
+    // the whole point of the job and it decides whether Route 53 and ACM
+    // belong in the design at all.
+    if (parsed.projectTypes.some((p) => ['web-app', 'static-site'].includes(p.id))) {
       Q.push('Custom domain — do they already have one (Route 53 or external registrar)?');
     }
   }
@@ -349,6 +358,12 @@ export function analyseProject(text, options = {}) {
   // Detect everything
   const compliance     = detectCompliance(q);
   const projectTypes   = PROJECT_TYPES.filter((p) => p.test.test(q));
+  // A portfolio site matches both static-site and web-app, because
+  // "website" belongs to each. Static wins: the narrower reading is the
+  // right one, and letting web-app also contribute would put an hourly
+  // EC2 instance next to the S3 bucket it replaces.
+  const isStatic = projectTypes.some((p) => p.id === 'static-site');
+  const effectiveTypes = isStatic ? projectTypes.filter((p) => p.id !== 'web-app') : projectTypes;
   const urgency        = detectUrgency(q);
   const region         = detectRegion(q);
   const budget         = detectBudget(q);
@@ -360,7 +375,7 @@ export function analyseProject(text, options = {}) {
   // Compliance-driven additions (never replaces)
   for (const c of compliance) for (const sid of c.addServices) serviceIds.add(sid);
   // Project-type-driven suggestions (only if NOTHING was specified at all)
-  if (!serviceIds.size) for (const p of projectTypes) for (const sid of p.suggest) serviceIds.add(sid);
+  if (!serviceIds.size) for (const p of effectiveTypes) for (const sid of p.suggest) serviceIds.add(sid);
 
   const services = [...serviceIds].map((id) => SERVICE_MATRIX[id]).filter(Boolean);
 

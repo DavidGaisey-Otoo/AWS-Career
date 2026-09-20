@@ -44,6 +44,38 @@ const GIGS = {
 // ════════════════════════════════════════════════════════════════════
 const CHECKS = [
   {
+    name: 'a portfolio website is not proposed a virtual server',
+    run() {
+      // "website" fell through to the web-app intent and suggested EC2 +
+      // Lambda + API Gateway. A client asking for a portfolio site and
+      // saying they will not pay monthly fees was quoted an hourly server.
+      const r = runPipeline('I need a portfolio website on AWS using my own domain with HTTPS. I am not paying monthly fees.');
+      const ids = r.services.map((s) => s.id);
+      assert(!ids.includes('ec2'), 'a static site was proposed EC2: ' + ids.join(', '));
+      assert(ids.includes('s3') && ids.includes('cloudfront'),
+        'a static site was not proposed S3 + CloudFront: ' + ids.join(', '));
+    },
+  },
+  {
+    name: 'a real web application still gets compute',
+    run() {
+      const r = runPipeline('We need a web application with a Node.js backend that serves logged-in users.');
+      const ids = r.services.map((s) => s.id);
+      assert(ids.some((id) => ['ec2', 'lambda', 'apigw', 'ecs'].includes(id)),
+        'a web application was left with no compute: ' + ids.join(', '));
+    },
+  },
+  {
+    name: 'a landing page and a blog are static too',
+    run() {
+      for (const brief of ['Just a simple landing page for my bakery.', 'A personal blog I can update myself.']) {
+        const ids = runPipeline(brief).services.map((s) => s.id);
+        assert(ids.includes('s3'), brief + ' did not get static hosting: ' + ids.join(', '));
+        assert(!ids.includes('ec2'), brief + ' was proposed a server: ' + ids.join(', '));
+      }
+    },
+  },
+  {
     name: 'plain-language strict zero-cost local briefs disable AWS immediately',
     run: () => {
       const brief = 'Strict $0 Local Lab only. Build locally. Do not create or deploy any AWS resources. Budget is $0.';
