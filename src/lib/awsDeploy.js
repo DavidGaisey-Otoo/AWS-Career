@@ -528,15 +528,22 @@ export async function dynamodb_create_table({ creds, region, params }) {
     keySchema.push({ AttributeName: params.sortKey, KeyType: 'RANGE' });
     attrs.push({ AttributeName: params.sortKey, AttributeType: params.sortType || 'S' });
   }
+  // PROVISIONED at 1/1 sits inside the always-free 25 RCU/WCU. This used
+  // to be hardcoded to PAY_PER_REQUEST while the action quoted the
+  // provisioned free allowance, so the table billed from the first write.
+  const billingMode = params.billingMode === 'PAY_PER_REQUEST' ? 'PAY_PER_REQUEST' : 'PROVISIONED';
   const raw = await ddb.send(new CreateTableCommand({
     TableName: params.tableName,
     AttributeDefinitions: attrs,
     KeySchema: keySchema,
-    BillingMode: 'PAY_PER_REQUEST',
+    BillingMode: billingMode,
+    ...(billingMode === 'PROVISIONED'
+      ? { ProvisionedThroughput: { ReadCapacityUnits: 1, WriteCapacityUnits: 1 } }
+      : {}),
   }));
   return {
     ok: true,
-    result: { tableName: raw.TableDescription?.TableName, status: raw.TableDescription?.TableStatus },
+    result: { tableName: raw.TableDescription?.TableName, status: raw.TableDescription?.TableStatus, billingMode },
     raw: trimResponse(raw),
     log: [mkLog('success', `Table ${params.tableName} created (status: ${raw.TableDescription?.TableStatus}).`)],
   };

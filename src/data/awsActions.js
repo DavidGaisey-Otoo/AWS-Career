@@ -50,7 +50,9 @@ export const ACTIONS = {
       { id: 'region',     label: 'Region',      type: 'region', required: true, default: 'eu-west-1' },
       { id: 'blockPublic',label: 'Block all public access', type: 'boolean', default: true, hint: 'Recommended ON unless this is a public static site.' },
     ],
-    cost: { typical: 0, max: 0.023, free: 5 /* GB free */ },
+    // The 5 GB allowance belongs to the legacy 12-month Free Tier. An
+    // account on the credits-based plan has no such bucket.
+    cost: { typical: 0, max: 0.023, free: '5 GB on the legacy 12-month Free Tier only. An empty bucket stores nothing and costs nothing either way.' },
     reversible: true,
     consoleUrl: ({ region }) => `https://${region || 'eu-west-1'}.console.aws.amazon.com/s3/home?region=${region || 'eu-west-1'}`,
     docsUrl: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/creating-bucket.html',
@@ -114,7 +116,9 @@ export const ACTIONS = {
       { id: 'bucketName',   label: 'Origin S3 bucket', type: 'text', required: true },
       { id: 'priceClass',   label: 'Price class', type: 'select', options: ['PriceClass_100', 'PriceClass_200', 'PriceClass_All'], default: 'PriceClass_100', hint: 'PriceClass_100 = US + EU only (cheapest).' },
     ],
-    cost: { typical: 0, max: 1.0, free: 'first 50 GB/month + 2M requests free' },
+    // 50 GB / 2M requests was the old 12-month tier. The always-free
+    // allowance has been 1 TB out and 10M requests since 2021.
+    cost: { typical: 0, max: 1.0, free: '1 TB data transfer out + 10M requests/month, free forever' },
     reversible: true,
     consoleUrl: () => 'https://console.aws.amazon.com/cloudfront/v4/home',
     docsUrl: 'https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-creating.html',
@@ -165,15 +169,26 @@ export const ACTIONS = {
   // ─────────── DynamoDB ───────────
   'dynamodb.create-table': {
     service: 'DynamoDB', tier: 'BUILD',
-    summary: 'Create a DynamoDB table with on-demand billing.',
+    summary: 'Create a DynamoDB table. Provisioned at 1 RCU/1 WCU by default, inside the always-free 25.',
     params: [
       { id: 'tableName',  label: 'Table name',   type: 'text', required: true },
       { id: 'partitionKey', label: 'Partition key', type: 'text', required: true },
       { id: 'partitionType',label: 'Partition type', type: 'select', options: ['S', 'N', 'B'], default: 'S' },
       { id: 'sortKey',    label: 'Sort key (optional)', type: 'text' },
       { id: 'sortType',   label: 'Sort type', type: 'select', options: ['', 'S', 'N', 'B'], default: '' },
+      {
+        id: 'billingMode', label: 'Billing mode', type: 'select',
+        options: ['PROVISIONED', 'PAY_PER_REQUEST'], default: 'PROVISIONED',
+        hint: 'Provisioned at 1/1 stays inside the always-free 25 RCU/WCU. On-demand bills every request from the first one.',
+      },
     ],
-    cost: { typical: 0, max: 1.25, free: '25 GB + 25 RCU/WCU/month forever (provisioned mode)' },
+    // The always-free 25 RCU/WCU applies to PROVISIONED capacity only.
+    // This action used to create a PAY_PER_REQUEST table while quoting the
+    // provisioned allowance, so it promised free and delivered billable.
+    cost: {
+      typical: 0, max: 1.25,
+      free: '25 GB storage free forever. Provisioned mode: 25 RCU + 25 WCU/month free forever. On-demand mode: storage only — every read and write is billed.',
+    },
     reversible: true,
     consoleUrl: ({ tableName }) => `https://console.aws.amazon.com/dynamodbv2/home#table?name=${tableName || ''}`,
     docsUrl: 'https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-1.html',
@@ -193,7 +208,7 @@ export const ACTIONS = {
   // ─────────── EC2 ───────────
   'ec2.launch-instance': {
     service: 'EC2', tier: 'BUILD',
-    summary: 'Launch a single EC2 instance (Free Tier safe defaults).',
+    summary: 'Launch a single EC2 instance. Free Tier defaults apply only to a legacy 12-month account.',
     params: [
       { id: 'name',         label: 'Name tag',        type: 'text', required: true },
       { id: 'instanceType', label: 'Instance type',   type: 'select', options: ['t2.micro', 't3.micro', 't3.small'], default: 't2.micro', hint: 't2.micro is Free Tier (750 h/month).' },
@@ -201,7 +216,9 @@ export const ACTIONS = {
       { id: 'keyPairName',  label: 'SSH key pair',    type: 'text', required: true },
       { id: 'sgId',         label: 'Security group',  type: 'text', required: true },
     ],
-    cost: { typical: 0, max: 18, free: '750 hours/month of t2.micro for 12 months' },
+    // On a credits-based account there is no 750-hour bucket; the
+    // instance runs against credits and then against the card.
+    cost: { typical: 0, max: 18, free: '750 hours/month of t2.micro on the legacy 12-month Free Tier only. Not covered on a credits-based plan.' },
     reversible: true,
     consoleUrl: ({ region }) => `https://${region || 'eu-west-1'}.console.aws.amazon.com/ec2/home?region=${region || 'eu-west-1'}#Instances:`,
     docsUrl: 'https://docs.aws.amazon.com/ec2/latest/userguide/ec2-launch-instance.html',
