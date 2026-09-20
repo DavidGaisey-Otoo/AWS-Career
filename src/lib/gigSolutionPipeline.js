@@ -310,6 +310,15 @@ export function deriveNames(brief, { extracted, blueprint, services }) {
   let human = cleanJobTitle(extracted?.projectName || '');
   if (human.length > 60 || human.length < 6) human = '';
 
+  // A domain in the brief names the job better than a catalogue title
+  // does. "S3 Static Website with CloudFront" describes the template;
+  // the client is paying for their own site, and will not recognise
+  // their project under the name of the pattern it was built from.
+  if (!human) {
+    const domain = String(brief || "").match(/(?<![@\w.])([a-z0-9-]{3,}\.(?:co\.uk|com|net|org|io|dev|studio|shop))\b/i);
+    if (domain) human = domain[1].toLowerCase();
+  }
+
   if (!human && blueprint) human = blueprint.project.title;
 
   if (!human) {

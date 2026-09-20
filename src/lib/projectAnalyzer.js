@@ -88,6 +88,13 @@ function detectRegion(text) {
 // ─────────────────── budget + timeline ───────────────────
 
 function detectBudget(text) {
+  // A client saying "I am not paying monthly fees" has stated a budget.
+  // Reading it as unstated is the wrong miss for an app built around
+  // zero running cost: it decides which services are even allowed.
+  if (/\bno\s+monthly\s+(?:fees?|costs?|charges?)\b|\bnot\s+paying\s+monthly\b|\bas\s+(?:close\s+to\s+)?(?:nothing|free)\s+as\s+possible\b|\bzero[-\s]cost\b|\bfree\s+tier\s+only\b|\bas\s+cheap\s+as\s+possible\b|\bminimal\s+running\s+cost/i.test(text)) {
+    const currency = /£/.test(text) ? 'GBP' : /€/.test(text) ? 'EUR' : 'USD';
+    return { currency, kind: 'zero-cost', awsMonthly: 0, stated: 'As close to zero as possible (client stated)' };
+  }
   // Match: $1500, £850, 850 USD, $850 fixed, £3,200, $1,500/month, AWS under $150/month
   const fixed = text.match(/\b(?:[£$€]|usd\s*|eur\s*|gbp\s*)\s*([\d,]+)(?:\s*(?:fixed|total|budget))?/i);
   const monthly = text.match(/\b(?:[£$€]|usd\s*|eur\s*|gbp\s*)\s*([\d,]+)\s*\/?\s*(?:per\s+)?month/i);
@@ -130,6 +137,46 @@ function detectDeploymentMethod(text) {
  * Walk through aliases and collect every service ID mentioned in the text.
  * Also picks up tier-specific variants (e.g. t3.large, db.r5.large).
  */
+
+/**
+ * What clients actually write.
+ *
+ * ALIAS_INDEX matches AWS vocabulary — "route 53", "s3", "ses". A paying
+ * client writes "my own domain", "with HTTPS", "a contact form so
+ * enquiries reach my email". Acting as one of them, every requirement
+ * below was silently dropped from the design: a brief naming a domain
+ * and HTTPS produced S3 and CloudFront with no Route 53 and no
+ * certificate, so the site could not serve that domain at all.
+ *
+ * These are stated requirements, not guesses, so they count as
+ * explicitly requested.
+ */
+const CLIENT_REQUIREMENTS = [
+  {
+    id: 'custom-domain',
+    re: /\b(?:my|their|our|a|the)\s+own\s+domain\b|\bcustom\s+domain\b|\bdomain\s+name\b|(?<![@\w.])[a-z0-9-]{2,}\.(?:co\.uk|com|net|org|io|dev|studio|shop|photography)\b/i,
+    services: ['route53'],
+  },
+  {
+    id: 'https',
+    re: /\bhttps\b|\bssl\b|\btls\b|\bsecure\s+(?:site|website|connection)\b|\bcertificate\b/i,
+    services: ['acm'],
+  },
+  {
+    id: 'contact-form',
+    re: /\b(?:contact|enquiry|inquiry)\s+form\b|\b(?:enquiries|inquiries|messages|submissions)\s+(?:reach|go\s+to|are\s+sent\s+to|emailed)\b|\bemail\s+me\s+when\b|\bsend\s+me\s+an\s+email\b/i,
+    services: ['ses', 'lambda', 'apigw'],
+  },
+];
+
+/** Requirements a client stated in plain words. */
+function extractClientRequirements(text) {
+  const found = new Set();
+  for (const rule of CLIENT_REQUIREMENTS) {
+    if (rule.re.test(text)) for (const id of rule.services) found.add(id);
+  }
+  return [...found];
+}
 function extractServices(text) {
   const lower = ` ${text.toLowerCase()} `;
   const found = new Set();
@@ -371,11 +418,21 @@ export function analyseProject(text, options = {}) {
   const deploymentMethods = detectDeploymentMethod(q);
 
   // Extract services (NEVER substitute)
-  const serviceIds = new Set(extractServices(q));
+  // Services the client named in AWS terms. This set alone decides
+  // whether the project-type fallback runs, because that fallback exists
+  // for briefs written by someone who does not know the service names.
+  const namedServices = new Set(extractServices(q));
+  const serviceIds = new Set(namedServices);
+  // Requirements stated in plain words are stated, not guessed, so they
+  // are added too — but they must not count as "the client named a
+  // service", or mentioning a domain would cost them the site itself.
+  for (const id of extractClientRequirements(q)) serviceIds.add(id);
   // Compliance-driven additions (never replaces)
   for (const c of compliance) for (const sid of c.addServices) serviceIds.add(sid);
   // Project-type-driven suggestions (only if NOTHING was specified at all)
-  if (!serviceIds.size) for (const p of effectiveTypes) for (const sid of p.suggest) serviceIds.add(sid);
+  if (!namedServices.size) {
+    for (const p of effectiveTypes) for (const sid of p.suggest) serviceIds.add(sid);
+  }
 
   const services = [...serviceIds].map((id) => SERVICE_MATRIX[id]).filter(Boolean);
 

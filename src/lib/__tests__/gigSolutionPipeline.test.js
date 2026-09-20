@@ -44,6 +44,51 @@ const GIGS = {
 // ════════════════════════════════════════════════════════════════════
 const CHECKS = [
   {
+    name: 'a client brief in plain words is heard in full',
+    run() {
+      // Acting as a client: every one of these was silently dropped.
+      const r = runPipeline([
+        'I need a portfolio website on AWS using my own domain,',
+        'thenorthlightstudio.co.uk, with HTTPS.',
+        'I also need a contact form so enquiries reach my email.',
+        'It must cost me as close to nothing as possible - I am not paying monthly fees.',
+      ].join(' '));
+      const ids = r.services.map((s) => s.id);
+      for (const [need, want] of [['static hosting', 's3'], ['CDN', 'cloudfront'],
+        ['the custom domain', 'route53'], ['an HTTPS certificate', 'acm'], ['email for the form', 'ses']]) {
+        assert(ids.includes(want), need + ' was dropped from the design: ' + ids.join(', '));
+      }
+      assert(!ids.includes('ec2'), 'an hourly server was proposed: ' + ids.join(', '));
+    },
+  },
+  {
+    name: 'plain-language rules do not fire on unrelated work',
+    run() {
+      const ids = runPipeline('Migrate our Docker microservices to Kubernetes on AWS.').services.map((s) => s.id);
+      for (const stray of ['route53', 'acm', 'ses', 's3', 'cloudfront']) {
+        assert(!ids.includes(stray), stray + ' was added to a brief that never asked for it: ' + ids.join(', '));
+      }
+    },
+  },
+  {
+    name: 'a stated zero-cost budget is not read as unstated',
+    run() {
+      const r = runPipeline('Build me a landing page. I am not paying monthly fees.');
+      const budget = r.understanding?.extracted?.budget || r.input?.budget || null;
+      const text = JSON.stringify(r.understanding || {});
+      assert(/zero-cost/.test(text) || (budget && budget.kind === 'zero-cost'),
+        'a client who said they will not pay monthly fees was recorded as not stating a budget');
+    },
+  },
+  {
+    name: 'a project is named after the job, not the template',
+    run() {
+      const r = runPipeline('A portfolio website for thenorthlightstudio.co.uk with HTTPS.');
+      assert(/thenorthlightstudio/i.test(r.names.projectName),
+        'the project was named after the pattern, not the client: ' + r.names.projectName);
+    },
+  },
+  {
     name: 'a portfolio website is not proposed a virtual server',
     run() {
       // "website" fell through to the web-app intent and suggested EC2 +

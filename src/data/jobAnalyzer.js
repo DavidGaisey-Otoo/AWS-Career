@@ -178,6 +178,14 @@ function classifyType(text) {
 // ----------------------------------------------------------------------
 
 function extractBudget(text) {
+  // A client who says "as close to nothing as possible" and "I am not
+  // paying monthly fees" has stated a budget. Reading that as "Not
+  // stated" is the wrong miss for an app whose premise is zero cost:
+  // the whole design hinges on it, and it changes which services are
+  // even allowed.
+  if (/\bno\s+monthly\s+(?:fees?|costs?|charges?)\b|\bnot\s+paying\s+monthly\b|\bas\s+(?:close\s+to\s+)?(?:nothing|free)\s+as\s+possible\b|\bzero[-\s]cost\b|\bfree\s+tier\s+only\b|\bas\s+cheap\s+as\s+possible\b|\bminimal\s+running\s+cost/i.test(text)) {
+    return { kind: 'zero-cost', amount: 0, label: 'As close to zero as possible (client stated)' };
+  }
   // Hourly with range
   const hourlyRange = text.match(/\$(\d{2,4})\s*[-–to]+\s*\$?(\d{2,4})\s*\/?\s*(?:hr|hour|hourly)/i);
   if (hourlyRange) return { kind: 'hourly', min: +hourlyRange[1], max: +hourlyRange[2], label: `$${hourlyRange[1]}–$${hourlyRange[2]}/hr` };
