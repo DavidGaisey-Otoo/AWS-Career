@@ -1,4 +1,4 @@
-import { buildWorkspace, normaliseTitle, pool, titlesMatch, WORKSPACE_KINDS } from '../projectWorkspace.js';
+import { artifactTitle, buildWorkspace, normaliseTitle, pool, titlesMatch, WORKSPACE_KINDS } from '../projectWorkspace.js';
 
 /**
  * Everything produced for one job lived in a different store, so nothing
@@ -287,6 +287,20 @@ export function runProjectWorkspaceTests() {
     for (const kind of ['solution', 'architecture', 'script', 'plan', 'proposal', 'email', 'contract', 'invoice', 'document']) {
       assert(present.includes(kind), 'missing from the container: ' + kind);
     }
+  });
+
+  test('records with no title field are still named usefully', () => {
+    assert(artifactTitle({ number: 'INV-0001', clientName: 'Northwind Retail' }, 'invoice') === 'Invoice INV-0001 — Northwind Retail',
+      'an invoice fell back to a generic label: ' + artifactTitle({ number: 'INV-0001', clientName: 'Northwind Retail' }, 'invoice'));
+    assert(artifactTitle({ nodes: [1, 2] }, 'architecture') === 'Architecture diagram',
+      'a diagram fell back to a generic label');
+    assert(artifactTitle({ name: 'AWS CLI commands' }, 'script') === 'AWS CLI commands',
+      'a template lost its name');
+  });
+
+  test('a real title always wins over the fallback', () => {
+    assert(artifactTitle({ number: 'INV-9', projectTitle: 'Static site' }, 'invoice') === 'Static site',
+      'the fallback overrode a real title');
   });
 
   return { allPassed: results.every((r) => r.pass), results };

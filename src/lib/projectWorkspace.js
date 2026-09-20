@@ -287,9 +287,25 @@ export function pool(workspace, kind) {
   return out;
 }
 
+/**
+ * Some records have no title field at all — an invoice is identified by
+ * its number, a diagram by nothing. Falling through to a generic label
+ * like "Invoices record" is no use in a contents list, so name them from
+ * what they do carry.
+ */
+const FALLBACK_TITLES = {
+  invoice: (i) => (i.number ? `Invoice ${i.number}${i.clientName ? ' — ' + i.clientName : ''}` : null),
+  architecture: () => 'Architecture diagram',
+  script: (i) => i.name || null,
+  solution: (i) => i.projectName || null,
+};
+
 /** The title an artifact of this kind should be listed under. */
 export function artifactTitle(item, kind) {
-  return pick(item, FIELDS[kind]?.title) || null;
+  const direct = pick(item, FIELDS[kind]?.title);
+  if (direct) return direct;
+  const fallback = FALLBACK_TITLES[kind];
+  return (fallback && item ? fallback(item) : null) || null;
 }
 
 /** The date an artifact of this kind should be listed under. */
