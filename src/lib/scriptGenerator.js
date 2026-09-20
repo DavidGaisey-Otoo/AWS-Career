@@ -545,10 +545,15 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 }
 `,
   dynamodb: () => `
-# ─── DynamoDB (always-free up to 25GB) ──────────────────
+# ─── DynamoDB ───────────────────────────────
+# Provisioned at 1/1 sits inside the always-free 25 RCU/WCU, which is
+# what makes this table genuinely free. On-demand bills every request
+# from the first one; the 25 GB allowance covers storage only.
 resource "aws_dynamodb_table" "main" {
   name           = "\${var.project_name}-data"
-  billing_mode   = "PAY_PER_REQUEST"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 1
+  write_capacity = 1
   hash_key       = "pk"
   range_key      = "sk"
   attribute { name = "pk" type = "S" }
@@ -1065,7 +1070,10 @@ const CFN_PER_SERVICE = {
       Type: 'AWS::DynamoDB::Table',
       Properties: {
         TableName: { 'Fn::Sub': '${ProjectName}-table' },
-        BillingMode: 'PAY_PER_REQUEST',
+        // PROVISIONED at 1/1 is inside the always-free 25 RCU/WCU.
+        // PAY_PER_REQUEST bills every read and write from the first one.
+        BillingMode: 'PROVISIONED',
+        ProvisionedThroughput: { ReadCapacityUnits: 1, WriteCapacityUnits: 1 },
         AttributeDefinitions: [
           { AttributeName: 'pk', AttributeType: 'S' },
           { AttributeName: 'sk', AttributeType: 'S' },
@@ -1634,9 +1642,13 @@ export function generateCli(services, opts = {}) {
   const deployReady = uncovered.length === 0 && !hasPlaceholders && covered.length > 0;
   if (!deployReady) {
     lines.splice(8, 0,
-      'echo "DEPLOYMENT BLOCKED: generated CLI is incomplete." >&2',
+      'echo "DEPLOYMENT BLOCKED: this CLI script is incomplete." >&2',
       `echo "Unsupported services: ${uncovered.join(', ') || 'none'}; unresolved placeholders: ${hasPlaceholders ? 'yes' : 'no'}" >&2`,
-      'echo "Resolve the draft and remove this safety gate only after review." >&2',
+      // Refusing without saying what does work leaves you holding a
+      // design the app has just told you it cannot deploy.
+      ...(uncovered.length > 0 && !hasPlaceholders
+        ? ['echo "The CloudFormation and Terraform templates for this solution ARE complete - deploy with one of those instead." >&2']
+        : ['echo "Resolve the placeholders, then review before removing this gate." >&2']),
       'exit 1',
       '',
     );

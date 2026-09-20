@@ -5,6 +5,27 @@ function assert(condition, message) { if (!condition) throw new Error(message); 
 const service = (id, label = id.toUpperCase()) => ({ id, label, specs: {} });
 
 const checks = [
+  ['a generated DynamoDB table is provisioned inside the free allowance', () => {
+    // Both generators emitted PAY_PER_REQUEST while the surrounding text
+    // called the table always-free. On-demand bills every read and write
+    // from the first one; the always-free 25 RCU/WCU is provisioned only.
+    const tf = generateTerraform([service('dynamodb', 'DynamoDB')]);
+    const cfn = generateCloudFormation([service('dynamodb', 'DynamoDB')]);
+    for (const [name, out] of [['terraform', tf.code], ['cloudformation', cfn.code]]) {
+      assert(!/PAY_PER_REQUEST/.test(out),
+        name + ' creates an on-demand table while the app calls it free');
+      assert(/PROVISIONED/i.test(out), name + ' sets no billing mode at all');
+    }
+  }],
+  ['a refused CLI script names something that does work', () => {
+    // Refusing without a way forward leaves you holding a design the app
+    // has just told you it cannot deploy.
+    const result = generateCli([service('lambda', 'Lambda'), service('dynamodb', 'DynamoDB')]);
+    if (result.deployReady) return;
+    assert(/CloudFormation|Terraform/i.test(result.code),
+      'the CLI refused without naming a template that is complete');
+  }],
+
   ['supported placeholder-free Terraform is marked ready', () => {
     const result = generateTerraform([service('s3')]);
     assert(result.deployReady === true, 'safe Terraform incorrectly blocked');
