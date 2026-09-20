@@ -38,6 +38,10 @@ const PROJECT_TYPES = [
   // produced a solution with no storage service in it.
   { id: 'storage-archive',   label: 'Storage & Archive',         test: /\b(archiv(e|ing)|long[-\s]term\s+retention|cold\s+storage|file\s+storage|document\s+storage|store\s+(?:files|documents)|data\s+retention|retention\s+policy)\b/i, suggest: ['s3'] },
   { id: 'ecommerce',         label: 'Online Shop',               test: /\b(online\s+shop|e-?commerce|shopping\s+cart|storefront|product\s+catalogue?|checkout|card\s+payments)\b/i, suggest: ['s3', 'cloudfront', 'dynamodb', 'lambda'] },
+  // Letting customers do something for themselves online — book, order,
+  // register — is the shape of most small-business work, and had no
+  // intent. "Patients book appointments online" matched nothing at all.
+  { id: 'online-service',    label: 'Online Booking / Customer Portal', test: /\b(book(ing)?\s+(?:system|online|appointments?)|appointments?\s+online|(?:customers?|clients?|patients?|guests?)\s+(?:can\s+)?(?:book|order|register|sign\s?up)|reservations?|scheduling\s+system|customer\s+portal|order\s+online)\b/i, suggest: ['lambda', 'apigw', 'dynamodb'] },
   { id: 'database',          label: 'Database-driven',           test: /\b(database|postgres(ql)?|mysql|mongodb|rds|dynamodb|data\s+storage|records|crud)\b/i, suggest: ['rds', 'dynamodb'] },
   { id: 'networking',        label: 'Networking Infrastructure', test: /\b(vpc|subnet|network|firewall|security\s+group|routing|connectivity|peering|transit\s+gateway|direct\s+connect|nat)\b/i, suggest: ['vpc', 'subnet', 'security-group'] },
   { id: 'serverless',        label: 'Serverless Architecture',   test: /\b(lambda|serverless|function|event[-\s]?driven|no\s+server|pay\s+per\s+request|step\s+functions)\b/i, suggest: ['lambda', 'apigw', 'dynamodb'] },
@@ -80,7 +84,7 @@ function detectRegion(text) {
     if (lower.includes(r)) return r;
   }
   // Free-text region hints
-  if (/\b(uk|britain|england|london|britain)\b/i.test(text)) return 'eu-west-2';
+  if (/\b(uk|britain|england|scotland|wales|northern\s+ireland|london|manchester|birmingham|leeds|glasgow|edinburgh|bristol|liverpool|sheffield|cardiff|belfast|newcastle|nottingham|leicester|coventry|oxford|cambridge|brighton|southampton|aberdeen|dundee|york|bath|norwich|plymouth)\b/i.test(text)) return 'eu-west-2';
   if (/\b(ireland|dublin)\b/i.test(text)) return 'eu-west-1';
   if (/\b(germany|frankfurt)\b/i.test(text)) return 'eu-central-1';
   if (/\b(eu(rope)?|european)\b/i.test(text)) return 'eu-west-1';
@@ -96,7 +100,7 @@ function detectBudget(text) {
   // A client saying "I am not paying monthly fees" has stated a budget.
   // Reading it as unstated is the wrong miss for an app built around
   // zero running cost: it decides which services are even allowed.
-  if (/\bno\s+monthly\s+(?:fees?|costs?|charges?)\b|\bnot\s+paying\s+monthly\b|\bas\s+(?:close\s+to\s+)?(?:nothing|free)\s+as\s+possible\b|\bzero[-\s]cost\b|\bfree\s+tier\s+only\b|\bas\s+cheap\s+as\s+possible\b|\bminimal\s+running\s+cost/i.test(text)) {
+  if (/\bno\s+monthly\s+(?:fees?|costs?|charges?)\b|\bnot\s+paying\s+monthly\b|\bas\s+(?:close\s+to\s+)?(?:nothing|free)\s+as\s+possible\b|\bzero[-\s]cost\b|\bfree\s+tier\s+only\b|\bas\s+cheap\s+as\s+possible\b|\bminimal\s+running\s+cost|\bcheap\s+to\s+run\b|\bkeep\s+(?:the\s+)?costs?\s+down\b|\blow[-\s]cost\b|\binexpensive\b|\btight\s+budget\b/i.test(text)) {
     const currency = /£/.test(text) ? 'GBP' : /€/.test(text) ? 'EUR' : 'USD';
     return { currency, kind: 'zero-cost', awsMonthly: 0, stated: 'As close to zero as possible (client stated)' };
   }

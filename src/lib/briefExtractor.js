@@ -141,9 +141,12 @@ export function extractTechStack(brief = '') {
 // 4. Client location (delegated to regionSuggester audience detection)
 // ════════════════════════════════════════════════════════════════════
 const LOCATION_KEYWORDS = [
-  { audience: 'uk',             label: 'United Kingdom', patterns: [/\b(uk|united kingdom|great britain|britain|british|england|scotland|wales|london|\.co\.uk)\b/i] },
-  { audience: 'us',             label: 'United States',  patterns: [/\b(usa|us\b|united states|america|nyc|san francisco|los angeles|chicago)\b/i] },
-  { audience: 'eu',             label: 'Europe / EU',    patterns: [/\b(europe|european|eu(?!c)|germany|france|spain|italy|netherlands|ireland)\b/i] },
+  // Only London was listed, so a client anywhere else in the country had
+  // their data planned into us-east-1 — the wrong answer for latency and
+  // the wrong answer for UK data residency.
+  { audience: 'uk',             label: 'United Kingdom', patterns: [/\b(uk|united kingdom|great britain|britain|british|england|scotland|wales|northern ireland|london|manchester|birmingham|leeds|glasgow|edinburgh|bristol|liverpool|sheffield|cardiff|belfast|newcastle|nottingham|leicester|coventry|oxford|cambridge|brighton|southampton|aberdeen|dundee|bath|norwich|plymouth|\.co\.uk)\b/i] },
+  { audience: 'us',             label: 'United States',  patterns: [/\b(usa|us\b|united states|america|american|nyc|new york|san francisco|los angeles|chicago|boston|seattle|austin|miami|denver|atlanta)\b/i] },
+  { audience: 'eu',             label: 'Europe / EU',    patterns: [/\b(europe|european|eu(?!c)|germany|france|spain|italy|netherlands|ireland|belgium|portugal|austria|poland|sweden|denmark|berlin|munich|hamburg|frankfurt|paris|lyon|madrid|barcelona|milan|rome|amsterdam|rotterdam|dublin|brussels|lisbon|vienna|warsaw|stockholm|copenhagen)\b/i] },
   { audience: 'africa',         label: 'West Africa',    patterns: [/\b(ghana|nigeria|lagos|accra|kenya|west africa)\b/i] },
   { audience: 'south-africa',   label: 'South Africa',   patterns: [/\b(south africa|johannesburg|cape town|pretoria)\b/i] },
   { audience: 'india',          label: 'India',          patterns: [/\b(india|mumbai|bangalore|bengaluru|delhi|chennai|hyderabad)\b/i] },

@@ -44,6 +44,57 @@ const GIGS = {
 // ════════════════════════════════════════════════════════════════════
 const CHECKS = [
   {
+    name: 'a city name does not send a client to the wrong continent',
+    run() {
+      // Adding UK towns matched "York" inside "New York" and planned a
+      // US client into a UK region. Wrong for latency and, where data
+      // residency matters, wrong for the law.
+      const cases = [
+        ['Bristol', 'eu-west-2'], ['Manchester', 'eu-west-2'], ['Glasgow', 'eu-west-2'],
+        ['New York', 'us-east-1'], ['Chicago', 'us-east-1'],
+        ['Berlin', 'eu-west-1'], ['Paris', 'eu-west-1'],
+      ];
+      for (const [place, expected] of cases) {
+        const got = runPipeline('A booking system for my shop in ' + place + '.').region.primary;
+        assert(got === expected, place + ' was placed in ' + got + ', expected ' + expected);
+      }
+    },
+  },
+  {
+    name: 'a small business brief with no AWS words in it still works',
+    run() {
+      // The commonest kind of job there is, and it produced nothing:
+      // no services, no budget, no region, classified planning-only.
+      const r = runPipeline('I run a dental practice in Bristol. I want patients to book appointments online themselves, and I need it to be cheap to run.');
+      const ids = r.services.map((s) => s.id);
+      assert(ids.length > 0, 'a plain client brief produced no services at all');
+      assert(ids.some((id) => ['lambda', 'ec2', 'ecs'].includes(id)), 'nothing to run it on: ' + ids.join(', '));
+      assert(ids.some((id) => ['dynamodb', 'rds'].includes(id)), 'nowhere to store the bookings: ' + ids.join(', '));
+    },
+  },
+  {
+    name: 'a UK town outside London still routes to a UK region',
+    run() {
+      // Only London was recognised, so a client anywhere else in the
+      // country had their data planned into us-east-1.
+      for (const town of ['Bristol', 'Manchester', 'Glasgow', 'Cardiff']) {
+        const r = runPipeline('A booking system for my shop in ' + town + '.');
+        assert(r.region.primary === 'eu-west-2',
+          town + ' was placed in ' + r.region.primary + ' rather than a UK region');
+      }
+    },
+  },
+  {
+    name: 'cheap to run is a stated budget',
+    run() {
+      for (const phrase of ['it must be cheap to run', 'keep the costs down', 'we are on a tight budget']) {
+        const r = runPipeline('A landing page for my shop and ' + phrase + '.');
+        const text = JSON.stringify(r.understanding || {});
+        assert(/zero-cost/.test(text), phrase + ' was recorded as no budget stated');
+      }
+    },
+  },
+  {
     name: 'a project name is a name, not the first line of the brief',
     run() {
       // "A Law Firm Needs Secure Client Document Storage With Encrypt" —

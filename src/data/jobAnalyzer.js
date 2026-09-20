@@ -183,7 +183,7 @@ function extractBudget(text) {
   // stated" is the wrong miss for an app whose premise is zero cost:
   // the whole design hinges on it, and it changes which services are
   // even allowed.
-  if (/\bno\s+monthly\s+(?:fees?|costs?|charges?)\b|\bnot\s+paying\s+monthly\b|\bas\s+(?:close\s+to\s+)?(?:nothing|free)\s+as\s+possible\b|\bzero[-\s]cost\b|\bfree\s+tier\s+only\b|\bas\s+cheap\s+as\s+possible\b|\bminimal\s+running\s+cost/i.test(text)) {
+  if (/\bno\s+monthly\s+(?:fees?|costs?|charges?)\b|\bnot\s+paying\s+monthly\b|\bas\s+(?:close\s+to\s+)?(?:nothing|free)\s+as\s+possible\b|\bzero[-\s]cost\b|\bfree\s+tier\s+only\b|\bas\s+cheap\s+as\s+possible\b|\bminimal\s+running\s+cost|\bcheap\s+to\s+run\b|\bkeep\s+(?:the\s+)?costs?\s+down\b|\blow[-\s]cost\b|\binexpensive\b|\btight\s+budget\b/i.test(text)) {
     return { kind: 'zero-cost', amount: 0, label: 'As close to zero as possible (client stated)' };
   }
   // Hourly with range
