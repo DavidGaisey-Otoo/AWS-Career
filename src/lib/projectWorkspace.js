@@ -89,6 +89,10 @@ const FIELDS = {
   contract: { title: ['title', 'name'], client: ['clientName'], date: ['createdAt'] },
   invoice:  { title: ['projectTitle', 'title'], client: ['clientName'], date: ['issuedAt', 'createdAt'] },
   plan:     { title: ['name', 'projectTitle', 'title'], client: ['clientName', 'clientCompany'], date: ['updatedAt', 'createdAt'] },
+  solution:  { title: ['title', 'projectName', 'name'], client: ['clientName'], date: ['savedAt', 'updatedAt', 'createdAt'] },
+  caseStudy: { title: ['title', 'name'], client: ['clientName'], date: ['completedAt', 'createdAt'] },
+  portfolio: { title: ['title', 'name'], client: ['clientName'], date: ['updatedAt', 'startedAt'] },
+  script:    { title: ['name'], client: [], date: [] },
 };
 
 /** The label each generated template carries in the container. */
