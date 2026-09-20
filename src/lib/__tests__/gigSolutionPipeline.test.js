@@ -44,6 +44,59 @@ const GIGS = {
 // ════════════════════════════════════════════════════════════════════
 const CHECKS = [
   {
+    name: 'a job about storing files gets a storage service',
+    run() {
+      // "Archive 2TB of old project files" produced a design with no
+      // storage in it, because there was no storage intent at all.
+      for (const brief of ['Archive 2TB of old project files cheaply for long term retention.',
+        'We need secure document storage for client files.']) {
+        const ids = runPipeline(brief).services.map((s) => s.id);
+        assert(ids.includes('s3'), brief.slice(0, 30) + ' got no storage: ' + ids.join(', '));
+      }
+    },
+  },
+  {
+    name: 'an intent fills a category nobody named',
+    run() {
+      // Naming encryption and audit logging used to suppress the intent
+      // entirely, so a document-storage brief contained no storage.
+      const ids = runPipeline('A law firm needs secure client document storage with encryption, audit logging and 7 year retention.')
+        .services.map((s) => s.id);
+      assert(ids.includes('s3'), 'the storage this job is about was missing: ' + ids.join(', '));
+      assert(ids.includes('kms'), 'the encryption the client named was dropped: ' + ids.join(', '));
+    },
+  },
+  {
+    name: 'an API is given something to run on',
+    run() {
+      const ids = runPipeline('We need a REST API backed by a Postgres database for our booking system.')
+        .services.map((s) => s.id);
+      assert(ids.some((id) => ['ec2', 'lambda', 'ecs'].includes(id)),
+        'an API was designed with no compute to run it: ' + ids.join(', '));
+      assert(ids.includes('rds'), 'the database the client named was dropped: ' + ids.join(', '));
+    },
+  },
+  {
+    name: 'an online shop is recognised',
+    run() {
+      const ids = runPipeline('An online shop with product images, a cart and card payments.').services.map((s) => s.id);
+      assert(ids.length > 0, 'an ecommerce brief produced nothing at all');
+      assert(ids.includes('s3'), 'a shop with product images got no storage: ' + ids.join(', '));
+    },
+  },
+  {
+    name: 'a vague brief is blocked, not answered with a guess',
+    run() {
+      // The honest outcome. Inventing an architecture from "we need some
+      // AWS help" would be worse than admitting there is nothing to go on.
+      const r = runPipeline('We need some AWS help with our systems.');
+      assert(r.services.length === 0, 'an architecture was invented from nothing');
+      assert(r.review.readiness.classification === 'planning-only', 'a guess was marked deployable');
+      assert((r.understanding.analysis.missingQuestions || []).length >= 3,
+        'nothing was asked of a client who said almost nothing');
+    },
+  },
+  {
     name: 'a client brief in plain words is heard in full',
     run() {
       // Acting as a client: every one of these was silently dropped.

@@ -33,6 +33,11 @@ const PROJECT_TYPES = [
   // first, so the plainest brief in freelancing gets the right answer.
   { id: 'static-site',       label: 'Static Website',            test: /\b(portfolio\s+(web)?site|static\s+(web)?site|landing\s+page|brochure\s+site|marketing\s+site|personal\s+(web)?site|one[-\s]?page\s+site|blog)\b/i, suggest: ['s3', 'cloudfront'] },
   { id: 'web-app',           label: 'Web Application',           test: /\b(website|web\s*app|web\s+application|frontend|backend|node\.?js|python|react|api|rest|http|next\.?js|express|django|flask|laravel|spring)\b/i, suggest: ['ec2', 'lambda', 'apigw'] },
+  // Storing and archiving files is one of the commonest freelance jobs
+  // and had no intent at all, so "archive 2TB of old project files"
+  // produced a solution with no storage service in it.
+  { id: 'storage-archive',   label: 'Storage & Archive',         test: /\b(archiv(e|ing)|long[-\s]term\s+retention|cold\s+storage|file\s+storage|document\s+storage|store\s+(?:files|documents)|data\s+retention|retention\s+policy)\b/i, suggest: ['s3'] },
+  { id: 'ecommerce',         label: 'Online Shop',               test: /\b(online\s+shop|e-?commerce|shopping\s+cart|storefront|product\s+catalogue?|checkout|card\s+payments)\b/i, suggest: ['s3', 'cloudfront', 'dynamodb', 'lambda'] },
   { id: 'database',          label: 'Database-driven',           test: /\b(database|postgres(ql)?|mysql|mongodb|rds|dynamodb|data\s+storage|records|crud)\b/i, suggest: ['rds', 'dynamodb'] },
   { id: 'networking',        label: 'Networking Infrastructure', test: /\b(vpc|subnet|network|firewall|security\s+group|routing|connectivity|peering|transit\s+gateway|direct\s+connect|nat)\b/i, suggest: ['vpc', 'subnet', 'security-group'] },
   { id: 'serverless',        label: 'Serverless Architecture',   test: /\b(lambda|serverless|function|event[-\s]?driven|no\s+server|pay\s+per\s+request|step\s+functions)\b/i, suggest: ['lambda', 'apigw', 'dynamodb'] },
@@ -431,7 +436,27 @@ export function analyseProject(text, options = {}) {
   for (const c of compliance) for (const sid of c.addServices) serviceIds.add(sid);
   // Project-type-driven suggestions (only if NOTHING was specified at all)
   if (!namedServices.size) {
+    // Nothing named at all: the intent is all there is to go on.
     for (const p of effectiveTypes) for (const sid of p.suggest) serviceIds.add(sid);
+  } else {
+    // Something was named, so the intent must not override it — but it
+    // must still fill a category the job plainly needs and nobody
+    // mentioned. "Secure client document storage with encryption and
+    // audit logging" named KMS, CloudTrail and GuardDuty, which
+    // suppressed the intent entirely and produced a document-storage
+    // design containing no storage. One service per empty category,
+    // because filling a gap is not the same as piling on.
+    const present = new Set(
+      [...serviceIds].map((id) => SERVICE_MATRIX[id]?.category).filter(Boolean),
+    );
+    for (const p of effectiveTypes) {
+      for (const sid of p.suggest) {
+        const category = SERVICE_MATRIX[sid]?.category;
+        if (!category || present.has(category)) continue;
+        serviceIds.add(sid);
+        present.add(category);
+      }
+    }
   }
 
   const services = [...serviceIds].map((id) => SERVICE_MATRIX[id]).filter(Boolean);
