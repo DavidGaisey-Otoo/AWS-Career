@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 import {
   Boxes, FileText, FolderOpen, Layers, Mail, Receipt, ScrollText,
   Presentation as Deck, Network, FileCode, ClipboardList, Search,
-  BookOpen, Inbox, ChevronRight, HelpCircle, Check, Copy,
+  BookOpen, Inbox, ChevronRight, HelpCircle, Check, Copy, FileText as ReportIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
@@ -24,6 +24,7 @@ import { StatChip } from '../components/common/StatChip.jsx';
 import { ArtifactViewer } from '../components/workspace/ArtifactViewer.jsx';
 import { IntakePanel } from '../components/workspace/IntakePanel.jsx';
 import { FolderPicker } from '../components/workspace/FolderPicker.jsx';
+import { ClientReportPanel } from '../components/workspace/ClientReportPanel.jsx';
 import { LocalLibraryProvider } from '../context/LocalLibraryContext.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { useEarn } from '../context/EarnContext.jsx';
@@ -335,16 +336,25 @@ function WorkspaceInner() {
                 </div>
                 <NameToReuse title={open.title} />
                 <div className="inline-flex rounded-xl border border-token overflow-hidden mt-3">
-                  {[['contents', 'Everything in this job'], ['intake', 'Ask the client']].map(([id, label]) => (
+                  {[
+                    ['contents', 'Everything in this job'],
+                    ['report', 'Client report'],
+                    ['intake', 'Ask the client'],
+                  ].map(([id, label]) => (
                     <button key={id} onClick={() => setTab(id)}
                             className={cn('px-3 py-1.5 text-xs font-bold transition inline-flex items-center gap-1.5',
                               tab === id ? 'bg-aws-orange/15 text-aws-orange' : 'text-muted hover:text-current')}>
                       {id === 'intake' && <HelpCircle size={12} />}
+                      {id === 'report' && <ReportIcon size={12} />}
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {tab === 'report' && (
+                <ClientReportPanel project={open} author={profile?.name} company={profile?.company} />
+              )}
 
               {tab === 'intake' && <IntakePanel project={open} author={profile?.name} />}
 
