@@ -23,6 +23,8 @@ import { EmptyState } from '../components/common/EmptyState.jsx';
 import { StatChip } from '../components/common/StatChip.jsx';
 import { ArtifactViewer } from '../components/workspace/ArtifactViewer.jsx';
 import { IntakePanel } from '../components/workspace/IntakePanel.jsx';
+import { FolderPicker } from '../components/workspace/FolderPicker.jsx';
+import { LocalLibraryProvider } from '../context/LocalLibraryContext.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { useEarn } from '../context/EarnContext.jsx';
 import { useFreelance } from '../context/FreelanceContext.jsx';
@@ -70,7 +72,7 @@ const dateLabel = (value) => {
   return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString();
 };
 
-export default function Workspace() {
+function WorkspaceInner() {
   const [view, setView] = useState('projects');
   const [openId, setOpenId] = useState(null);
   const [tab, setTab] = useState('contents');
@@ -308,6 +310,10 @@ export default function Workspace() {
 
               {tab === 'intake' && <IntakePanel project={open} author={profile?.name} />}
 
+              {tab === 'contents' && open.artifacts.document.some((d) => d?.localPath || d?.file) && (
+                <FolderPicker />
+              )}
+
               {tab === 'contents' && (
                 <div className="grid gap-3 lg:grid-cols-[15rem_1fr]">
                   <nav className="surface rounded-2xl p-2 lg:max-h-[44rem] lg:overflow-y-auto">
@@ -413,5 +419,18 @@ export default function Workspace() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * The chosen folder belongs to the page, not to one document, so the
+ * provider sits above every project. Pick it once and switching between
+ * documents costs nothing.
+ */
+export default function Workspace() {
+  return (
+    <LocalLibraryProvider>
+      <WorkspaceInner />
+    </LocalLibraryProvider>
   );
 }
