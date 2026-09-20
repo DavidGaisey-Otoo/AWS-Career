@@ -14,6 +14,7 @@ import { runCareerProgressionTests } from '../src/lib/__tests__/careerProgressio
 import { runGithubImporterTests } from '../src/lib/__tests__/githubProjectImporter.test.js';
 import { runServiceWorkerTests } from '../src/lib/__tests__/serviceWorker.test.js';
 import { runClientIntakeTests } from '../src/lib/__tests__/clientIntake.test.js';
+import { runLocalFileReaderTests } from '../src/lib/__tests__/localFileReader.test.js';
 import { runLazyRecoveryTests } from '../src/lib/__tests__/lazyWithRecovery.test.js';
 import { runFreelanceClaimSafetyTests } from '../src/lib/__tests__/freelanceClaimSafety.test.js';
 import { runProfessionalBriefBuilderTests } from '../src/lib/__tests__/professionalBriefBuilder.test.js';
@@ -225,6 +226,7 @@ for (const result of awsNews.results) console.log(`${result.pass ? '✓' : '✗'
 const workspace = runProjectWorkspaceTests();
 const serviceWorker = await runServiceWorkerTests();
 const clientIntake = runClientIntakeTests();
+const localFiles = await runLocalFileReaderTests();
 console.log('');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('  PROJECT WORKSPACE TESTS');
@@ -242,6 +244,12 @@ console.log('══════════════════════�
 console.log('  CLIENT INTAKE TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of clientIntake.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  LOCAL FILE READER TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of localFiles.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
 const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
@@ -272,7 +280,8 @@ const awsNewsOk = awsNews.allPassed;
 const workspaceOk = workspace.allPassed;
 const serviceWorkerOk = serviceWorker.allPassed;
 const clientIntakeOk = clientIntake.allPassed;
-const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk && awsNewsOk && workspaceOk && serviceWorkerOk && clientIntakeOk;
+const localFilesOk = localFiles.allPassed;
+const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk && awsNewsOk && workspaceOk && serviceWorkerOk && clientIntakeOk && localFilesOk;
 
 console.log('');
 console.log(allOk
@@ -280,6 +289,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} awsEnvironmentPolicy:${awsEnvironmentPolicyOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'} awsNews:${awsNewsOk ? 'ok' : 'FAIL'} workspace:${workspaceOk ? 'ok' : 'FAIL'} serviceWorker:${serviceWorkerOk ? 'ok' : 'FAIL'} clientIntake:${clientIntakeOk ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'} awsNews:${awsNewsOk ? 'ok' : 'FAIL'} workspace:${workspaceOk ? 'ok' : 'FAIL'} serviceWorker:${serviceWorkerOk ? 'ok' : 'FAIL'} clientIntake:${clientIntakeOk ? 'ok' : 'FAIL'} localFiles:${localFilesOk ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

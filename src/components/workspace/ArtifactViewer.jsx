@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Markdown } from '../ai/Markdown.jsx';
+import { LocalFileViewer } from './LocalFileViewer.jsx';
 import { cn } from '../../lib/utils.js';
 
 /** A copyable block of code, commands or template. */
@@ -293,8 +294,9 @@ export function ArtifactViewer({ item, kind, to }) {
             <Fact label="Client" value={item.clientName || item.clientCompany} />
             <Fact label="Status" value={item.status} />
             <Fact label="Created" value={when(item.createdAt)} />
-            <Fact label="File" value={item.file || item.localPath} />
           </Facts>
+          {/* A path is a description of a document, not a document. */}
+          <LocalFileViewer path={item.localPath || item.file} />
           <Body text={item.description} title="What it contains" />
           {item.externalReview?.verdict && item.externalReview.verdict !== 'not-reviewed' && (
             <Facts>
