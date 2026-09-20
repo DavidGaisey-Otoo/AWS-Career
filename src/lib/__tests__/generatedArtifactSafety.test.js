@@ -5,6 +5,31 @@ function assert(condition, message) { if (!condition) throw new Error(message); 
 const service = (id, label = id.toUpperCase()) => ({ id, label, specs: {} });
 
 const checks = [
+  ['Terraform covers the same services CloudFormation does', () => {
+    // The two drifted: a solution was deployable in one format and
+    // "unsupported" in the other, for the same brief.
+    const ids = ['s3', 'cloudfront', 'route53', 'acm', 'ses', 'lambda', 'dynamodb'];
+    const cfn = generateCloudFormation(ids.map((id) => service(id)), { mode: "prod" });
+    const tf = generateTerraform(ids.map((id) => service(id)), { mode: "prod" });
+    for (const id of cfn.coverage.covered) {
+      assert(!tf.coverage.uncovered.includes(id),
+        id + ' generates CloudFormation but not Terraform');
+    }
+  }],
+  ['a certificate is requested for the real domain, not a placeholder', () => {
+    // It asked for a wildcard on a domain nobody owns, so DNS validation
+    // could never complete and terraform apply hung until it timed out.
+    const code = generateTerraform([service("acm")], { mode: "prod" }).code;
+    assert(!/example\.com"/.test(code), "the certificate still names a placeholder domain");
+    assert(/var\.domain_name/.test(code), "the certificate does not use the domain variable");
+  }],
+  ['Terraform declares every variable its resources use', () => {
+    const code = generateTerraform([service("route53"), service("ses"), service("acm")], { mode: "prod" }).code;
+    const declared = new Set([...code.matchAll(/variable "(\w+)"/g)].map((m) => m[1]));
+    for (const used of new Set([...code.matchAll(/var\.(\w+)/g)].map((m) => m[1]))) {
+      assert(declared.has(used), "var." + used + " is used but never declared");
+    }
+  }],
   ['a generated template declares every parameter it references', () => {
     // A template referencing an undeclared parameter fails in
     // CloudFormation with "Unresolved resource dependencies" — worse than

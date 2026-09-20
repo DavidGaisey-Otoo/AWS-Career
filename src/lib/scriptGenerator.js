@@ -101,6 +101,40 @@ function headerLines(project, opts = {}, mode = 'test') {
 }
 
 const TF_PER_SERVICE = {
+  // ─── Custom domain and outbound email ────────────────────────────
+  //
+  // CloudFormation gained these first and Terraform did not, so the same
+  // solution was deployable in one format and "unsupported" in the other.
+  // Both reference variables rather than interpolating a project slug,
+  // because a certificate for the wrong domain is not a small mistake.
+  route53: () => `
+# ─── Route 53 hosted zone ───────────────────────────────
+# COST: $0.50 per month per hosted zone, plus $0.40 per million queries.
+# This is the only charge here that no free tier covers.
+# You do not need it to use your own domain: leave DNS at your existing
+# registrar, point a CNAME at CloudFront, and remove this resource.
+resource "aws_route53_zone" "main" {
+  name    = var.domain_name
+  comment = "DNS for the project"
+  tags    = local.common_tags
+}
+
+output "name_servers" {
+  description = "Set these at your registrar to delegate DNS to Route 53."
+  value       = aws_route53_zone.main.name_servers
+}
+`,
+  ses: () => `
+# ─── SES (outbound email for the contact form) ──────────
+# COST: creating an identity is free. Sending is $0.10 per 1,000 emails
+# beyond the free allowance, so a contact form costs pennies a year.
+# NOTE: a new account is in the SES sandbox and can only send TO verified
+# addresses. Delivering to your own inbox is fine; sending to the public
+# needs production access, which is a support request.
+resource "aws_ses_email_identity" "notify" {
+  email = var.notify_email
+}
+`,
   vpc: () => `
 # ─── VPC ─────────────────────────────────────────────────
 resource "aws_vpc" "main" {
@@ -368,9 +402,12 @@ resource "aws_kms_alias" "main" {
   acm: () => `
 # ─── ACM (TLS certificate, DNS-validated) ───────────────
 resource "aws_acm_certificate" "main" {
-  domain_name               = "*.\${var.project_name}.example.com"
+  # A certificate must name the domain you actually control. This asked
+  # for a wildcard on a placeholder domain nobody owns, so DNS validation
+  # could never complete and the apply hung until it timed out.
+  domain_name               = var.domain_name
   validation_method         = "DNS"
-  subject_alternative_names = ["\${var.project_name}.example.com"]
+  subject_alternative_names = ["www.\${var.domain_name}"]
   tags                      = local.common_tags
   lifecycle { create_before_destroy = true }
 }
@@ -668,12 +705,32 @@ export function generateTerraform(services, opts = {}) {
   for (const line of headerLines(project, opts, mode)) blocks.push(`# ${line}`);
   blocks.push(`# Services: ${services.map((s) => s.label).join(', ')}`);
   blocks.push(`# ============================================================`);
+  // A resource referencing an undeclared variable fails terraform plan,
+  // so the variables are declared alongside the resources that need them.
+  const needsDomain = requested.includes('route53') || requested.includes('acm');
+  const needsEmail = requested.includes('ses');
   blocks.push(TERRAFORM_PROVIDERS
     .replace('%REGION%', region)
     .replace('%PROJECT%', project)
     .replace('%ENV%', env)
     .replace('%PREPARED_BY%', preparedBy(opts) ? `
     PreparedBy  = "${preparedBy(opts)}"` : ''));
+  if (needsDomain) {
+    blocks.push(`
+variable "domain_name" {
+  description = "The domain this site is served from, without a protocol — for example yourstudio.co.uk"
+  type        = string
+}
+`);
+  }
+  if (needsEmail) {
+    blocks.push(`
+variable "notify_email" {
+  description = "Where contact-form enquiries are delivered. AWS sends this address a verification link first."
+  type        = string
+}
+`);
+  }
 
   // Render in dependency-respecting order: network → security → compute → data → monitoring → devops
   const order = ['vpc', 'subnet', 'igw', 'nat-instance', 'nat-gateway', 'security-group', 'kms', 'acm',
