@@ -1,29 +1,26 @@
-node_modules/
-dist/
-.env
-.env.local
-.DS_Store
-*.log
-.saa-dump-audit.txt
-
-# Private calibration sources. Never publish raw exam-dump PDFs.
-question-imports/**/raw/*.pdf
 
 # Claude Code local settings (per-developer)
-.claude/settings.local.json
-
+# Local data snapshots captured by the dev server — contain credentials
+# Personal assessment documents and evidence — never publish these
+# Private calibration sources. Never publish raw exam-dump PDFs.
 # Scratch/working dirs from local tooling — not part of the app
+*.log
+.DS_Store
+.claude/settings.local.json
 .docdeps/
+.env
+.env.local
+.saa-dump-audit.txt
 .task-docdeps/
 .tmp-vc-health/
 .tmp-vital-check/
 .tmp_doc_render/
-tmp/
-
-# Local data snapshots captured by the dev server — contain credentials
-local-backups/
-
-# Personal assessment documents and evidence — never publish these
+dist/
 documentation/
 evidence/
+local-backups/
+node_modules/
+public/documents/
+question-imports/**/raw/*.pdf
+tmp/
 ~$*

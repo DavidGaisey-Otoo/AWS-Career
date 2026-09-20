@@ -75,10 +75,8 @@ export const MY_DOCUMENTS = [
     localPath: 'documentation\\David Gaisey-Otoo AWS Identity and Account Security Assessment.docx',
     createdAt: '2026-09-12',
     category: 'Work',
-    // A copy of this one is published with the site, so it can be
-    // downloaded rather than picked off disk. Published means anyone
-    // with the URL can read it.
-    file: 'documents/David-Gaisey-Otoo-AWS-Identity-and-Account-Security-Assessment.docx',
+    // Deliberately not published with the site. The only copy is the one
+    // on your disk, reached through the folder picker.
     status: 'Ready for evidence',
   },
   {
