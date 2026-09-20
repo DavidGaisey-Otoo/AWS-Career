@@ -10,7 +10,7 @@
  * fully refresh. Old caches get pruned on activate.
  */
 
-const CACHE_VERSION = 'v6-2026-08-startup-recovery';
+const CACHE_VERSION = 'v7-2026-09-cache-optional';
 const APP_CACHE = `awscl-app-${CACHE_VERSION}`;
 
 // Assets we want available offline immediately on first visit
@@ -45,8 +45,14 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k !== APP_CACHE).map((k) => caches.delete(k)));
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter((k) => k !== APP_CACHE).map((k) => caches.delete(k)));
+      } catch {
+        // Pruning is housekeeping. If the cache store is unavailable the
+        // worker must still activate, because the handlers below work
+        // without it — see openCache.
+      }
       await self.clients.claim();
     })()
   );
@@ -94,28 +100,58 @@ self.addEventListener('fetch', (event) => {
   // Default — let the browser handle it
 });
 
+/**
+ * The cache is an optimisation, never a dependency.
+ *
+ * caches.open() can reject outright — a private window, storage disabled,
+ * quota exhausted, or a profile whose cache backend is corrupt, which
+ * fails with "Unexpected internal error". Because every handler below
+ * opened the cache first and respondWith() turns a rejected promise into
+ * net::ERR_FAILED, one broken cache took down every request the worker
+ * touched: no chunks, no navigation, a dead app on a working network.
+ *
+ * Returning null here lets each handler fall through to the network.
+ */
+async function openCache() {
+  try {
+    return await caches.open(APP_CACHE);
+  } catch {
+    return null;
+  }
+}
+
+/** cache.match that never rejects — a miss and a broken store are the same. */
+async function matchIn(cache, req) {
+  if (!cache) return null;
+  try {
+    return (await cache.match(req)) || null;
+  } catch {
+    return null;
+  }
+}
+
 async function staleWhileRevalidate(req) {
-  const cache = await caches.open(APP_CACHE);
-  const cached = await cache.match(req);
+  const cache = await openCache();
+  const cached = await matchIn(cache, req);
   const fetchPromise = fetch(req).then((res) => {
-    if (res.ok) cache.put(req, res.clone()).catch(() => {});
+    if (res.ok && cache) cache.put(req, res.clone()).catch(() => {});
     return res;
-  }).catch(() => cached);
+  }).catch(() => cached || Response.error());
   return cached || fetchPromise;
 }
 
 async function networkFirst(req, allowShellFallback = false) {
-  const cache = await caches.open(APP_CACHE);
+  const cache = await openCache();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
   try {
     const res = await fetch(req, { cache: 'no-store', signal: controller.signal });
-    if (res.ok) cache.put(req, res.clone()).catch(() => {});
+    if (res.ok && cache) cache.put(req, res.clone()).catch(() => {});
     return res;
   } catch {
-    const exact = await cache.match(req);
+    const exact = await matchIn(cache, req);
     if (exact) return exact;
-    if (allowShellFallback) return (await cache.match('./index.html')) || Response.error();
+    if (allowShellFallback) return (await matchIn(cache, './index.html')) || Response.error();
     return Response.error();
   } finally {
     clearTimeout(timeout);
@@ -123,14 +159,14 @@ async function networkFirst(req, allowShellFallback = false) {
 }
 
 async function cacheFirst(req) {
-  const cache = await caches.open(APP_CACHE);
-  const cached = await cache.match(req);
+  const cache = await openCache();
+  const cached = await matchIn(cache, req);
   if (cached) return cached;
   try {
     const res = await fetch(req);
-    if (res.ok) cache.put(req, res.clone()).catch(() => {});
+    if (res.ok && cache) cache.put(req, res.clone()).catch(() => {});
     return res;
   } catch {
-    return cached; // returns undefined → browser network error
+    return Response.error();
   }
 }
