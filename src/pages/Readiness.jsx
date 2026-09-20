@@ -515,34 +515,11 @@ async function composeMasterReport({ aws, deploy }) {
     lines.push('');
   }
 
-  // 5. App changelog
-  lines.push('## 5 · App changelog');
-  lines.push('');
-  for (const c of APP_CHANGELOG) {
-    lines.push(`### v${c.version} · ${c.date}`);
-    lines.push(`${c.highlight}`);
-    lines.push('');
-    for (const sec of ['added', 'changed', 'fixed', 'notes']) {
-      const items = c.sections?.[sec];
-      if (!items?.length) continue;
-      lines.push(`**${sec[0].toUpperCase() + sec.slice(1)}**`);
-      for (const it of items) lines.push(`- ${it}`);
-      lines.push('');
-    }
-  }
-
-  // 6. Walkthrough progress
-  lines.push('## 6 · Walkthrough progress');
-  lines.push('');
-  const progress = collectWalkthroughProgress();
-  if (progress.length === 0) {
-    lines.push('_No walkthrough progress recorded yet._');
-  } else {
-    for (const p of progress) {
-      lines.push(`- **${p.key}** — ${p.done}/${p.total ?? '?'} steps complete`);
-    }
-  }
-  lines.push('');
+  // Sections 5 and 6 used to append this application's changelog and its
+  // walkthrough progress keys. Neither is about the AWS account the report
+  // describes: one is the release notes of the tool, the other is internal
+  // state that reads as "p1-t6 - 0/? steps complete". Five releases and
+  // fourteen lines of padding in a document about an account.
 
   lines.push('---');
   lines.push('_End of report._');

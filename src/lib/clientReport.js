@@ -25,8 +25,59 @@
  * to let you send them unaware.
  */
 
+/**
+ * Identifiers that must not travel with a document.
+ *
+ * The app's own Master Setup Report carries the AWS account number four
+ * times, four distinct email addresses, a note about which bank cards
+ * were declined, and five releases of this application's changelog. It
+ * is a useful private record and a disastrous thing to attach to an
+ * email, and nothing about the file says which.
+ *
+ * Matches are counted and masked. A scanner that prints the secret it
+ * found in order to warn you about it has not helped.
+ */
+const SECRET_PATTERNS = [
+  { type: 'AWS account number', re: /\b\d{12}\b/g,
+    why: 'an account number lets someone target that account directly' },
+  { type: 'AWS access key id', re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g,
+    why: 'an access key id should never appear in a document at all' },
+  { type: 'email address', re: /\b[\w.+-]+@[\w-]+\.[\w.]+\b/g,
+    why: 'personal addresses do not belong in a client deliverable' },
+  { type: 'IP address', re: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,
+    why: 'an address from your own network is not the client s business' },
+];
+
+const mask = (value) => {
+  const text = String(value);
+  if (text.length <= 4) return '****';
+  return text.slice(0, 2) + '*'.repeat(Math.max(3, text.length - 4)) + text.slice(-2);
+};
+
+/**
+ * Scan a document's text for things that should not be sent.
+ * @returns {{ type, count, sample, why }[]}
+ */
+export function scanForSecrets(text = '') {
+  const out = [];
+  for (const { type, re, why } of SECRET_PATTERNS) {
+    const matches = [...new Set(String(text).match(re) || [])];
+    // A version string like 1.7.0 is not an IP address.
+    const real = type === 'IP address'
+      ? matches.filter((m) => m.split('.').every((part) => Number(part) <= 255))
+      : matches;
+    if (real.length) out.push({ type, count: real.length, sample: mask(real[0]), why });
+  }
+  return out;
+}
+
 /** Things that must never reach a client, and why. */
 const INTERNAL_RULES = [
+  {
+    id: 'marked-internal',
+    test: (doc) => doc.internal === true,
+    reason: null, // supplied by the record itself — see classifyDocument
+  },
   {
     id: 'app-screenshot',
     test: (doc) => /launchpad/i.test(doc.localPath || doc.name || ''),
@@ -47,7 +98,12 @@ const INTERNAL_RULES = [
 /** Is this document safe to put in front of a client? */
 export function classifyDocument(doc = {}) {
   for (const rule of INTERNAL_RULES) {
-    if (rule.test(doc)) return { clientSafe: false, ruleId: rule.id, reason: rule.reason };
+    if (!rule.test(doc)) continue;
+    return {
+      clientSafe: false,
+      ruleId: rule.id,
+      reason: rule.reason || doc.internalReason || 'marked internal in the catalogue',
+    };
   }
   return { clientSafe: true, ruleId: null, reason: null };
 }

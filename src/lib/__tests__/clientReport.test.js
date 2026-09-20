@@ -1,4 +1,4 @@
-import { auditForClient, buildClientReport, classifyDocument } from '../clientReport.js';
+import { auditForClient, buildClientReport, classifyDocument, scanForSecrets } from '../clientReport.js';
 
 /**
  * Two of the "evidence" screenshots in this project turned out to be
@@ -70,6 +70,43 @@ export function runClientReportTests() {
   test('genuine evidence is allowed through', () => {
     const verdict = classifyDocument({ name: 'AWS Account Setup Evidence', localPath: 'evidence\\Account_Setup_Evidence.docx' });
     assert(verdict.clientSafe, 'real evidence was wrongly withheld');
+  });
+
+  test('the scanner finds identifiers that must not travel', () => {
+    const text = 'Account: 851725590283 owned by someone@example.com, key AKIAIOSFODNN7EXAMPLE, host 10.0.4.19.';
+    const types = scanForSecrets(text).map((f) => f.type);
+    for (const expected of ['AWS account number', 'AWS access key id', 'email address', 'IP address']) {
+      assert(types.includes(expected), 'missed: ' + expected);
+    }
+  });
+
+  test('the scanner never prints the thing it is warning about', () => {
+    const findings = scanForSecrets('Account 851725590283 and mail dave@example.com');
+    for (const f of findings) {
+      assert(!/851725590283/.test(f.sample), 'the account number was printed in full');
+      assert(!/dave@example\.com/.test(f.sample), 'the address was printed in full');
+      assert(/\*/.test(f.sample), 'nothing was masked: ' + f.sample);
+    }
+  });
+
+  test('a version number is not mistaken for an address', () => {
+    assert(scanForSecrets('Released in v1.7.0 on 2026-05-23').length === 0,
+      'a version string was reported as sensitive');
+  });
+
+  test('a clean document reports nothing', () => {
+    assert(scanForSecrets('An S3 origin behind CloudFront with HTTPS.').length === 0, 'a false positive on clean text');
+    assert(scanForSecrets('').length === 0, 'empty text produced findings');
+  });
+
+  test('a document marked internal is blocked with its own reason', () => {
+    const verdict = classifyDocument({
+      name: 'AWS Account Setup Master Report',
+      internal: true,
+      internalReason: 'a record of your own AWS account — it contains the account number',
+    });
+    assert(!verdict.clientSafe, 'a document marked internal was passed as client-safe');
+    assert(/your own AWS account/.test(verdict.reason), 'the record\u2019s own reason was discarded: ' + verdict.reason);
   });
 
   // ───────── the audit ─────────

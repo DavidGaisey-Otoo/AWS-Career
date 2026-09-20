@@ -104,6 +104,12 @@ export const MY_DOCUMENTS = [
     createdAt: '2026-05-23',
     category: 'Work',
     status: 'Complete',
+    // A private record of your own account, not a deliverable. It carries
+    // the account number, three email addresses and a note about which
+    // bank cards were declined.
+    internal: true,
+    internalReason:
+      'a record of your own AWS account — it contains the account number, personal email addresses and payment notes',
   },
   {
     id: 'account-setup-evidence',

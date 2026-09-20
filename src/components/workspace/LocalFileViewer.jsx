@@ -14,10 +14,11 @@
  * Nothing is uploaded and nothing is saved.
  */
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, FileWarning, FolderOpen, X } from 'lucide-react';
+import { AlertTriangle, FileWarning, FolderOpen, ShieldAlert, X } from 'lucide-react';
 import { Markdown } from '../ai/Markdown.jsx';
 import { FolderPicker } from './FolderPicker.jsx';
 import { useLocalLibrary } from '../../context/LocalLibraryContext.jsx';
+import { scanForSecrets } from '../../lib/clientReport.js';
 import {
   baseName, fileKindFor, humanSize, looksLikeExpected, readLocalFile,
 } from '../../lib/localFileReader.js';
@@ -124,6 +125,28 @@ export function LocalFileViewer({ path }) {
           <FileWarning size={12} className="mt-0.5 shrink-0" />
           {error}
         </p>
+      )}
+
+      {opened?.text && scanForSecrets(opened.text).length > 0 && (
+        <div className="rounded-lg border border-token p-2.5">
+          <div className="flex items-center gap-1.5">
+            <ShieldAlert size={12} className="text-warning" />
+            <span className="text-[11px] font-extrabold uppercase tracking-widest text-warning">
+              Identifiers in this document
+            </span>
+          </div>
+          <ul className="mt-1 space-y-0.5">
+            {scanForSecrets(opened.text).map((finding) => (
+              <li key={finding.type} className="text-[11px] text-muted">
+                <strong className="text-current">{finding.count} {finding.type}{finding.count === 1 ? '' : 's'}</strong>
+                {' '}(e.g. {finding.sample}) — {finding.why}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[10.5px] text-muted mt-1.5">
+            Fine for your own records. Strip them before this goes to anyone else.
+          </p>
+        </div>
       )}
 
       {opened && (
