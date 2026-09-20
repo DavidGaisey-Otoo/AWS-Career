@@ -26,7 +26,9 @@ const keyFor = (name) => baseName(name).toLowerCase();
 
 export function LocalLibraryProvider({ children }) {
   const [files, setFiles] = useState(() => new Map());
-  const [folderLabel, setFolderLabel] = useState(null);
+  // Folders accumulate. The documents may be split across two of them,
+  // and picking the second must not discard the first.
+  const [folders, setFolders] = useState(() => []);
 
   const addFiles = useCallback((fileList) => {
     const picked = Array.from(fileList || []);
@@ -42,13 +44,13 @@ export function LocalLibraryProvider({ children }) {
       for (const file of picked) next.set(keyFor(file.name), file);
       return next;
     });
-    if (folder) setFolderLabel(folder);
+    if (folder) setFolders((current) => (current.includes(folder) ? current : [...current, folder]));
     return { added: picked.length, folder };
   }, []);
 
   const clear = useCallback(() => {
     setFiles(new Map());
-    setFolderLabel(null);
+    setFolders([]);
   }, []);
 
   /**
@@ -70,12 +72,16 @@ export function LocalLibraryProvider({ children }) {
     return null;
   }, [files]);
 
+  const folderLabel = folders.length === 0 ? null
+    : folders.length === 1 ? folders[0]
+    : `${folders.length} folders`;
+
   const value = useMemo(() => ({
     files, addFiles, clear, find,
     count: files.size,
-    folderLabel,
+    folders, folderLabel,
     ready: files.size > 0,
-  }), [files, addFiles, clear, find, folderLabel]);
+  }), [files, addFiles, clear, find, folders, folderLabel]);
 
   return <LocalLibraryContext.Provider value={value}>{children}</LocalLibraryContext.Provider>;
 }
@@ -83,7 +89,7 @@ export function LocalLibraryProvider({ children }) {
 /** Safe to call outside the provider — returns an empty library. */
 export function useLocalLibrary() {
   return useContext(LocalLibraryContext) || {
-    files: new Map(), count: 0, folderLabel: null, ready: false,
+    files: new Map(), count: 0, folders: [], folderLabel: null, ready: false,
     addFiles: () => ({ added: 0, folder: null }), clear: () => {}, find: () => null,
   };
 }

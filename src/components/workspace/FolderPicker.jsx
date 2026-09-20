@@ -76,9 +76,21 @@ export function FolderPicker({ compact = false, expectedFolder = 'AWS-Career-Doc
               </span>
             )}
           </div>
+          {/* The dialog opens at Downloads and a Desktop with a hundred
+              items on it is no easier to search than a filing cabinet.
+              Every Windows and macOS folder dialog accepts a typed path,
+              which is the reliable way in. */}
+          {!ready && (
+            <p className="text-[10.5px] text-muted mt-2">
+              Can't find it in the dialog? It opens at Downloads. Paste the full path
+              into the <strong className="text-current">Folder:</strong> box at the bottom instead
+              of browsing — or pick one folder, then the other; they add up.
+            </p>
+          )}
           {ready && (
             <p className="text-[10.5px] text-muted mt-2">
-              Held for this tab only — reloading the page asks again.
+              Held for this tab only — reloading the page asks again. You can add another
+              folder and both stay open.
             </p>
           )}
         </div>
