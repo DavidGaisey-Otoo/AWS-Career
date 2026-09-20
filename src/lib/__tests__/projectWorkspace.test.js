@@ -1,4 +1,4 @@
-import { buildWorkspace, normaliseTitle, pool, titlesMatch } from '../projectWorkspace.js';
+import { buildWorkspace, normaliseTitle, pool, titlesMatch, WORKSPACE_KINDS } from '../projectWorkspace.js';
 
 /**
  * Everything produced for one job lived in a different store, so nothing
@@ -198,6 +198,95 @@ export function runProjectWorkspaceTests() {
     assert(ws.projects[0].title === 'S3 Static Website with CloudFront', `title not used: ${ws.projects[0].title}`);
     assert(ws.projects[0].services.includes('cloudfront'), `services lost: ${ws.projects[0].services}`);
     assert(ws.projects[0].artifacts.portfolio[0].id === 'p-s3-cf', 'the id needed for the deep link was lost');
+  });
+
+  // ───────── the field names real records actually use ─────────
+
+  const REAL = {
+    solutions: [{
+      id: 'sol-real', title: 'Secure static website for UK retailer',
+      projectName: 'uk-retailer-site', stackName: 'uk-retailer-site-stack',
+      region: 'eu-west-2', serviceIds: ['s3', 'cloudfront'],
+      serviceLabels: ['Amazon S3', 'Amazon CloudFront'],
+      savedAt: '2026-09-10T09:00:00Z',
+      templates: {
+        cfn: 'AWSTemplateFormatVersion: 2010-09-09',
+        terraform: 'resource "aws_s3_bucket" "site" {}',
+        cli: 'aws s3 mb s3://uk-retailer-site',
+      },
+      plan: { id: 'plan-1', name: 'Secure static website for UK retailer', phases: [] },
+    }],
+    // FreelanceContext writes jobTitle + clientName, never gigTitle.
+    proposals: [{ id: 'pr-1', jobTitle: 'Secure static website for UK retailer', clientName: 'Northwind Retail', sentAt: '2026-09-11T09:00:00Z' }],
+    // Invoices carry a client and no project title at all.
+    invoices: [{ id: 'inv-1', number: 'INV-0001', clientName: 'Northwind Retail', issuedAt: '2026-09-20T09:00:00Z', lineItems: [] }],
+    // buildPlan writes name + clientName.
+    plans: [{ id: 'pl-1', name: 'Secure static website for UK retailer', clientName: 'Northwind Retail', createdAt: '2026-09-12T09:00:00Z' }],
+    // buildDeliveryPackage writes projectTitle + diagram.
+    documents: [{ id: 'dl-1', kind: 'delivery', projectTitle: 'Secure static website for UK retailer', clientName: 'Northwind Retail', diagram: { nodes: 4 }, createdAt: '2026-09-13T09:00:00Z' }],
+    contracts: [{ id: 'ct-1', kind: 'contract', title: 'Secure static website for UK retailer', createdAt: '2026-09-11T10:00:00Z' }],
+    emails: [{ id: 'em-1', projectId: 'sol-real', subject: 'Scope confirmed', at: '2026-09-12T10:00:00Z' }],
+  };
+
+  test('a real proposal joins its project by jobTitle', () => {
+    const ws = buildWorkspace(REAL);
+    const p = ws.projects.find((x) => /static website/i.test(x.title));
+    assert(p.artifacts.proposal.length === 1, 'jobTitle was not read, so the proposal never joined');
+    assert(p.client === 'Northwind Retail', 'the client name was not picked up: ' + p.client);
+  });
+
+  test('the generated templates are artifacts you can open', () => {
+    const p = buildWorkspace(REAL).projects.find((x) => /static website/i.test(x.title));
+    const formats = p.artifacts.script.map((s) => s.format).sort();
+    assert(formats.join(',') === 'cfn,cli,terraform', 'templates missing: ' + formats.join(','));
+    const cli = p.artifacts.script.find((s) => s.format === 'cli');
+    assert(cli.code.includes('aws s3 mb'), 'the commands were not carried through');
+    assert(cli.name === 'AWS CLI commands', 'the template has no readable name: ' + cli.name);
+  });
+
+  test('the solution plan appears as the project plan', () => {
+    const p = buildWorkspace(REAL).projects.find((x) => /static website/i.test(x.title));
+    assert(p.artifacts.plan.length >= 1, 'the plan inside the solution was dropped');
+    assert(p.artifacts.plan.some((x) => x.solutionId === 'sol-real'), 'the plan lost its solution link');
+  });
+
+  test('a solution keeps its service labels, region and save date', () => {
+    const p = buildWorkspace(REAL).projects.find((x) => /static website/i.test(x.title));
+    assert(p.region === 'eu-west-2', 'region lost: ' + p.region);
+    assert(p.services.includes('Amazon S3'), 'serviceLabels lost: ' + p.services.join(','));
+    assert(p.createdAt === '2026-09-10T09:00:00Z', 'savedAt was not read: ' + p.createdAt);
+  });
+
+  test('a delivery package surfaces its diagram as architecture', () => {
+    const p = buildWorkspace(REAL).projects.find((x) => /static website/i.test(x.title));
+    assert(p.artifacts.architecture.length === 1, 'the only stored diagram was not surfaced');
+    assert(p.artifacts.architecture[0].fromDocument === 'dl-1', 'the diagram lost its source');
+  });
+
+  test('an invoice with only a client joins when there is one candidate', () => {
+    const p = buildWorkspace(REAL).projects.find((x) => /static website/i.test(x.title));
+    assert(p.artifacts.invoice.length === 1, 'an invoice carrying only a client name was never placed');
+  });
+
+  test('an invoice is NOT guessed when a client has two jobs', () => {
+    const ws = buildWorkspace({
+      solutions: [
+        { id: 's1', title: 'Secure static website', clientName: 'Northwind Retail', savedAt: '2026-09-01T00:00:00Z' },
+        { id: 's2', title: 'Kubernetes cluster migration', clientName: 'Northwind Retail', savedAt: '2026-09-02T00:00:00Z' },
+      ],
+      invoices: [{ id: 'inv-x', clientName: 'Northwind Retail', issuedAt: '2026-09-20T00:00:00Z' }],
+    });
+    const placed = ws.projects.some((p) => p.artifacts.invoice.length > 0);
+    assert(!placed, 'an invoice was filed against one of two equally likely jobs');
+    assert(ws.unassigned.invoice.length === 1, 'the ambiguous invoice vanished instead of being listed');
+  });
+
+  test('everything for the job lands in one container', () => {
+    const p = buildWorkspace(REAL).projects.find((x) => /static website/i.test(x.title));
+    const present = WORKSPACE_KINDS.filter((k) => p.artifacts[k].length);
+    for (const kind of ['solution', 'architecture', 'script', 'plan', 'proposal', 'email', 'contract', 'invoice', 'document']) {
+      assert(present.includes(kind), 'missing from the container: ' + kind);
+    }
   });
 
   return { allPassed: results.every((r) => r.pass), results };

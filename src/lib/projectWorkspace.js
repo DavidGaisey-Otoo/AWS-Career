@@ -5,29 +5,47 @@
  * WHY
  * ════════════════════════════════════════════════════════════════════
  * Everything this app produces for a single job is scattered across
- * separate stores: the solution and architecture in one, the proposal in
- * another, the emails in a third, the portfolio entry, the deck, the
- * contract, the invoice, the generated scripts. Each page lists its own
- * kind and nothing answers the question that actually matters mid-job —
- * "what do I have for THIS client?"
+ * separate stores: the solution and its generated templates in one, the
+ * proposal in another, the emails in a third, the plan, the contract, the
+ * invoice, the delivery package, the portfolio entry. Each page lists its
+ * own kind and nothing answered the question that actually matters
+ * mid-job — "what do I have for THIS client?"
  *
- * That is also why the app looked like it had no CRM. The records exist;
- * nothing ever joined them up.
+ * ════════════════════════════════════════════════════════════════════
+ * FIELD NAMES ARE NOT GUESSES
+ * ════════════════════════════════════════════════════════════════════
+ * Every store names its fields differently, and the first version of this
+ * module invented names that looked plausible — gigTitle for proposals,
+ * projectTitle for invoices. Real proposals use jobTitle and real invoices
+ * carry no project title at all, so nothing ever joined: the workspace
+ * looked empty while the stores were full.
+ *
+ * FIELDS below is taken from the actual writers:
+ *   proposals  FreelanceContext DEFAULT_STATE
+ *   invoices   FreelanceContext DEFAULT_STATE
+ *   emails     EarnContext DEFAULT_STATE
+ *   plans      buildPlan            (data/projectPlan.js)
+ *   contracts  buildContract        (data/documents.js)
+ *   documents  buildDeliveryPackage (data/documents.js)
+ *   solutions  saveSolution         (lib/gigSolutionPipeline.js)
+ *
+ * Change a writer, change this list, and add a test.
  *
  * ════════════════════════════════════════════════════════════════════
  * HOW THINGS ARE JOINED
  * ════════════════════════════════════════════════════════════════════
  * In order of trust:
  *
- *   1. An explicit projectId. Emails already carry one; anything else
- *      that gains one is picked up for free.
- *   2. A matching normalised title. Artifacts made from the same gig
- *      inherit its wording, so this catches most real cases.
+ *   1. An explicit projectId. Emails already carry one.
+ *   2. A matching normalised title.
+ *   3. The client name — but only when exactly one project belongs to
+ *      that client. Invoices record a client and no project, so without
+ *      this they could never be placed; with more than one candidate it
+ *      is a coin toss, and a coin toss is not a join.
  *
- * Nothing is joined on a guess weaker than that. An artifact that cannot
- * be placed is listed as unassigned rather than filed under a project it
- * may not belong to — a proposal shown against the wrong client is worse
- * than one shown against none.
+ * Anything that cannot be placed is listed as unassigned rather than
+ * filed under a project it may not belong to. A proposal shown against
+ * the wrong client is worse than one shown against none.
  */
 
 /** Strip wording that varies between artifacts made from the same gig. */
@@ -58,9 +76,37 @@ export function titlesMatch(a, b) {
 }
 
 const ARTIFACT_KINDS = [
-  'solution', 'caseStudy', 'architecture', 'proposal', 'email', 'portfolio',
-  'document', 'deck', 'contract', 'invoice', 'plan', 'script',
+  'solution', 'architecture', 'script', 'plan', 'proposal', 'email',
+  'contract', 'invoice', 'document', 'deck', 'portfolio', 'caseStudy',
 ];
+
+/** Where each kind keeps its title, client and date. See the header. */
+const FIELDS = {
+  proposal: { title: ['jobTitle', 'gigTitle', 'title'], client: ['clientName'], date: ['sentAt', 'createdAt', 'at'] },
+  email:    { title: ['subject', 'title'], client: ['clientName'], date: ['at', 'createdAt'] },
+  document: { title: ['projectTitle', 'name', 'title'], client: ['clientName', 'clientCompany'], date: ['createdAt', 'at'] },
+  deck:     { title: ['name', 'title', 'brief'], client: ['clientName'], date: ['updatedAt', 'createdAt'] },
+  contract: { title: ['title', 'name'], client: ['clientName'], date: ['createdAt'] },
+  invoice:  { title: ['projectTitle', 'title'], client: ['clientName'], date: ['issuedAt', 'createdAt'] },
+  plan:     { title: ['name', 'projectTitle', 'title'], client: ['clientName', 'clientCompany'], date: ['updatedAt', 'createdAt'] },
+};
+
+/** The label each generated template carries in the container. */
+const TEMPLATE_LABELS = {
+  cfn: 'CloudFormation template',
+  terraform: 'Terraform configuration',
+  cli: 'AWS CLI commands',
+};
+
+const pick = (item, keys = []) => {
+  for (const key of keys) {
+    const value = item?.[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+};
+
+const normaliseClient = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 function emptyProject(id, title) {
   const artifacts = {};
@@ -71,6 +117,14 @@ function emptyProject(id, title) {
 const time = (v) => {
   const t = v ? new Date(v).getTime() : NaN;
   return Number.isNaN(t) ? 0 : t;
+};
+
+const addServices = (project, list) => {
+  if (!Array.isArray(list) || !list.length) return;
+  project.services = [...new Set([
+    ...project.services,
+    ...list.map((x) => x?.label || x?.id || x?.name || x),
+  ])].filter((x) => typeof x === 'string' && x);
 };
 
 /**
@@ -92,7 +146,7 @@ export function buildWorkspace(stores = {}) {
   for (const k of ARTIFACT_KINDS) unassigned[k] = [];
 
   /** Find an existing project, or start one. */
-  const locate = (projectId, title, { create = false } = {}) => {
+  const locate = (projectId, title, { create = false, client = null } = {}) => {
     if (projectId) {
       const byId = projects.find((p) => p.id === projectId);
       if (byId) return byId;
@@ -101,31 +155,59 @@ export function buildWorkspace(stores = {}) {
       const byTitle = projects.find((p) => titlesMatch(p.title, title));
       if (byTitle) return byTitle;
     }
+    if (client) {
+      // Only when it is unambiguous. Two jobs for one client make this a
+      // guess, and the record is better shown unassigned than misfiled.
+      const wanted = normaliseClient(client);
+      const candidates = projects.filter((p) => p.client && normaliseClient(p.client) === wanted);
+      if (candidates.length === 1) return candidates[0];
+    }
     if (!create) return null;
     const created = emptyProject(projectId || `proj-${projects.length + 1}`, title || 'Untitled project');
+    created.client = client || null;
     projects.push(created);
     return created;
   };
 
-  // Solutions anchor a project: they carry the gig, services and region.
+  // Solutions anchor a project: they carry the gig, services and region,
+  // and the generated templates that are the actual deliverable.
   for (const s of solutions) {
-    const title = s.title || s.gigTitle || s.name || 'Untitled solution';
+    const title = s.title || s.projectName || s.gigTitle || s.name || 'Untitled solution';
     const p = locate(s.id, title, { create: true });
     p.artifacts.solution.push(s);
     p.region = p.region || s.region || null;
-    if (Array.isArray(s.services) && s.services.length) {
-      p.services = [...new Set([...p.services, ...s.services.map((x) => x?.id || x?.name || x)])].filter(Boolean);
-    }
+    addServices(p, s.serviceLabels || s.serviceIds || s.services);
+    p.client = p.client || s.clientName || s.client || null;
+    p.createdAt = p.createdAt || s.savedAt || s.createdAt || s.at || null;
+    p.updatedAt = Math.max(time(p.updatedAt), time(s.updatedAt || s.savedAt || s.createdAt)) || p.updatedAt;
+
     if (s.architecture || s.diagram) p.artifacts.architecture.push(s.architecture || s.diagram);
-    p.client = p.client || s.client || s.clientName || null;
-    p.createdAt = p.createdAt || s.createdAt || s.at || null;
-    p.updatedAt = Math.max(time(p.updatedAt), time(s.updatedAt || s.createdAt || s.at)) || p.updatedAt;
+
+    // The configurations and commands — what the client is actually paying
+    // for. These live inside the solution record and were never surfaced.
+    for (const [key, code] of Object.entries(s.templates || {})) {
+      if (!code) continue;
+      p.artifacts.script.push({
+        id: `${s.id}-${key}`,
+        format: key,
+        name: TEMPLATE_LABELS[key] || key,
+        code,
+        solutionId: s.id,
+      });
+    }
+
+    if (s.plan) {
+      p.artifacts.plan.push({
+        ...s.plan,
+        id: s.plan.id || `${s.id}-plan`,
+        name: s.plan.name || `${title} — project plan`,
+        solutionId: s.id,
+      });
+    }
   }
 
   // A completed case study is a finished piece of work, so it anchors a
-  // project in the same way a solution does. Without this the app knows
-  // about real, delivered AWS work — it is catalogued and rendered on the
-  // documents page — while the workspace reports having none.
+  // project in the same way a solution does.
   for (const c of caseStudies) {
     const title = c.title || c.name || 'Untitled case study';
     const p = locate(c.id, title, { create: true });
@@ -145,25 +227,39 @@ export function buildWorkspace(stores = {}) {
     // A portfolio entry is keyed by the catalogue project id and stores
     // only progress, so its name and services come from the catalogue.
     // Without them the project shows as a raw slug like 'p-s3-cf'.
-    if (Array.isArray(entry?.services) && entry.services.length) {
-      p.services = [...new Set([...p.services, ...entry.services.map((x) => x?.id || x?.name || x)])].filter(Boolean);
-    }
+    addServices(p, entry?.services);
     p.updatedAt = Math.max(time(p.updatedAt), time(entry?.updatedAt || entry?.startedAt)) || p.updatedAt;
   }
 
-  const place = (kind, item, { projectId, title }) => {
-    const p = locate(projectId, title);
-    if (p) p.artifacts[kind].push(item);
-    else unassigned[kind].push(item);
+  const place = (kind, item) => {
+    if (!item) return;
+    const map = FIELDS[kind] || {};
+    const title = pick(item, map.title);
+    const client = pick(item, map.client);
+    const p = locate(item.projectId, title, { client });
+    if (p) {
+      p.artifacts[kind].push(item);
+      p.client = p.client || client;
+      p.updatedAt = Math.max(time(p.updatedAt), time(pick(item, map.date))) || p.updatedAt;
+    } else {
+      unassigned[kind].push(item);
+    }
+    // A delivery package carries the architecture diagram; it is the only
+    // place one is stored, so surface it as architecture too.
+    if (kind === 'document' && item.diagram) {
+      const diagram = { id: `${item.id}-diagram`, ...item.diagram, fromDocument: item.id };
+      if (p) p.artifacts.architecture.push(diagram);
+      else unassigned.architecture.push(diagram);
+    }
   };
 
-  for (const x of proposals) place('proposal', x, { projectId: x.projectId, title: x.gigTitle || x.title });
-  for (const x of emails) place('email', x, { projectId: x.projectId, title: x.subject || x.title });
-  for (const x of documents) place('document', x, { projectId: x.projectId, title: x.name || x.title });
-  for (const x of decks) place('deck', x, { projectId: x.projectId, title: x.name || x.brief });
-  for (const x of contracts) place('contract', x, { projectId: x.projectId, title: x.name || x.title });
-  for (const x of invoices) place('invoice', x, { projectId: x.projectId, title: x.projectTitle || x.title });
-  for (const x of plans) place('plan', x, { projectId: x.projectId, title: x.projectTitle || x.title });
+  for (const x of proposals) place('proposal', x);
+  for (const x of emails) place('email', x);
+  for (const x of documents) place('document', x);
+  for (const x of decks) place('deck', x);
+  for (const x of contracts) place('contract', x);
+  for (const x of invoices) place('invoice', x);
+  for (const x of plans) place('plan', x);
 
   // Newest work first — that is what someone mid-job is looking for.
   for (const p of projects) {
@@ -191,4 +287,15 @@ export function pool(workspace, kind) {
   return out;
 }
 
+/** The title an artifact of this kind should be listed under. */
+export function artifactTitle(item, kind) {
+  return pick(item, FIELDS[kind]?.title) || null;
+}
+
+/** The date an artifact of this kind should be listed under. */
+export function artifactDate(item, kind) {
+  return pick(item, FIELDS[kind]?.date) || null;
+}
+
 export const WORKSPACE_KINDS = ARTIFACT_KINDS;
+export const WORKSPACE_FIELDS = FIELDS;

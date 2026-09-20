@@ -6,62 +6,78 @@
  * have mid-job — "what do I have for THIS client?" — so the answer was
  * to open five pages and hold it in your head.
  *
- * Two views, because both questions are real:
- *   Projects — open one job, see everything under it.
- *   Pool     — every proposal, or every email, across all jobs.
+ * Opening a project gives you a contents list on the left and the artifact
+ * itself on the right: the proposal to read, the CLI commands to copy, the
+ * plan with its phases. A list of titles was not enough to work from.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Boxes, FileText, FolderOpen, Layers, Mail, Receipt, ScrollText,
-  Presentation as Deck, Network, FileCode, ClipboardList, Search, BookOpen, Inbox, ChevronRight,
+  Presentation as Deck, Network, FileCode, ClipboardList, Search,
+  BookOpen, Inbox, ChevronRight, HelpCircle,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { EmptyState } from '../components/common/EmptyState.jsx';
 import { StatChip } from '../components/common/StatChip.jsx';
+import { ArtifactViewer } from '../components/workspace/ArtifactViewer.jsx';
+import { IntakePanel } from '../components/workspace/IntakePanel.jsx';
+import { useApp } from '../context/AppContext.jsx';
 import { useEarn } from '../context/EarnContext.jsx';
 import { useFreelance } from '../context/FreelanceContext.jsx';
 import { usePortfolio } from '../context/PortfolioContext.jsx';
 import { listSolutions } from '../lib/solutionStore.js';
+import {
+  artifactDate, artifactTitle, buildWorkspace, pool, WORKSPACE_KINDS,
+} from '../lib/projectWorkspace.js';
 import { ASSESSMENT_DOCUMENTS, COMPLETED_CASE_STUDIES } from '../data/completedCaseStudies.js';
 import { PROJECTS } from '../data/projects.js';
-import { buildWorkspace, pool, WORKSPACE_KINDS } from '../lib/projectWorkspace.js';
 import { cn } from '../lib/utils.js';
 
 const KIND_META = {
   solution:     { label: 'Solutions',     icon: Layers,        to: '/solution' },
-  caseStudy:    { label: 'Case studies',  icon: BookOpen,      to: '/documents' },
   architecture: { label: 'Architecture',  icon: Network,       to: '/architecture' },
+  script:       { label: 'Scripts / IaC', icon: FileCode,      to: '/solution' },
+  plan:         { label: 'Project plans', icon: ClipboardList, to: '/project-plan' },
   proposal:     { label: 'Proposals',     icon: ScrollText,    to: '/freelance?tab=myproposals' },
   email:        { label: 'Emails',        icon: Mail,          to: '/email' },
-  portfolio:    { label: 'Portfolio',     icon: FolderOpen,    to: '/portfolio' },
+  contract:     { label: 'Contracts',     icon: ClipboardList, to: '/documents?tab=contracts' },
+  invoice:      { label: 'Invoices',      icon: Receipt,       to: '/documents?tab=invoices' },
   document:     { label: 'Documents',     icon: FileText,      to: '/documents' },
   deck:         { label: 'Decks',         icon: Deck,          to: '/presentation' },
-  contract:     { label: 'Contracts',     icon: ClipboardList, to: '/freelance' },
-  invoice:      { label: 'Invoices',      icon: Receipt,       to: '/freelance' },
-  plan:         { label: 'Project plans', icon: ClipboardList, to: '/project-plan' },
-  script:       { label: 'Scripts / IaC', icon: FileCode,      to: '/solution' },
+  portfolio:    { label: 'Portfolio',     icon: FolderOpen,    to: '/portfolio' },
+  caseStudy:    { label: 'Case studies',  icon: BookOpen,      to: '/documents' },
 };
 
 const titleOf = (item, kind) =>
-  item?.title || item?.gigTitle || item?.subject || item?.name ||
-  item?.projectTitle || item?.brief || `${KIND_META[kind]?.label || kind} record`;
+  artifactTitle(item, kind) || item?.title || item?.name || item?.subject ||
+  `${KIND_META[kind]?.label || kind} record`;
+
+const whenOf = (item, kind) =>
+  artifactDate(item, kind) || item?.updatedAt || item?.completedAt || item?.createdAt ||
+  item?.savedAt || item?.at || null;
 
 const linkFor = (item, kind) => {
   if (kind === 'portfolio' && item?.id) return `/portfolio/${item.id}`;
   return KIND_META[kind]?.to || '/';
 };
 
-const whenOf = (item) =>
-  item?.updatedAt || item?.completedAt || item?.createdAt || item?.at || item?.date || null;
+const dateLabel = (value) => {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString();
+};
 
 export default function Workspace() {
   const [view, setView] = useState('projects');
   const [openId, setOpenId] = useState(null);
+  const [tab, setTab] = useState('contents');
+  const [selected, setSelected] = useState(null); // { kind, index }
   const [kind, setKind] = useState('proposal');
   const [query, setQuery] = useState('');
 
+  const { profile } = useApp();
   const earn = useEarn();
   const freelance = useFreelance();
   const portfolio = usePortfolio();
@@ -85,9 +101,8 @@ export default function Workspace() {
 
   const workspace = useMemo(() => buildWorkspace({
     solutions: listSolutions() || [],
-    // Work that is already recorded in the app but lived only on the
-    // documents page, so the workspace reported nothing while real,
-    // delivered AWS work existed.
+    // Work already recorded in the app but living only on the documents
+    // page, so the workspace reported nothing while real work existed.
     caseStudies: COMPLETED_CASE_STUDIES,
     proposals: freelance?.state?.proposals || [],
     emails: earn?.state?.emails || [],
@@ -96,9 +111,20 @@ export default function Workspace() {
     decks: earn?.state?.decks || [],
     contracts: earn?.state?.contracts || [],
     invoices: freelance?.state?.invoices || [],
+    plans: earn?.state?.plans || [],
   }), [earn?.state, freelance?.state, portfolioEntries]);
 
   const open = workspace.projects.find((p) => p.id === openId) || null;
+
+  // Opening a project should show something, not an empty right-hand pane.
+  useEffect(() => {
+    if (!openId) { setSelected(null); return; }
+    const project = workspace.projects.find((p) => p.id === openId);
+    if (!project) { setSelected(null); return; }
+    const first = WORKSPACE_KINDS.find((k) => project.artifacts[k].length);
+    setSelected(first ? { kind: first, index: 0 } : null);
+    setTab('contents');
+  }, [openId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredProjects = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -116,8 +142,7 @@ export default function Workspace() {
 
   // buildWorkspace deliberately refuses to file an artifact under a project
   // it only half-matches. That is the right call, but the page then dropped
-  // those items entirely — so work the user had done was neither filed nor
-  // shown. Kept out of a project, still listed.
+  // those items entirely — neither filed nor shown.
   const unplaced = useMemo(
     () => WORKSPACE_KINDS.filter((k) => workspace.unassigned?.[k]?.length),
     [workspace],
@@ -126,12 +151,14 @@ export default function Workspace() {
   const nothingYet = workspace.totals.projects === 0 &&
     WORKSPACE_KINDS.every((k) => workspace.totals[k] === 0);
 
+  const selectedItem = open && selected ? open.artifacts[selected.kind]?.[selected.index] : null;
+
   return (
     <div className="space-y-4">
       <PageHeader
         eyebrow="Workspace"
         title="Everything, by the job it belongs to."
-        subtitle="One container per piece of client work — its solution, architecture, proposal, emails, documents, contract and invoice together. Or browse every artifact of one kind across all jobs."
+        subtitle="One container per piece of client work — its solution, architecture, templates, plan, proposal, emails, contract and invoice together. Open any one of them and read it here."
         icon={Boxes}
       />
 
@@ -147,7 +174,7 @@ export default function Workspace() {
         <>
           <section className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
             <StatChip layout="stacked" icon={Boxes} label="Projects" value={workspace.totals.projects} />
-            {['proposal', 'email', 'document', 'portfolio', 'invoice'].map((k) => (
+            {['script', 'proposal', 'email', 'document', 'invoice'].map((k) => (
               <StatChip key={k} layout="stacked" icon={KIND_META[k].icon}
                         label={KIND_META[k].label} value={workspace.totals[k]} />
             ))}
@@ -178,6 +205,7 @@ export default function Workspace() {
             </div>
           </section>
 
+          {/* ───────────── the projects list ───────────── */}
           {view === 'projects' && !open && (
             <section className="grid gap-2 sm:grid-cols-2">
               {filteredProjects.map((p) => (
@@ -212,13 +240,12 @@ export default function Workspace() {
             </section>
           )}
 
+          {/* ───────────── what could not be placed ───────────── */}
           {view === 'projects' && !open && unplaced.length > 0 && (
             <section className="surface rounded-2xl p-4">
               <div className="flex items-center gap-2">
                 <Inbox size={14} className="text-muted" />
-                <h3 className="text-[11px] font-extrabold uppercase tracking-widest">
-                  Not linked to a project
-                </h3>
+                <h3 className="text-[11px] font-extrabold uppercase tracking-widest">Not linked to a project</h3>
               </div>
               <p className="text-[11px] text-muted mt-1 mb-3">
                 These exist, but nothing records which job they belong to — so they are listed
@@ -238,10 +265,8 @@ export default function Workspace() {
                       <ul className="space-y-0.5">
                         {workspace.unassigned[k].map((item, i) => (
                           <li key={item?.id || i}>
-                            <Link
-                              to={linkFor(item, k)}
-                              className="group flex items-center gap-1 text-[12px] text-muted hover:text-aws-orange transition"
-                            >
+                            <Link to={linkFor(item, k)}
+                                  className="group flex items-center gap-1 text-[12px] text-muted hover:text-aws-orange transition">
                               <span className="min-w-0 truncate">{titleOf(item, k)}</span>
                               <ChevronRight size={11} className="shrink-0 opacity-0 group-hover:opacity-100" />
                             </Link>
@@ -255,6 +280,7 @@ export default function Workspace() {
             </section>
           )}
 
+          {/* ───────────── one project, opened ───────────── */}
           {view === 'projects' && open && (
             <motion.section initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
               <div className="surface rounded-2xl p-4">
@@ -267,49 +293,84 @@ export default function Workspace() {
                   {open.services.length > 0 && <span>{open.services.join(' · ')}</span>}
                   <span>{open.artifactCount} item{open.artifactCount === 1 ? '' : 's'}</span>
                 </div>
+                <div className="inline-flex rounded-xl border border-token overflow-hidden mt-3">
+                  {[['contents', 'Everything in this job'], ['intake', 'Ask the client']].map(([id, label]) => (
+                    <button key={id} onClick={() => setTab(id)}
+                            className={cn('px-3 py-1.5 text-xs font-bold transition inline-flex items-center gap-1.5',
+                              tab === id ? 'bg-aws-orange/15 text-aws-orange' : 'text-muted hover:text-current')}>
+                      {id === 'intake' && <HelpCircle size={12} />}
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {WORKSPACE_KINDS.map((k) => {
-                const items = open.artifacts[k];
-                if (!items.length) return null;
-                const meta = KIND_META[k] || { label: k, icon: FileText, to: '/' };
-                const Icon = meta.icon;
-                return (
-                  <div key={k} className="surface rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icon size={14} className="text-aws-orange" />
-                      <h3 className="text-[11px] font-extrabold uppercase tracking-widest">{meta.label}</h3>
-                      <span className="text-[10px] text-muted">{items.length}</span>
-                      <Link to={meta.to} className="ml-auto text-[11px] font-bold text-muted hover:text-aws-orange">
-                        Open {meta.label.toLowerCase()} →
-                      </Link>
-                    </div>
-                    <ul className="space-y-1">
-                      {items.map((item, i) => (
-                        <li key={item?.id || i} className="border-b border-token/40 last:border-0">
-                          <Link
-                            to={linkFor(item, k)}
-                            className="group flex items-start justify-between gap-3 py-1.5 px-1 -mx-1 rounded text-[12px] hover:bg-[var(--card-2)] transition"
-                          >
-                            <span className="min-w-0 truncate group-hover:text-aws-orange">{titleOf(item, k)}</span>
-                            <span className="flex items-center gap-1.5 shrink-0">
-                              {whenOf(item) && (
-                                <span className="text-[10.5px] text-muted">
-                                  {new Date(whenOf(item)).toLocaleDateString()}
-                                </span>
-                              )}
-                              <ChevronRight size={12} className="text-muted group-hover:text-aws-orange" />
+              {tab === 'intake' && <IntakePanel project={open} author={profile?.name} />}
+
+              {tab === 'contents' && (
+                <div className="grid gap-3 lg:grid-cols-[15rem_1fr]">
+                  <nav className="surface rounded-2xl p-2 lg:max-h-[44rem] lg:overflow-y-auto">
+                    {WORKSPACE_KINDS.filter((k) => open.artifacts[k].length).map((k) => {
+                      const meta = KIND_META[k] || { label: k, icon: FileText };
+                      const Icon = meta.icon;
+                      return (
+                        <div key={k} className="mb-2 last:mb-0">
+                          <div className="flex items-center gap-1.5 px-2 py-1">
+                            <Icon size={11} className="text-aws-orange" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-widest">{meta.label}</span>
+                            <span className="text-[10px] text-muted">{open.artifacts[k].length}</span>
+                          </div>
+                          {open.artifacts[k].map((item, i) => {
+                            const active = selected?.kind === k && selected?.index === i;
+                            return (
+                              <button
+                                key={item?.id || i}
+                                onClick={() => setSelected({ kind: k, index: i })}
+                                className={cn(
+                                  'w-full text-left px-2 py-1.5 rounded-lg text-[12px] transition truncate',
+                                  active
+                                    ? 'bg-aws-orange/15 text-aws-orange font-bold'
+                                    : 'text-muted hover:bg-[var(--card-2)] hover:text-current',
+                                )}
+                              >
+                                {titleOf(item, k)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </nav>
+
+                  <div className="min-w-0">
+                    {selectedItem ? (
+                      <div className="space-y-3">
+                        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                          <h3 className="font-extrabold text-sm">{titleOf(selectedItem, selected.kind)}</h3>
+                          {dateLabel(whenOf(selectedItem, selected.kind)) && (
+                            <span className="text-[11px] text-muted">
+                              {dateLabel(whenOf(selectedItem, selected.kind))}
                             </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                          )}
+                        </div>
+                        <ArtifactViewer
+                          item={selectedItem}
+                          kind={selected.kind}
+                          to={linkFor(selectedItem, selected.kind)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="surface rounded-2xl p-6 text-center">
+                        <p className="text-sm text-muted">Nothing in this project yet.</p>
+                      </div>
+                    )}
                   </div>
-                );
-              })}
+                </div>
+              )}
             </motion.section>
           )}
 
+          {/* ───────────── everything of one kind ───────────── */}
           {view === 'pool' && (
             <section className="surface rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -336,10 +397,8 @@ export default function Workspace() {
                           </span>
                         </span>
                         <span className="flex items-center gap-1.5 shrink-0">
-                          {whenOf(item) && (
-                            <span className="text-[10.5px] text-muted">
-                              {new Date(whenOf(item)).toLocaleDateString()}
-                            </span>
+                          {dateLabel(whenOf(item, kind)) && (
+                            <span className="text-[10.5px] text-muted">{dateLabel(whenOf(item, kind))}</span>
                           )}
                           <ChevronRight size={12} className="text-muted group-hover:text-aws-orange" />
                         </span>
