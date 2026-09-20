@@ -309,6 +309,11 @@ export function deriveNames(brief, { extracted, blueprint, services }) {
   // extracted name, else build one from the strongest service + a keyword.
   let human = cleanJobTitle(extracted?.projectName || '');
   if (human.length > 60 || human.length < 6) human = '';
+  // An extracted "name" that is really the opening of a sentence reads
+  // as a broken title — "A Law Firm Needs Secure Client Document Storage
+  // With Encrypt", cut mid-word at the length limit. Prose is not a name.
+  if (human && /^(a|an|the|we|our|i|my|they|their|you|your)\s/i.test(human)) human = "";
+  if (human && /\b(need|needs|want|wants|require|requires|looking\s+for|would\s+like)\b/i.test(human)) human = "";
 
   // A domain in the brief names the job better than a catalogue title
   // does. "S3 Static Website with CloudFront" describes the template;

@@ -44,6 +44,25 @@ const GIGS = {
 // ════════════════════════════════════════════════════════════════════
 const CHECKS = [
   {
+    name: 'a project name is a name, not the first line of the brief',
+    run() {
+      // "A Law Firm Needs Secure Client Document Storage With Encrypt" —
+      // prose, cut mid-word at the length limit, shown to the client.
+      const r = runPipeline('A law firm needs secure client document storage with encryption and 7 year retention.');
+      const name = r.names.projectName;
+      assert(!/^(a|an|the|we|our|my)\s/i.test(name), 'the name starts like a sentence: ' + name);
+      assert(!/\bneeds?\b/i.test(name), 'the name contains the verb from the brief: ' + name);
+    },
+  },
+  {
+    name: 'a brief that really is a title keeps it',
+    run() {
+      const name = runPipeline('Ecommerce Platform Migration to AWS').names.projectName;
+      assert(/ecommerce/i.test(name) && /migration/i.test(name),
+        'a genuine project title was discarded: ' + name);
+    },
+  },
+  {
     name: 'a job about storing files gets a storage service',
     run() {
       // "Archive 2TB of old project files" produced a design with no
