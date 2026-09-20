@@ -27,7 +27,8 @@ import { listSolutions } from '../lib/solutionStore.js';
 import {
   deleteVaultDocument, downloadVaultDocument, listVaultDocuments, saveVaultDocument,
 } from '../lib/documentVault.js';
-import { ASSESSMENT_DOCUMENTS, COMPLETED_CASE_STUDIES } from '../data/completedCaseStudies.js';
+import { COMPLETED_CASE_STUDIES } from '../data/completedCaseStudies.js';
+import { MY_DOCUMENTS, MY_PROJECTS } from '../data/myWork.js';
 
 const TABS = [
   { id: 'overview',   label: 'Overview',   icon: FileText },
@@ -37,6 +38,67 @@ const TABS = [
   { id: 'deliveries', label: 'Deliveries', icon: Package },
   { id: 'library',    label: 'Library',    icon: Archive },
 ];
+
+const PROJECT_TITLES = Object.fromEntries(
+  [...MY_PROJECTS, ...COMPLETED_CASE_STUDIES].map((p) => [p.id, p.title]),
+);
+
+/**
+ * Every document the app knows about, grouped by its project.
+ *
+ * This page listed two of them while the workspace listed ten, so
+ * "open in the full tool" led somewhere that had never heard of the
+ * document you were looking at.
+ */
+function MyDocuments() {
+  const groups = new Map();
+  for (const item of MY_DOCUMENTS) {
+    const key = item.projectId || '__none';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return (
+    <>
+      {[...groups.entries()].map(([key, items]) => (
+        <section key={key} className="surface rounded-2xl p-5 mt-3 space-y-3">
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-electric">
+              {key === '__none' ? 'Not linked to a project' : 'Project'}
+            </div>
+            <h3 className="text-base font-extrabold mt-1">
+              {PROJECT_TITLES[key] || 'Standalone documents'}
+            </h3>
+            <p className="text-xs text-muted mt-1">
+              {items.length} document{items.length === 1 ? '' : 's'}. Open them together in{' '}
+              <Link to="/workspace" className="text-aws-orange font-bold">My Workspace</Link>.
+            </p>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            {items.map((item) => (
+              <div key={item.id} className="rounded-xl border border-token p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="font-extrabold text-sm">{item.name}</div>
+                  {item.category && <span className="chip text-[9px]">{item.category}</span>}
+                </div>
+                {item.description && (
+                  <p className="text-[10.5px] text-muted mt-1 leading-relaxed">{item.description}</p>
+                )}
+                {item.file && (
+                  <a href={`${import.meta.env.BASE_URL}${item.file}`} download className="btn btn-ghost !text-xs mt-2">
+                    <Download size={12} /> Download Word document
+                  </a>
+                )}
+                {item.localPath && (
+                  <div className="mt-2 text-[10px] text-muted break-all">On your computer: {item.localPath}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
 
 export default function DocumentCenter() {
   const [params] = useSearchParams();
@@ -176,26 +238,7 @@ function OverviewTab({ setTab }) {
       </div>
       <p className="text-[10px] text-muted">Verified teardown: 0 CloudFront distributions and 0 S3 buckets. The AWS copy is no longer live.</p>
     </section>
-    <section className="surface rounded-2xl p-5 mt-3 space-y-3">
-      <div>
-        <div className="text-[10px] font-extrabold uppercase tracking-widest text-electric">Current AWS portfolio engagement</div>
-        <h3 className="text-base font-extrabold mt-1">David Gaisey-Otoo identity and account assessment</h3>
-        <p className="text-xs text-muted mt-1">The public portfolio dossier and the private challenges register are deliberately separated.</p>
-      </div>
-      <div className="grid gap-2 md:grid-cols-2">
-        {ASSESSMENT_DOCUMENTS.map((item) => (
-          <div key={item.id} className="rounded-xl border border-token p-3">
-            <div className="flex items-start justify-between gap-2"><div className="font-extrabold text-sm">{item.title}</div><span className="chip text-[9px]">{item.category}</span></div>
-            <p className="text-[10.5px] text-muted mt-1 leading-relaxed">{item.description}</p>
-            {item.file ? (
-              <a href={`${import.meta.env.BASE_URL}${item.file}`} download className="btn btn-ghost !text-xs mt-2"><Download size={12} /> Download Word document</a>
-            ) : (
-              <div className="mt-2 text-[10px] font-bold text-warning">Private local file: {item.localPath}</div>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
+    <MyDocuments />
     </>
   );
 }
