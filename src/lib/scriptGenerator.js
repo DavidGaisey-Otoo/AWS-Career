@@ -995,6 +995,505 @@ export function generateCloudFormation(services, opts = {}) {
 }
 
 const CFN_PER_SERVICE = {
+  // ─── Databases beyond the basics ─────────────────────────────────
+  //
+  // None of these have a perpetual free tier. Aurora Serverless v2 is
+  // the only one here that can scale toward nothing when idle, and even
+  // that has a floor.
+  aurora: () => ({
+    AuroraSubnetGroup: {
+      // Its own group rather than the one the plain RDS generator makes,
+      // so asking for Aurora does not silently also create an RDS instance.
+      Type: 'AWS::RDS::DBSubnetGroup',
+      Properties: {
+        DBSubnetGroupDescription: 'Private subnets for the Aurora cluster',
+        SubnetIds: [{ Ref: 'PrivateSubnet1' }, { Ref: 'PrivateSubnet2' }],
+      },
+    },
+    AuroraCluster: {
+      Type: 'AWS::RDS::DBCluster',
+      DeletionPolicy: 'Snapshot',
+      Metadata: {
+        Cost: 'Serverless v2 bills per capacity unit-hour. A 0.5 ACU floor is roughly $43 per month before storage and I/O. It does not scale to zero unless auto-pause is configured.',
+        Alternative: 'For a small workload a single db.t4g.micro RDS instance is cheaper and simpler, and DynamoDB on provisioned 1/1 is genuinely free.',
+      },
+      Properties: {
+        Engine: 'aurora-postgresql',
+        EngineVersion: '15.4',
+        DatabaseName: 'appdb',
+        MasterUsername: 'appadmin',
+        ManageMasterUserPassword: true,
+        StorageEncrypted: true,
+        BackupRetentionPeriod: 7,
+        DBSubnetGroupName: { Ref: 'AuroraSubnetGroup' },
+        ServerlessV2ScalingConfiguration: { MinCapacity: 0.5, MaxCapacity: 4 },
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+    AuroraInstance: {
+      Type: 'AWS::RDS::DBInstance',
+      Properties: {
+        DBClusterIdentifier: { Ref: 'AuroraCluster' },
+        DBInstanceClass: 'db.serverless',
+        Engine: 'aurora-postgresql',
+        PubliclyAccessible: false,
+      },
+    },
+  }),
+  elasticache: () => ({
+    AppCacheSubnetGroup: {
+      Type: 'AWS::ElastiCache::SubnetGroup',
+      Properties: {
+        Description: 'Private subnets for the cache',
+        SubnetIds: [{ Ref: 'PrivateSubnet1' }, { Ref: 'PrivateSubnet2' }],
+      },
+    },
+    AppCache: {
+      Type: 'AWS::ElastiCache::CacheCluster',
+      Metadata: {
+        Cost: 'A cache.t4g.micro node is roughly $12 per month, billed hourly whether or not anything reads from it. The twelve-month free tier covers 750 hours on a legacy account only.',
+      },
+      Properties: {
+        Engine: 'redis',
+        CacheNodeType: 'cache.t4g.micro',
+        NumCacheNodes: 1,
+        CacheSubnetGroupName: { Ref: 'AppCacheSubnetGroup' },
+        VpcSecurityGroupIds: [{ Ref: 'AppSecurityGroup' }],
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+  redshift: () => ({
+    RedshiftCluster: {
+      Type: 'AWS::Redshift::Cluster',
+      DeletionPolicy: 'Snapshot',
+      Metadata: {
+        Cost: 'The smallest dc2.large node is about $180 per month, billed hourly. This is a warehouse for real analytics volumes; do not reach for it on a small project.',
+        Alternative: 'Athena queries data already sitting in S3 at $5 per TB scanned, with nothing running between queries.',
+      },
+      Properties: {
+        ClusterType: 'single-node',
+        NodeType: 'dc2.large',
+        DBName: 'analytics',
+        MasterUsername: 'appadmin',
+        ManageMasterPassword: true,
+        Encrypted: true,
+        PubliclyAccessible: false,
+      },
+    },
+  }),
+
+  // ─── Compute beyond a single instance ────────────────────────────
+  'ec2-autoscale': (spec, mode) => ({
+    AppLaunchTemplate: {
+      Type: 'AWS::EC2::LaunchTemplate',
+      Properties: {
+        LaunchTemplateName: { 'Fn::Sub': '${ProjectName}-lt' },
+        LaunchTemplateData: {
+          InstanceType: mode === 'test' ? 't3.micro' : (spec || 't3.small'),
+          ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}',
+          IamInstanceProfile: { Arn: { 'Fn::GetAtt': ['ManagedInstanceProfile', 'Arn'] } },
+          SecurityGroupIds: [{ Ref: 'AppSecurityGroup' }],
+          MetadataOptions: { HttpTokens: 'required' },
+        },
+      },
+    },
+    AppAutoScalingGroup: {
+      Type: 'AWS::AutoScaling::AutoScalingGroup',
+      Metadata: {
+        Cost: 'The group itself is free; every instance it launches is not. Minimum size is what you pay for around the clock, so a minimum of one t3.small is about $15 per month before storage.',
+      },
+      Properties: {
+        AutoScalingGroupName: { 'Fn::Sub': '${ProjectName}-asg' },
+        MinSize: '1',
+        MaxSize: mode === 'test' ? '1' : '3',
+        DesiredCapacity: '1',
+        VPCZoneIdentifier: [{ Ref: 'PrivateSubnet1' }, { Ref: 'PrivateSubnet2' }],
+        LaunchTemplate: {
+          LaunchTemplateId: { Ref: 'AppLaunchTemplate' },
+          Version: { 'Fn::GetAtt': ['AppLaunchTemplate', 'LatestVersionNumber'] },
+        },
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' }, PropagateAtLaunch: true }],
+      },
+    },
+  }),
+  eks: () => ({
+    EksClusterRole: {
+      Type: 'AWS::IAM::Role',
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [{ Effect: 'Allow', Principal: { Service: 'eks.amazonaws.com' }, Action: 'sts:AssumeRole' }],
+        },
+        ManagedPolicyArns: ['arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'],
+      },
+    },
+    EksCluster: {
+      Type: 'AWS::EKS::Cluster',
+      Metadata: {
+        Cost: 'The control plane alone is $0.10 per hour — about $73 per month — before a single worker node. Nodes, load balancers and NAT are all extra.',
+        Alternative: 'ECS on Fargate has no control-plane charge. For one container, App Runner or a Lambda function is cheaper still.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-eks' },
+        RoleArn: { 'Fn::GetAtt': ['EksClusterRole', 'Arn'] },
+        ResourcesVpcConfig: {
+          SubnetIds: [{ Ref: 'PrivateSubnet1' }, { Ref: 'PrivateSubnet2' }],
+        },
+      },
+    },
+  }),
+
+  // ─── Orchestration ───────────────────────────────────────────────
+  step: () => ({
+    StateMachineRole: {
+      Type: 'AWS::IAM::Role',
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [{ Effect: 'Allow', Principal: { Service: 'states.amazonaws.com' }, Action: 'sts:AssumeRole' }],
+        },
+        Policies: [{
+          PolicyName: 'InvokeAppFunction',
+          PolicyDocument: {
+            Version: '2012-10-17',
+            Statement: [{ Effect: 'Allow', Action: 'lambda:InvokeFunction', Resource: '*' }],
+          },
+        }],
+      },
+    },
+    AppStateMachine: {
+      Type: 'AWS::StepFunctions::StateMachine',
+      Metadata: {
+        Cost: 'Standard workflows are $0.025 per 1,000 state transitions, with 4,000 free every month forever. A small workflow costs nothing.',
+      },
+      Properties: {
+        StateMachineName: { 'Fn::Sub': '${ProjectName}-workflow' },
+        RoleArn: { 'Fn::GetAtt': ['StateMachineRole', 'Arn'] },
+        DefinitionString: '{"Comment":"Replace with the real workflow","StartAt":"Done","States":{"Done":{"Type":"Succeed"}}}',
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+
+  // ─── Data ────────────────────────────────────────────────────────
+  kinesis: () => ({
+    AppStream: {
+      Type: 'AWS::Kinesis::Stream',
+      Metadata: {
+        Cost: 'On-demand mode is about $36 per month per stream before data charges. Provisioned mode is roughly $11 per shard per month. Neither has a free tier.',
+        Alternative: 'For low volumes an SQS queue costs cents and the first million requests each month are free.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-stream' },
+        StreamModeDetails: { StreamMode: 'PROVISIONED' },
+        ShardCount: 1,
+        RetentionPeriodHours: 24,
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+  athena: () => ({
+    AppWorkGroup: {
+      Type: 'AWS::Athena::WorkGroup',
+      Metadata: {
+        Cost: '$5 per terabyte scanned. Nothing runs between queries, so an idle workgroup costs nothing. The scan limit below stops a careless query becoming an expensive one.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-wg' },
+        State: 'ENABLED',
+        WorkGroupConfiguration: {
+          EnforceWorkGroupConfiguration: true,
+          PublishCloudWatchMetricsEnabled: true,
+          BytesScannedCutoffPerQuery: 10737418240,
+          ResultConfiguration: {
+            OutputLocation: { 'Fn::Sub': 's3://${AppBucket}/athena-results/' },
+          },
+        },
+      },
+    },
+  }),
+  glue: () => ({
+    AppGlueDatabase: {
+      Type: 'AWS::Glue::Database',
+      Metadata: {
+        Cost: 'The Data Catalog is free for the first million objects stored and the first million requests each month. Crawlers and ETL jobs bill per DPU-hour and are not free.',
+      },
+      Properties: {
+        CatalogId: { Ref: 'AWS::AccountId' },
+        DatabaseInput: {
+          Name: { 'Fn::Sub': '${ProjectName}_catalogue' },
+          Description: 'Table definitions for data held in S3',
+        },
+      },
+    },
+  }),
+
+  // ─── Archive storage ─────────────────────────────────────────────
+  glacier: () => ({
+    ArchiveBucket: {
+      Type: 'AWS::S3::Bucket',
+      DeletionPolicy: 'Retain',
+      Metadata: {
+        Cost: 'Glacier Deep Archive is about $0.00099 per GB per month — roughly $1 per terabyte. Retrieval is charged and takes up to twelve hours, and there is a 180-day minimum storage charge.',
+        Note: 'The lifecycle rule moves objects to the archive class automatically. Do not use this for anything you might need back quickly.',
+      },
+      Properties: {
+        BucketName: { 'Fn::Sub': '${ProjectName}-archive-${AWS::AccountId}' },
+        PublicAccessBlockConfiguration: {
+          BlockPublicAcls: true, BlockPublicPolicy: true,
+          IgnorePublicAcls: true, RestrictPublicBuckets: true,
+        },
+        BucketEncryption: {
+          ServerSideEncryptionConfiguration: [
+            { ServerSideEncryptionByDefault: { SSEAlgorithm: 'AES256' } },
+          ],
+        },
+        LifecycleConfiguration: {
+          Rules: [{
+            Id: 'archive-after-30-days',
+            Status: 'Enabled',
+            Transitions: [{ StorageClass: 'DEEP_ARCHIVE', TransitionInDays: 30 }],
+          }],
+        },
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+  // ─── Load balancing ──────────────────────────────────────────────
+  //
+  // Both of these bill by the hour whether or not anything is behind
+  // them, which is the commonest surprise on a first AWS invoice. The
+  // figure is in the template rather than in a footnote somewhere.
+  alb: () => ({
+    AppLoadBalancer: {
+      Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer',
+      Metadata: {
+        Cost: 'About $16 per month per load balancer, billed hourly whether or not it serves a request, plus capacity units for traffic. No free tier covers it.',
+        Alternative: 'A static site behind CloudFront, or a Lambda function URL, needs no load balancer at all.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-alb' },
+        Type: 'application',
+        Scheme: 'internet-facing',
+        Subnets: [{ Ref: 'PublicSubnet1' }, { Ref: 'PublicSubnet2' }],
+        SecurityGroups: [{ Ref: 'AppSecurityGroup' }],
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+    AppTargetGroup: {
+      Type: 'AWS::ElasticLoadBalancingV2::TargetGroup',
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-tg' },
+        VpcId: { Ref: 'Vpc' },
+        Port: 80,
+        Protocol: 'HTTP',
+        TargetType: 'instance',
+        HealthCheckPath: '/',
+        HealthCheckIntervalSeconds: 30,
+        HealthyThresholdCount: 2,
+        UnhealthyThresholdCount: 3,
+      },
+    },
+    AppListener: {
+      Type: 'AWS::ElasticLoadBalancingV2::Listener',
+      Properties: {
+        LoadBalancerArn: { Ref: 'AppLoadBalancer' },
+        Port: 80,
+        Protocol: 'HTTP',
+        DefaultActions: [{ Type: 'forward', TargetGroupArn: { Ref: 'AppTargetGroup' } }],
+      },
+    },
+  }),
+  nlb: () => ({
+    AppNetworkLoadBalancer: {
+      Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer',
+      Metadata: {
+        Cost: 'About $16 per month, billed hourly whether idle or not, plus capacity units. Choose this over an application load balancer only when you need TCP rather than HTTP.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-nlb' },
+        Type: 'network',
+        Scheme: 'internet-facing',
+        Subnets: [{ Ref: 'PublicSubnet1' }, { Ref: 'PublicSubnet2' }],
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+
+  // ─── Addresses and outbound routing ──────────────────────────────
+  'elastic-ip': () => ({
+    AppElasticIp: {
+      Type: 'AWS::EC2::EIP',
+      Metadata: {
+        Cost: 'Since February 2024 every public IPv4 address is charged, about $3.60 per month, attached or not. It used to be free while in use; it is not any more.',
+      },
+      Properties: {
+        Domain: 'vpc',
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+  'nat-gateway': () => ({
+    NatEip: {
+      Type: 'AWS::EC2::EIP',
+      Properties: { Domain: 'vpc' },
+    },
+    AppNatGateway: {
+      Type: 'AWS::EC2::NatGateway',
+      Metadata: {
+        Cost: 'About $32 per month per gateway, plus roughly $0.045 per GB processed. One of the largest avoidable charges on a small account, and it bills while completely idle.',
+        Alternative: 'For a lab or a low-traffic workload a NAT instance on t4g.nano costs a few dollars a month, and VPC endpoints remove the need entirely for S3 and DynamoDB traffic.',
+      },
+      Properties: {
+        AllocationId: { 'Fn::GetAtt': ['NatEip', 'AllocationId'] },
+        SubnetId: { Ref: 'PublicSubnet1' },
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+
+  // ─── Shared file storage ─────────────────────────────────────────
+  efs: () => ({
+    AppFileSystem: {
+      Type: 'AWS::EFS::FileSystem',
+      Metadata: {
+        Cost: 'About $0.30 per GB per month on standard storage. The free tier gives 5 GB for twelve months on a legacy account and nothing on a credits-based plan.',
+        Note: 'Elastic throughput is the default and bills per request. Bursting throughput is usually cheaper for small workloads.',
+      },
+      Properties: {
+        Encrypted: true,
+        PerformanceMode: 'generalPurpose',
+        ThroughputMode: 'bursting',
+        BackupPolicy: { Status: 'DISABLED' },
+        FileSystemTags: [
+          { Key: 'Name', Value: { 'Fn::Sub': '${ProjectName}-efs' } },
+          { Key: 'Project', Value: { Ref: 'ProjectName' } },
+        ],
+      },
+    },
+  }),
+
+  // ─── Secrets ─────────────────────────────────────────────────────
+  'secrets-manager': () => ({
+    AppSecret: {
+      Type: 'AWS::SecretsManager::Secret',
+      Metadata: {
+        Cost: '$0.40 per secret per month, plus $0.05 per 10,000 API calls. There is no perpetual free tier.',
+        Alternative: 'SSM Parameter Store standard parameters are free and hold the same kind of value, without automatic rotation.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-secret' },
+        Description: 'Application secret. Set the value after the stack is created; never commit it.',
+        GenerateSecretString: {
+          SecretStringTemplate: '{"username":"app"}',
+          GenerateStringKey: 'password',
+          PasswordLength: 32,
+          ExcludeCharacters: '"@/\\',
+        },
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+
+  // ─── Audit logging ───────────────────────────────────────────────
+  cloudtrail: () => ({
+    TrailBucket: {
+      Type: 'AWS::S3::Bucket',
+      DeletionPolicy: 'Retain',
+      Properties: {
+        BucketName: { 'Fn::Sub': '${ProjectName}-trail-${AWS::AccountId}' },
+        PublicAccessBlockConfiguration: {
+          BlockPublicAcls: true, BlockPublicPolicy: true,
+          IgnorePublicAcls: true, RestrictPublicBuckets: true,
+        },
+        BucketEncryption: {
+          ServerSideEncryptionConfiguration: [
+            { ServerSideEncryptionByDefault: { SSEAlgorithm: 'AES256' } },
+          ],
+        },
+      },
+    },
+    TrailBucketPolicy: {
+      Type: 'AWS::S3::BucketPolicy',
+      Properties: {
+        Bucket: { Ref: 'TrailBucket' },
+        PolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Sid: 'AWSCloudTrailAclCheck',
+              Effect: 'Allow',
+              Principal: { Service: 'cloudtrail.amazonaws.com' },
+              Action: 's3:GetBucketAcl',
+              Resource: { 'Fn::GetAtt': ['TrailBucket', 'Arn'] },
+            },
+            {
+              Sid: 'AWSCloudTrailWrite',
+              Effect: 'Allow',
+              Principal: { Service: 'cloudtrail.amazonaws.com' },
+              Action: 's3:PutObject',
+              Resource: { 'Fn::Sub': '${TrailBucket.Arn}/AWSLogs/${AWS::AccountId}/*' },
+              Condition: { StringEquals: { 's3:x-amz-acl': 'bucket-owner-full-control' } },
+            },
+          ],
+        },
+      },
+    },
+    AppTrail: {
+      Type: 'AWS::CloudTrail::Trail',
+      DependsOn: 'TrailBucketPolicy',
+      Metadata: {
+        Cost: 'One trail recording management events in one region is free. A second trail, data events, or Insights are charged, and the S3 storage of the logs is charged either way.',
+      },
+      Properties: {
+        TrailName: { 'Fn::Sub': '${ProjectName}-trail' },
+        S3BucketName: { Ref: 'TrailBucket' },
+        IsLogging: true,
+        IsMultiRegionTrail: false,
+        IncludeGlobalServiceEvents: true,
+        EnableLogFileValidation: true,
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
+
+  // ─── Web application firewall ────────────────────────────────────
+  waf: () => ({
+    AppWebAcl: {
+      Type: 'AWS::WAFv2::WebACL',
+      Metadata: {
+        Cost: '$5 per month per web ACL, plus $1 per rule per month and $0.60 per million requests. No free tier.',
+        Scope: 'REGIONAL protects a load balancer or API Gateway. A CloudFront distribution needs a CLOUDFRONT-scoped ACL created in us-east-1.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-waf' },
+        Scope: 'REGIONAL',
+        DefaultAction: { Allow: {} },
+        VisibilityConfig: {
+          SampledRequestsEnabled: true,
+          CloudWatchMetricsEnabled: true,
+          MetricName: { 'Fn::Sub': '${ProjectName}-waf' },
+        },
+        Rules: [{
+          Name: 'AWSManagedRulesCommonRuleSet',
+          Priority: 0,
+          OverrideAction: { None: {} },
+          Statement: {
+            ManagedRuleGroupStatement: {
+              VendorName: 'AWS',
+              Name: 'AWSManagedRulesCommonRuleSet',
+            },
+          },
+          VisibilityConfig: {
+            SampledRequestsEnabled: true,
+            CloudWatchMetricsEnabled: true,
+            MetricName: 'CommonRuleSet',
+          },
+        }],
+      },
+    },
+  }),
   // ─── Custom domain, certificate and outbound email ───────────────
   //
   // These three were designed but never generated, so a brief naming a
@@ -1702,6 +2201,17 @@ const CFN_PER_SERVICE = {
  * implied but didn't name.
  */
 const CFN_REQUIRES = {
+  aurora: ['vpc', 'subnet'],
+  elasticache: ['vpc', 'subnet', 'security-group'],
+  'ec2-autoscale': ['vpc', 'subnet', 'security-group', 'iam'],
+  eks: ['vpc', 'subnet'],
+  athena: ['s3'],
+
+  alb: ['vpc', 'subnet', 'security-group'],
+  nlb: ['vpc', 'subnet'],
+  'nat-gateway': ['vpc', 'subnet'],
+  efs: ['vpc', 'subnet'],
+
   subnet: ['vpc'],
   igw: ['vpc'],
   'route-table': ['vpc'],

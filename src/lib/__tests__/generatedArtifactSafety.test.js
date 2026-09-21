@@ -5,6 +5,44 @@ function assert(condition, message) { if (!condition) throw new Error(message); 
 const service = (id, label = id.toUpperCase()) => ({ id, label, specs: {} });
 
 const checks = [
+  ['every generated resource states what it costs', () => {
+    // The cost note is the point. A resource that appears in a template
+    // with no figure beside it is how a £32/month NAT gateway arrives
+    // unannounced on someone who asked for a cheap site.
+    const CHARGED = ['alb','nlb','nat-gateway','elastic-ip','efs','secrets-manager','waf',
+      'aurora','elasticache','redshift','eks','ec2-autoscale','kinesis','glacier','route53'];
+    for (const id of CHARGED) {
+      const code = generateCloudFormation([service(id)], { mode: "prod" }).code;
+      assert(/Cost:/.test(code), id + " generates a resource with no cost note");
+    }
+  }],
+  ['the expensive ones name a cheaper way', () => {
+    // Someone reaching for Redshift on a small project should meet the
+    // alternative before the invoice does.
+    for (const id of ['nat-gateway','eks','redshift','aurora','kinesis','secrets-manager','alb']) {
+      const code = generateCloudFormation([service(id)], { mode: "prod" }).code;
+      assert(/Alternative:/.test(code), id + " offers no cheaper option");
+    }
+  }],
+  ['no generated template references a resource it never creates', () => {
+    const ids = ['alb','nlb','nat-gateway','efs','cloudtrail','waf','aurora','elasticache',
+      'redshift','ec2-autoscale','eks','step','kinesis','athena','glue','glacier','secrets-manager','elastic-ip'];
+    for (const id of ids) {
+      const code = generateCloudFormation([service(id)], { mode: "prod" }).code;
+      const declared = new Set((code.match(/^ {2}(\w+):\n {4}Type: "?AWS::/gm) || [])
+        .map((x) => x.trim().split(":")[0]));
+      const params = new Set((((code.match(/Parameters:[\s\S]*?\nResources:/) || [""])[0])
+        .match(/^ {2}(\w+):/gm) || []).map((x) => x.trim().replace(":", "")));
+      for (const ref of new Set([...code.matchAll(/Ref: (\w+)/g)].map((m) => m[1]))) {
+        if (ref.startsWith("AWS")) continue;
+        assert(declared.has(ref) || params.has(ref),
+          id + " references " + ref + " but never creates or declares it");
+      }
+      for (const ref of new Set([...code.matchAll(/Fn::GetAtt.{0,4}\[.(\w+)./g)].map((m) => m[1]))) {
+        assert(declared.has(ref), id + " uses GetAtt on " + ref + " which it never creates");
+      }
+    }
+  }],
   ['Terraform covers the same services CloudFormation does', () => {
     // The two drifted: a solution was deployable in one format and
     // "unsupported" in the other, for the same brief.
@@ -137,7 +175,11 @@ const checks = [
     assert(result.code.includes('generation_safety_gate'), 'Terraform has no plan-time gate');
   }],
   ['partial CloudFormation requires explicit review and reports coverage', () => {
-    const result = generateCloudFormation([service('s3'), service('eks')]);
+    // A service id that will never have a generator, so this stays a test
+    // of what happens when coverage is partial rather than a test of
+    // whether one particular service has been implemented yet. It broke
+    // the moment EKS gained a generator, which was the wrong signal.
+    const result = generateCloudFormation([service('s3'), service('not-a-real-service')]);
     assert(result.deployReady === false, 'partial template marked ready');
     assert(result.coverage.pct === 50, 'partial coverage is inaccurate');
     assert(result.code.includes('IncompleteArtifactMustBeReviewed'), 'CloudFormation has no deployment rule');
