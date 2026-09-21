@@ -77,6 +77,7 @@ const ContentQueue         = lazy(() => import('./pages/ContentQueue.jsx'));
 const DeployConsole        = lazy(() => import('./pages/DeployConsole.jsx'));
 const ResourceSearch       = lazy(() => import('./pages/ResourceSearch.jsx'));
 const Workspace            = lazy(() => import('./pages/Workspace.jsx'));
+const WinThisJob           = lazy(() => import('./pages/WinThisJob.jsx'));
 const Walkthroughs         = lazy(() => import('./pages/Walkthroughs.jsx'));
 const SessionLog           = lazy(() => import('./pages/SessionLog.jsx'));
 const ProjectBuilder       = lazy(() => import('./pages/ProjectBuilder.jsx'));
@@ -193,6 +194,7 @@ export default function App() {
                        <Route path="/deploy"        element={<Suspended><DeployConsole /></Suspended>} />
                        <Route path="/resource-search" element={<Suspended><ResourceSearch /></Suspended>} />
                        <Route path="/workspace"     element={<Suspended><Workspace /></Suspended>} />
+                       <Route path="/start"         element={<Suspended><WinThisJob /></Suspended>} />
                        <Route path="/walkthroughs"  element={<Suspended><Walkthroughs /></Suspended>} />
                        <Route path="/walkthroughs/:id" element={<Suspended><Walkthroughs /></Suspended>} />
                        <Route path="/session-log"   element={<Suspended><SessionLog /></Suspended>} />

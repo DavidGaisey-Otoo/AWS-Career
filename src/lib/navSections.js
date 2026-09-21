@@ -78,6 +78,8 @@ export const SECTIONS = [
     path: '/build',
     blurb: 'Portfolio projects + architecture studio + AWS account deploys.',
     children: [
+      { id: 'start',        label: '🚀 Win this job',    icon: Rocket,      path: '/start',
+        hint: 'Paste what the client sent you and work down one page: design, questions, proposal, email, deploy' },
       { id: 'workspace',    label: '📦 My Workspace',    icon: Layers,      path: '/workspace',
         hint: 'Every job in one place — its solution, architecture, proposal, emails, documents, contract and invoice' },
       { id: 'solution-studio', label: '⚡ Solution Studio', icon: Wand2,     path: '/solution',           // GIG-01
@@ -206,7 +208,7 @@ const ESSENTIAL_IDS = new Set([
   // where you are
   'home', 'dashboard',
   // turning a brief into a design you can quote
-  'build', 'workspace', 'solution-studio', 'architecture',
+  'build', 'start', 'workspace', 'solution-studio', 'architecture',
   // the paperwork a client actually receives
   'earn', 'freelance', 'my-proposals', 'email', 'documents',
   'project-plan', 'discovery-call', 'rate-calc', 'job-analyzer',
