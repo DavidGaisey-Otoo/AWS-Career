@@ -34,6 +34,7 @@ import {
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useApp } from '../context/AppContext.jsx';
+import { readableList, unsupportedText } from '../lib/readinessText.js';
 import {
   runPipeline, saveSolution, getSolution, listSolutions,
   recordDeployment, listLiveStacks, deleteSolution,
@@ -922,6 +923,22 @@ function UnderstandingPanel({ solution, onApprovePlanning, onApplyDiscovery }) {
           </p>
           <ul className="space-y-1 pl-4 list-disc text-[11.5px] opacity-90 leading-relaxed">
             {solution.review.readiness.assumptions.slice(0, 5).map((a) => <li key={a.id}>{a.statement}</li>)}
+          </ul>
+        </div>
+      )}
+      {readableList(solution.review.readiness?.unsupported, unsupportedText).length > 0 && (
+        <div className="rounded-lg border border-danger/40 bg-danger/5 p-2.5">
+          <div className="flex items-center gap-1.5 text-danger font-extrabold text-[11.5px] mb-1">
+            <AlertTriangle size={13} /> Not in the generated templates
+          </div>
+          <p className="text-[11px] text-muted mb-1.5">
+            These are part of the design and are not in the one-click templates. Some cannot be —
+            an API has no resource to create, a desktop tool lives on a laptop, a cross-connect is a
+            cable. Each says which it is, and what to do instead.
+          </p>
+          <ul className="space-y-1 pl-4 list-disc text-[11.5px] leading-relaxed">
+            {readableList(solution.review.readiness.unsupported, unsupportedText)
+              .slice(0, 6).map((line, i) => <li key={i}>{line}</li>)}
           </ul>
         </div>
       )}
