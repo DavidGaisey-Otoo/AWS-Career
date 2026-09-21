@@ -47,7 +47,7 @@ import { extractFromBrief } from './briefExtractor.js';
 import { suggestServices } from './serviceSuggester.js';
 import { suggestRegion } from './regionSuggester.js';
 import { recommendApproach, getApproachById, APPROACH_OPTIONS } from './approachRecommender.js';
-import { generateTerraform, generateCloudFormation, generateCli } from './scriptGenerator.js';
+import { generateTerraform, generateCloudFormation, generateCli, CFN_NOT_APPLICABLE } from './scriptGenerator.js';
 import { runExpertReview } from './expertAgents/master.js';
 import { runDeployReview } from './deployAgents/master.js';
 import { scoreFromFindings, gradeFromScore } from './agentScoring.js';
@@ -195,9 +195,17 @@ export function assessDeliveryReadiness({ understanding, services, coverage, has
     status: 'needs-client-confirmation',
     source: 'missing requirement',
   }));
+  // Some of these cannot be generated because there is nothing to
+  // generate — an API has no resource, a desktop tool lives on a laptop,
+  // a cross-connect is a cable. Saying "unsupported" to all of them tells
+  // someone to wait for a generator that will never be written.
   const unsupported = uncovered.map((serviceId) => ({
     serviceId,
-    reason: 'The one-click CloudFormation generator has no verified implementation for this service.',
+    reason: CFN_NOT_APPLICABLE[serviceId]
+      ? 'Nothing to generate: ' + CFN_NOT_APPLICABLE[serviceId].reason + '.'
+      : 'The one-click CloudFormation generator has no verified implementation for this service yet.',
+    instead: CFN_NOT_APPLICABLE[serviceId]?.instead || null,
+    generatable: !CFN_NOT_APPLICABLE[serviceId],
     action: 'Use reviewed IaC or a qualified engineer; do not represent this design as one-click deployable.',
   }));
 

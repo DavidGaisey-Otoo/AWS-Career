@@ -994,7 +994,256 @@ export function generateCloudFormation(services, opts = {}) {
   };
 }
 
+/**
+ * Services with nothing to generate, and why.
+ *
+ * "Unsupported" was the only answer available, and it says the same
+ * thing about a service nobody has written yet as about one that cannot
+ * be created at all. Rekognition has no resource — you call an API. SCT
+ * is an application you download. Direct Connect is a physical cable
+ * ordered through a partner. Telling someone to wait for a generator
+ * that can never exist wastes their afternoon.
+ *
+ * Anything absent from both this map and CFN_PER_SERVICE is simply not
+ * written yet, which is a different and more hopeful problem.
+ */
+export const CFN_NOT_APPLICABLE = {
+  rekognition: {
+    reason: 'an API you call, not infrastructure you create — there is no resource to declare',
+    instead: 'Give your Lambda or EC2 role rekognition:DetectLabels and call the API. Nothing needs provisioning.',
+  },
+  textract: {
+    reason: 'an API you call, not infrastructure you create — there is no resource to declare',
+    instead: 'Grant textract:AnalyzeDocument to the role that calls it. The first 1,000 pages a month are free for twelve months.',
+  },
+  cloudformation: {
+    reason: 'the tool doing the generating — a template cannot meaningfully declare itself',
+    instead: 'To deploy one stack from another, use AWS::CloudFormation::Stack with a nested template in S3.',
+  },
+  cdk: {
+    reason: 'a framework that emits CloudFormation rather than a resource inside it',
+    instead: 'Write the CDK app in TypeScript or Python and run cdk deploy. It produces a template like this one.',
+  },
+  sct: {
+    reason: 'a desktop application you download and run, not anything that exists in an account',
+    instead: 'Download the Schema Conversion Tool, point it at the source database, and use DMS for the data itself.',
+  },
+  'direct-connect': {
+    reason: 'a physical cross-connect ordered through a partner and provisioned in a data centre',
+    instead: 'For most work a Site-to-Site VPN over the public internet is enough, costs about $36 a month, and can be created in CloudFormation.',
+  },
+  shield: {
+    reason: 'Shield Standard is on by default for every account and free; Shield Advanced is a subscription, not a resource',
+    instead: 'Standard already protects you. Advanced is $3,000 a month with a one-year commitment — only worth it under genuine attack.',
+  },
+  quicksight: {
+    reason: 'a per-user subscription enabled once in the console, not per-project infrastructure',
+    instead: 'Enable it once for the account. Authors are about $24 a month, readers about $3. Datasets and dashboards can then be managed in CloudFormation.',
+  },
+  codecommit: {
+    reason: 'closed to new customers since July 2024 — an account without it already cannot start using it',
+    instead: 'Use GitHub or GitLab as the source and connect it to CodePipeline through CodeConnections.',
+  },
+  elb: {
+    reason: 'the Classic Load Balancer, superseded and not worth building anything new on',
+    instead: 'Use an Application Load Balancer for HTTP or a Network Load Balancer for TCP. Both generate here.',
+  },
+};
+
 const CFN_PER_SERVICE = {
+  // ─── The cheap way out of a NAT gateway ──────────────────────────
+  'nat-instance': (spec, mode) => ({
+    NatInstanceSecurityGroup: {
+      Type: 'AWS::EC2::SecurityGroup',
+      Properties: {
+        GroupDescription: 'Outbound internet access for private subnets',
+        VpcId: { Ref: 'Vpc' },
+        SecurityGroupIngress: [
+          { IpProtocol: '-1', CidrIp: '10.0.0.0/16', Description: 'Traffic from inside the VPC only' },
+        ],
+      },
+    },
+    NatInstance: {
+      Type: 'AWS::EC2::Instance',
+      Metadata: {
+        Cost: 'A t4g.nano is roughly $3 per month plus its EBS volume — about a tenth of a NAT gateway, which is $32 before data charges.',
+        Tradeoff: 'One instance in one availability zone, so it is a single point of failure, and you patch it yourself. Right for a lab or a small workload, wrong for production traffic that must not stop.',
+        Setup: 'SourceDestCheck must be false, which is set below, and the private route table needs a 0.0.0.0/0 route to this instance.',
+      },
+      Properties: {
+        InstanceType: mode === 'test' ? 't4g.nano' : (spec || 't4g.nano'),
+        ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}',
+        SubnetId: { Ref: 'PublicSubnet1' },
+        SecurityGroupIds: [{ Ref: 'NatInstanceSecurityGroup' }],
+        SourceDestCheck: false,
+        MetadataOptions: { HttpTokens: 'required' },
+        Tags: [
+          { Key: 'Name', Value: { 'Fn::Sub': '${ProjectName}-nat' } },
+          { Key: 'Project', Value: { Ref: 'ProjectName' } },
+        ],
+      },
+    },
+  }),
+
+  // ─── Configuration recording ─────────────────────────────────────
+  config: () => ({
+    ConfigBucket: {
+      Type: 'AWS::S3::Bucket',
+      DeletionPolicy: 'Retain',
+      Properties: {
+        BucketName: { 'Fn::Sub': '${ProjectName}-config-${AWS::AccountId}' },
+        PublicAccessBlockConfiguration: {
+          BlockPublicAcls: true, BlockPublicPolicy: true,
+          IgnorePublicAcls: true, RestrictPublicBuckets: true,
+        },
+      },
+    },
+    ConfigRole: {
+      Type: 'AWS::IAM::Role',
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [{ Effect: 'Allow', Principal: { Service: 'config.amazonaws.com' }, Action: 'sts:AssumeRole' }],
+        },
+        ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AWS_ConfigRole'],
+        Policies: [{
+          PolicyName: 'WriteConfigHistory',
+          PolicyDocument: {
+            Version: '2012-10-17',
+            Statement: [{
+              Effect: 'Allow',
+              Action: ['s3:PutObject', 's3:GetBucketAcl'],
+              Resource: [
+                { 'Fn::GetAtt': ['ConfigBucket', 'Arn'] },
+                { 'Fn::Sub': '${ConfigBucket.Arn}/*' },
+              ],
+            }],
+          },
+        }],
+      },
+    },
+    ConfigRecorder: {
+      Type: 'AWS::Config::ConfigurationRecorder',
+      Metadata: {
+        Cost: '$0.003 per configuration item recorded, plus $0.001 per rule evaluation. Recording every resource type on a busy account adds up quietly, and it is charged per region.',
+        Note: 'Turning the recorder on is what starts the charge. Config queries against an account with no recorder return nothing, which reads exactly like an empty account — check the recorder before believing an empty result.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-recorder' },
+        RoleARN: { 'Fn::GetAtt': ['ConfigRole', 'Arn'] },
+        RecordingGroup: { AllSupported: true, IncludeGlobalResourceTypes: false },
+      },
+    },
+    ConfigDeliveryChannel: {
+      Type: 'AWS::Config::DeliveryChannel',
+      DependsOn: 'ConfigRecorder',
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-delivery' },
+        S3BucketName: { Ref: 'ConfigBucket' },
+      },
+    },
+  }),
+
+  // ─── Findings aggregation ────────────────────────────────────────
+  'security-hub': () => ({
+    AppSecurityHub: {
+      Type: 'AWS::SecurityHub::Hub',
+      Metadata: {
+        Cost: 'First 10,000 finding ingestion events per region per month are free, then $0.00003 each. Security checks are $0.0010 per check, and the standards run continuously — a small account is usually a few dollars a month.',
+        Note: 'Thirty-day free trial per region. It aggregates findings from GuardDuty, Inspector and Macie; it does not replace them.',
+      },
+      Properties: {
+        Tags: { Project: { Ref: 'ProjectName' } },
+      },
+    },
+  }),
+  macie: () => ({
+    AppMacieSession: {
+      Type: 'AWS::Macie::Session',
+      Metadata: {
+        Cost: 'Bucket inventory is free. Sensitive-data discovery is about $1 per GB scanned, so pointing it at a large bucket is expensive — scope the job before running it.',
+      },
+      Properties: {
+        Status: 'ENABLED',
+        FindingPublishingFrequency: 'FIFTEEN_MINUTES',
+      },
+    },
+  }),
+
+  // ─── Managed application platform ────────────────────────────────
+  beanstalk: (spec, mode) => ({
+    BeanstalkApplication: {
+      Type: 'AWS::ElasticBeanstalk::Application',
+      Properties: {
+        ApplicationName: { 'Fn::Sub': '${ProjectName}-app' },
+        Description: 'Managed application platform',
+      },
+    },
+    BeanstalkEnvironment: {
+      Type: 'AWS::ElasticBeanstalk::Environment',
+      Metadata: {
+        Cost: 'Beanstalk itself is free. You pay for what it launches underneath — an EC2 instance, its EBS volume, and a load balancer if you choose a load-balanced environment. A single t3.micro instance is about $8 a month.',
+        Alternative: 'A single-instance environment avoids the $16 per month load balancer. For one container, App Runner or Lambda is simpler and cheaper still.',
+      },
+      Properties: {
+        ApplicationName: { Ref: 'BeanstalkApplication' },
+        EnvironmentName: { 'Fn::Sub': '${ProjectName}-env' },
+        SolutionStackName: '64bit Amazon Linux 2023 v6.1.2 running Node.js 20',
+        OptionSettings: [
+          { Namespace: 'aws:autoscaling:launchconfiguration', OptionName: 'IamInstanceProfile', Value: { Ref: 'ManagedInstanceProfile' } },
+          { Namespace: 'aws:autoscaling:launchconfiguration', OptionName: 'InstanceType', Value: mode === 'test' ? 't3.micro' : (spec || 't3.small') },
+          { Namespace: 'aws:elasticbeanstalk:environment', OptionName: 'EnvironmentType', Value: 'SingleInstance' },
+        ],
+      },
+    },
+  }),
+
+  // ─── Build pipeline ──────────────────────────────────────────────
+  codebuild: () => ({
+    BuildRole: {
+      Type: 'AWS::IAM::Role',
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Version: '2012-10-17',
+          Statement: [{ Effect: 'Allow', Principal: { Service: 'codebuild.amazonaws.com' }, Action: 'sts:AssumeRole' }],
+        },
+        Policies: [{
+          PolicyName: 'BuildLogging',
+          PolicyDocument: {
+            Version: '2012-10-17',
+            Statement: [{
+              Effect: 'Allow',
+              Action: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
+              Resource: '*',
+            }],
+          },
+        }],
+      },
+    },
+    BuildProject: {
+      Type: 'AWS::CodeBuild::Project',
+      Metadata: {
+        Cost: 'The general1.small Linux instance is $0.005 per build minute, with 100 minutes free every month. A small project typically costs nothing.',
+        Note: 'The buildspec below is a placeholder that succeeds and does nothing. Replace it with the real build before wiring it to anything.',
+      },
+      Properties: {
+        Name: { 'Fn::Sub': '${ProjectName}-build' },
+        ServiceRole: { 'Fn::GetAtt': ['BuildRole', 'Arn'] },
+        Artifacts: { Type: 'NO_ARTIFACTS' },
+        Environment: {
+          Type: 'LINUX_CONTAINER',
+          ComputeType: 'BUILD_GENERAL1_SMALL',
+          Image: 'aws/codebuild/amazonlinux2-x86_64-standard:5.0',
+        },
+        Source: {
+          Type: 'NO_SOURCE',
+          BuildSpec: 'version: 0.2\nphases:\n  build:\n    commands:\n      - echo "replace this with the real build"\n',
+        },
+        TimeoutInMinutes: 10,
+        Tags: [{ Key: 'Project', Value: { Ref: 'ProjectName' } }],
+      },
+    },
+  }),
   // ─── Databases beyond the basics ─────────────────────────────────
   //
   // None of these have a perpetual free tier. Aurora Serverless v2 is
@@ -2201,6 +2450,9 @@ const CFN_PER_SERVICE = {
  * implied but didn't name.
  */
 const CFN_REQUIRES = {
+  'nat-instance': ['vpc', 'subnet'],
+  beanstalk: ['iam'],
+
   aurora: ['vpc', 'subnet'],
   elasticache: ['vpc', 'subnet', 'security-group'],
   'ec2-autoscale': ['vpc', 'subnet', 'security-group', 'iam'],

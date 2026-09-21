@@ -28,14 +28,23 @@ export function assumptionText(entry) {
   return clean(entry.statement) || clean(entry.text) || clean(entry.question) || null;
 }
 
-/** A claim the evidence does not support, as a sentence. */
+/**
+ * A claim the evidence does not support, as a sentence.
+ *
+ * Where the service can never be generated — an API with no resource, a
+ * desktop tool, a physical cross-connect — the record carries what to do
+ * instead, and that is the useful half. Dropping it leaves someone
+ * waiting for a generator nobody will ever write.
+ */
 export function unsupportedText(entry) {
   if (entry == null) return null;
   if (typeof entry === 'string') return clean(entry);
   const service = clean(entry.serviceId) || clean(entry.service);
   const reason = clean(entry.reason) || clean(entry.detail) || clean(entry.statement);
-  if (service && reason) return `${service} — ${reason}`;
-  return reason || service || null;
+  const instead = clean(entry.instead);
+  const head = service && reason ? `${service} — ${reason}` : (reason || service || null);
+  if (!head) return null;
+  return instead ? `${head} ${instead}` : head;
 }
 
 /** Map a list through one of the above, dropping anything unreadable. */

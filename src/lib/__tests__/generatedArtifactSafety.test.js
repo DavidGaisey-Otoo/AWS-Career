@@ -1,10 +1,29 @@
-import { generateCli, generateCloudFormation, generateTerraform } from '../scriptGenerator.js';
+import { generateCli, generateCloudFormation, generateTerraform, CFN_NOT_APPLICABLE } from '../scriptGenerator.js';
 import { generateCfnTemplate, generateCliScript, generateTerraform as generateWalkthroughTerraform } from '../walkthroughScriptGenerator.js';
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
 const service = (id, label = id.toUpperCase()) => ({ id, label, specs: {} });
 
 const checks = [
+  ['a service that cannot be generated says why, not just no', () => {
+    // "Unsupported" said the same thing about a service nobody has
+    // written yet as about one that cannot exist — an API has no
+    // resource, a desktop tool lives on a laptop, a cross-connect is a
+    // cable. Telling someone to wait for that generator wastes a day.
+    for (const id of ['rekognition','textract','sct','direct-connect','shield','quicksight','codecommit','elb','cdk','cloudformation']) {
+      const entry = CFN_NOT_APPLICABLE[id];
+      assert(entry, id + " has no explanation for why it cannot be generated");
+      assert(entry.reason && entry.reason.length > 20, id + " gives no real reason");
+      assert(entry.instead && entry.instead.length > 20, id + " offers no way forward");
+    }
+  }],
+  ['nothing is both generatable and declared impossible', () => {
+    for (const id of Object.keys(CFN_NOT_APPLICABLE)) {
+      const out = generateCloudFormation([service(id)], { mode: "prod" });
+      assert(out.coverage.uncovered.includes(id),
+        id + " is declared impossible to generate but a generator exists for it");
+    }
+  }],
   ['every generated resource states what it costs', () => {
     // The cost note is the point. A resource that appears in a template
     // with no figure beside it is how a £32/month NAT gateway arrives
