@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Sparkles , Eye, EyeOff } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext.jsx';
-import { SECTIONS } from '../../lib/navSections.js';
+import { SECTIONS, hiddenCount, navFor } from '../../lib/navSections.js';
 import { cn } from '../../lib/utils.js';
 import { UserCard } from './UserCard.jsx';
 
@@ -14,20 +14,25 @@ import { UserCard } from './UserCard.jsx';
  * - The section containing the current route is auto-expanded.
  */
 export function Sidebar({ onItemClick, forceExpanded = false }) {
-  const { sidebarCollapsed, setSidebarCollapsed } = useApp();
+  const { sidebarCollapsed, setSidebarCollapsed, prefs, setDisplayPrefs } = useApp();
+  const focusMode = !!prefs?.display?.focusMode;
+  // Fifty-six entries is a lot to read past when a client is waiting.
+  const sections = navFor(SECTIONS, focusMode);
+  const hidden = hiddenCount(SECTIONS);
+  const toggleFocus = () => setDisplayPrefs({ focusMode: !focusMode });
   const collapsed = forceExpanded ? false : sidebarCollapsed;
   const location = useLocation();
 
   // Determine which section is "active" based on the current pathname.
   const activeSectionId = useMemo(() => {
-    for (const sec of SECTIONS) {
+    for (const sec of sections) {
       if (location.pathname === sec.path) return sec.id;
       for (const c of sec.children) {
         if (location.pathname === c.path) return sec.id;
         if (c.path !== '/' && location.pathname.startsWith(c.path)) return sec.id;
       }
     }
-    return SECTIONS[0].id;
+    return sections[0]?.id;
   }, [location.pathname]);
 
   // Auto-expand the active section. User can manually toggle others.
@@ -73,7 +78,7 @@ export function Sidebar({ onItemClick, forceExpanded = false }) {
       {/* 5-section grouped nav */}
       <nav className="flex-1 overflow-y-auto px-2 pb-2 no-scrollbar">
         <ul className="space-y-1">
-          {SECTIONS.map((sec) => {
+          {sections.map((sec) => {
             const Icon = sec.icon;
             const isOpen = openIds.has(sec.id);
             const isActive = sec.id === activeSectionId;
@@ -202,6 +207,22 @@ export function Sidebar({ onItemClick, forceExpanded = false }) {
       </div>
 
       {/* Collapse toggle (desktop only) */}
+      {/* Fifty-six entries is a lot to read past when a client is waiting.
+          This hides the ones that are not part of winning and delivering
+          work — nothing is deleted, and the same button brings them back. */}
+      <button
+        onClick={toggleFocus}
+        title={focusMode
+          ? `Show everything — ${hidden} more pages`
+          : `Hide ${hidden} pages you do not need for client work`}
+        className={cn(
+          'mx-2 mb-1 flex items-center gap-2 rounded-lg px-2 py-2 text-[11px] font-bold transition',
+          focusMode ? 'text-aws-orange bg-aws-orange/10' : 'text-muted hover:text-current hover:bg-[var(--card-2)]',
+        )}
+      >
+        {focusMode ? <Eye size={14} /> : <EyeOff size={14} />}
+        {!collapsed && <span>{focusMode ? `Show all (${hidden} hidden)` : 'Just my client work'}</span>}
+      </button>
       <button
         onClick={() => setSidebarCollapsed((c) => !c)}
         className="hidden lg:flex items-center justify-center gap-2 mx-2 mb-3 py-2 rounded-xl text-xs font-semibold text-muted hover:text-white hover:bg-[var(--card-2)] transition focus-ring"

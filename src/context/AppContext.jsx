@@ -57,6 +57,9 @@ const DEFAULT_PREFS = {
     accentColor: '#FF9900',
     fontScale: 1,            // 0.875 | 1 | 1.125 | 1.25
     compactMode: false,
+    // Hides the study, community and wellness pages, leaving what you
+    // need to win and deliver a piece of work. Nothing is deleted.
+    focusMode: false,
     reducedMotion: false,
     highContrast: false,
     colorblindMode: 'off',    // off | protanopia | deuteranopia | tritanopia

@@ -190,3 +190,56 @@ function prettifySegment(seg) {
 export const MOBILE_NAV_5 = SECTIONS.map((s) => ({
   id: s.id, label: s.label, icon: s.icon, path: s.path,
 }));
+
+/**
+ * Focus mode — the pages you need to win and deliver a piece of work.
+ *
+ * There are fifty-six entries in this navigation. Most of them are for
+ * studying: flashcards, exam modes, interview practice, a wellness
+ * tracker, a relocation planner. All useful, none of them any help when
+ * a client has just sent you a brief and you need a proposal by Friday.
+ *
+ * Nothing is deleted. This hides what is not part of that job, and one
+ * toggle brings it all back.
+ */
+const ESSENTIAL_IDS = new Set([
+  // where you are
+  'home', 'dashboard',
+  // turning a brief into a design you can quote
+  'build', 'workspace', 'solution-studio', 'architecture',
+  // the paperwork a client actually receives
+  'earn', 'freelance', 'my-proposals', 'email', 'documents',
+  'project-plan', 'discovery-call', 'rate-calc', 'job-analyzer',
+  // your account, and putting the thing live
+  'aws-accounts', 'deploy', 'resource-search', 'portfolio',
+  // settings stay reachable or you cannot turn this off again
+  'settings',
+]);
+
+/** Is this page part of winning and delivering work? */
+export function isEssential(id) {
+  return ESSENTIAL_IDS.has(id);
+}
+
+/**
+ * The navigation, narrowed to delivery when focus mode is on.
+ *
+ * A section survives if it is essential itself or has an essential child,
+ * so a section never appears with nothing under it.
+ */
+export function navFor(sections, focusMode) {
+  if (!focusMode) return sections;
+  return sections
+    .map((section) => ({
+      ...section,
+      children: (section.children || []).filter((child) => isEssential(child.id)),
+    }))
+    .filter((section) => isEssential(section.id) || section.children.length > 0);
+}
+
+/** How many pages focus mode is hiding, for the toggle's own label. */
+export function hiddenCount(sections) {
+  const all = sections.reduce((n, s) => n + 1 + (s.children || []).length, 0);
+  const kept = navFor(sections, true).reduce((n, s) => n + 1 + (s.children || []).length, 0);
+  return Math.max(0, all - kept);
+}
