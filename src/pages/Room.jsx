@@ -30,6 +30,7 @@ export const TAB_COMPONENTS = {
   'jobs/all':           lazy(() => import('./Workspace.jsx')),
   'jobs/new':           lazy(() => import('./WinThisJob.jsx')),
   'jobs/proposals':     named(() => import('../components/rooms/ProposalsDesk.jsx'), 'ProposalsDesk'),
+  'jobs/time':          named(() => import('../components/rooms/TimeTracker.jsx'), 'TimeTracker'),
   'jobs/call':          lazy(() => import('./DiscoveryCallPrep.jsx')),
   'jobs/plan':          lazy(() => import('./ProjectPlan.jsx')),
   'jobs/deck':          lazy(() => import('./PresentationGenerator.jsx')),
@@ -81,7 +82,7 @@ export default function Room({ roomId }) {
     <div className="space-y-5">
       <RoomTabs room={room} activeId={tab.id} />
       {Tool?.needsHeading && (
-        <PageHeader eyebrow={room.label} title={tab.label} subtitle={room.blurb} />
+        <PageHeader eyebrow={room.label} title={tab.label} subtitle={tab.blurb || room.blurb} />
       )}
       <Suspense fallback={<div className="space-y-4"><SkeletonCard /><SkeletonCard /></div>}>
         {Tool ? <Tool key={tab.id} /> : null}

@@ -4,9 +4,18 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 // Bump this string when you want to show the modal again to everyone.
-export const CURRENT_VERSION = '2026.11.18b';
+export const CURRENT_VERSION = '2026.11.18c';
 
 const WHATS_NEW = {
+  '2026.11.18c': {
+    title: 'Time tracking, and every connection in one place.',
+    bullets: [
+      'Jobs → Time: start a timer on a job, see your week, and turn the hours into a draft invoice.',
+      'Settings → Connections: your other computer, GitHub, Google Calendar, AWS, local AI, draw.io and the account controller, each with its status and a fix button.',
+      'Turn on sync there to have the same office on your desktop and your laptop. Your AWS keys never sync; set them up on each computer.',
+      'draw.io is built in: Build → Diagram (draw.io).',
+    ],
+  },
   '2026.11.18b': {
     title: 'Your office: Today, and six rooms.',
     bullets: [

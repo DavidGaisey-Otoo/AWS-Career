@@ -34,6 +34,8 @@ import { runAppRoutesTests } from '../src/lib/__tests__/appRoutes.test.js';
 import { runRetiredDataTests } from '../src/lib/__tests__/retiredData.test.js';
 import { runRoomsTests } from '../src/lib/__tests__/rooms.test.js';
 import { runOfficeTodayTests } from '../src/lib/__tests__/officeToday.test.js';
+import { runTimeTrackingTests } from '../src/lib/__tests__/timeTracking.test.js';
+import { runConnectionsTests } from '../src/lib/__tests__/connections.test.js';
 import { runProjectPlanDateTests } from '../src/lib/__tests__/projectPlanDate.test.js';
 import { runProjectWorkspaceTests } from '../src/lib/__tests__/projectWorkspace.test.js';
 
@@ -230,6 +232,20 @@ console.log('  TODAY (FRONT DESK) TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of officeToday.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
+const timeTracking = runTimeTrackingTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  TIME TRACKING + BILLING TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of timeTracking.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
+const connections = runConnectionsTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  CONNECTIONS STATUS TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of connections.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
 const safeStorage = runSafeStorageTests();
 console.log('');
 console.log('═══════════════════════════════════════════════════════════════');
@@ -316,7 +332,7 @@ const clientIntakeOk = clientIntake.allPassed;
 const localFilesOk = localFiles.allPassed;
 const clientReportOk = clientReport.allPassed;
 const repoSecretsOk = repoSecrets.allPassed;
-const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk && workspaceOk && serviceWorkerOk && clientIntakeOk && localFilesOk && clientReportOk && repoSecretsOk && appRoutes.allPassed && retiredData.allPassed && rooms.allPassed && officeToday.allPassed;
+const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk && workspaceOk && serviceWorkerOk && clientIntakeOk && localFilesOk && clientReportOk && repoSecretsOk && appRoutes.allPassed && retiredData.allPassed && rooms.allPassed && officeToday.allPassed && timeTracking.allPassed && connections.allPassed;
 
 console.log('');
 console.log(allOk
@@ -324,6 +340,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} awsEnvironmentPolicy:${awsEnvironmentPolicyOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'} workspace:${workspaceOk ? 'ok' : 'FAIL'} serviceWorker:${serviceWorkerOk ? 'ok' : 'FAIL'} clientIntake:${clientIntakeOk ? 'ok' : 'FAIL'} localFiles:${localFilesOk ? 'ok' : 'FAIL'} clientReport:${clientReportOk ? 'ok' : 'FAIL'} repoSecrets:${repoSecretsOk ? 'ok' : 'FAIL'} appRoutes:${appRoutes.allPassed ? 'ok' : 'FAIL'} retiredData:${retiredData.allPassed ? 'ok' : 'FAIL'} rooms:${rooms.allPassed ? 'ok' : 'FAIL'} today:${officeToday.allPassed ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'} workspace:${workspaceOk ? 'ok' : 'FAIL'} serviceWorker:${serviceWorkerOk ? 'ok' : 'FAIL'} clientIntake:${clientIntakeOk ? 'ok' : 'FAIL'} localFiles:${localFilesOk ? 'ok' : 'FAIL'} clientReport:${clientReportOk ? 'ok' : 'FAIL'} repoSecrets:${repoSecretsOk ? 'ok' : 'FAIL'} appRoutes:${appRoutes.allPassed ? 'ok' : 'FAIL'} retiredData:${retiredData.allPassed ? 'ok' : 'FAIL'} rooms:${rooms.allPassed ? 'ok' : 'FAIL'} today:${officeToday.allPassed ? 'ok' : 'FAIL'} time:${timeTracking.allPassed ? 'ok' : 'FAIL'} connections:${connections.allPassed ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

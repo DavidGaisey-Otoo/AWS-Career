@@ -38,11 +38,15 @@ every job. Everything else is in six rooms, each one page with tabs:
 | Room | Tabs |
 |---|---|
 | 🔎 **Find work** | Live gigs, Check a job post, Market rates, Rate calculator |
-| 💼 **Jobs** | All jobs, New job, Proposals (write · track · templates), Call prep, Project plan, Client deck |
+| 💼 **Jobs** | All jobs, New job, Proposals (write · track · templates), Time (timer → invoice), Call prep, Project plan, Client deck |
 | 👥 **Clients** | Clients, Emails, Contracts & invoices |
 | 💰 **Money** | Earnings, Expenses, Goals, Currency |
-| 🔨 **Build** | Design (**Solution Studio**), Ideas, Diagram, Deploy, From GitHub, AWS accounts, What's running, Session log |
+| 🔨 **Build** | Design (**Solution Studio**), Ideas, Diagram (draw.io), Deploy, From GitHub, AWS accounts, What's running, Session log |
 | 🌱 **Grow** | Portfolio, Walkthroughs, Project builder, Content queue, Branding, AI coach |
+
+**Settings → Connections** shows how the office is linked: your other computer (sync through a
+private GitHub repository), GitHub, Google Calendar, the AWS vault, local AI, draw.io and the
+account controller app — each with its real status and the button that fixes it.
 
 Exam practice is not part of this app; it lives in the separate Exam Prep app.
 

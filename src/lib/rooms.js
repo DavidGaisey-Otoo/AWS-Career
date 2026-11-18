@@ -18,7 +18,7 @@ export const ROOMS = Object.freeze([
     id: 'find', label: 'Find work',
     blurb: 'Gigs worth your time, and what to charge for them.',
     tabs: [
-      { id: 'gigs',   label: 'Live gigs' },
+      { id: 'gigs',   label: 'Live gigs', blurb: 'Remote AWS work from six job boards, matched to your level.' },
       { id: 'check',  label: 'Check a job post' },
       { id: 'market', label: 'Market rates' },
       { id: 'rates',  label: 'Rate calculator' },
@@ -30,7 +30,8 @@ export const ROOMS = Object.freeze([
     tabs: [
       { id: 'all',       label: 'All jobs' },
       { id: 'new',       label: 'New job' },
-      { id: 'proposals', label: 'Proposals' },
+      { id: 'proposals', label: 'Proposals', blurb: 'Write a proposal, track who has replied, and borrow from a template.' },
+      { id: 'time',      label: 'Time', blurb: 'Time each job, see your week, and turn the hours into an invoice.' },
       { id: 'call',      label: 'Call prep' },
       { id: 'plan',      label: 'Project plan' },
       { id: 'deck',      label: 'Client deck' },
@@ -40,7 +41,7 @@ export const ROOMS = Object.freeze([
     id: 'clients', label: 'Clients',
     blurb: 'The people you work for, what you send them, and what they sign.',
     tabs: [
-      { id: 'list',      label: 'Clients' },
+      { id: 'list',      label: 'Clients', blurb: 'Everyone you work for, and every conversation with them.' },
       { id: 'emails',    label: 'Emails' },
       { id: 'paperwork', label: 'Contracts & invoices' },
     ],
@@ -49,10 +50,10 @@ export const ROOMS = Object.freeze([
     id: 'money', label: 'Money',
     blurb: 'What came in, what went out, and where you stand against your goal.',
     tabs: [
-      { id: 'overview', label: 'Earnings' },
-      { id: 'expenses', label: 'Expenses' },
-      { id: 'goals',    label: 'Goals' },
-      { id: 'currency', label: 'Currency' },
+      { id: 'overview', label: 'Earnings', blurb: 'What came in this month against your goal, and every payment.' },
+      { id: 'expenses', label: 'Expenses', blurb: 'What the work costs you, and what to set aside for tax.' },
+      { id: 'goals',    label: 'Goals', blurb: 'Monthly and yearly targets, and how far along you are.' },
+      { id: 'currency', label: 'Currency', blurb: 'Exchange rates, and what each way of getting paid costs you.' },
     ],
   },
   {
@@ -61,7 +62,7 @@ export const ROOMS = Object.freeze([
     tabs: [
       { id: 'design',   label: 'Design' },
       { id: 'ideas',    label: 'Ideas' },
-      { id: 'diagram',  label: 'Diagram' },
+      { id: 'diagram',  label: 'Diagram (draw.io)' },
       { id: 'deploy',   label: 'Deploy' },
       { id: 'github',   label: 'From GitHub' },
       { id: 'accounts', label: 'AWS accounts' },
@@ -77,7 +78,7 @@ export const ROOMS = Object.freeze([
       { id: 'walkthroughs', label: 'Walkthroughs' },
       { id: 'builder',      label: 'Project builder' },
       { id: 'content',      label: 'Content queue' },
-      { id: 'branding',     label: 'Branding' },
+      { id: 'branding',     label: 'Branding', blurb: 'Your LinkedIn, website and GitHub profile, written to bring clients.' },
       { id: 'coach',        label: 'AI coach' },
     ],
   },

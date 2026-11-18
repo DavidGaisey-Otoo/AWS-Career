@@ -2,15 +2,17 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle, ArrowRight, Briefcase, Cloud, DollarSign, Hammer, Info, Rocket, Search,
-  Send, Sprout, Users, Wallet,
+  Link2, Send, Sprout, Users, Wallet,
 } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader.jsx';
 import { EmptyState } from '../components/common/EmptyState.jsx';
 import { StatChip } from '../components/common/StatChip.jsx';
 import { Button } from '../components/ui/Button.jsx';
+import { useConnections } from '../components/settings/ConnectionsPanel.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { useFreelance } from '../context/FreelanceContext.jsx';
 import { useWorkspace } from '../hooks/useWorkspace.js';
+import { summarise } from '../lib/connections.js';
 import { buildToday } from '../lib/officeToday.js';
 import { ROOMS, roomPath } from '../lib/rooms.js';
 import { listLiveStacks } from '../lib/solutionStore.js';
@@ -38,6 +40,9 @@ export default function Today() {
   const { profile } = useApp();
   const { state } = useFreelance();
   const workspace = useWorkspace();
+  const connections = useConnections();
+  const linked = summarise(connections);
+  const devices = connections.find((c) => c.id === 'devices');
 
   const today = useMemo(() => buildToday({
     proposals: state?.proposals,
@@ -80,6 +85,17 @@ export default function Today() {
         <StatChip layout="stacked" icon={Send} value={openProposals} label="Proposals waiting on a client" />
         <StatChip layout="stacked" icon={Briefcase} value={activeJobs} label="Jobs in progress" />
       </section>
+
+      <Link to="/settings?section=connections"
+            className="surface rounded-2xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs hover:border-aws-orange/40 transition focus-ring">
+        <Link2 size={14} className="text-aws-orange shrink-0" aria-hidden />
+        <span className="font-bold">Connections</span>
+        <span className="text-muted">
+          {linked.connected} of {linked.total} connected{linked.attention ? ` · ${linked.attention} need${linked.attention === 1 ? 's' : ''} you` : ''}
+          {devices && devices.status !== 'connected' ? ' · desktop and laptop are not in sync' : ''}
+        </span>
+        <span className="ml-auto font-bold text-muted">Manage →</span>
+      </Link>
 
       <section aria-labelledby="needs-you" className="space-y-3">
         <h2 id="needs-you" className="text-lg font-extrabold tracking-tight">Needs you</h2>

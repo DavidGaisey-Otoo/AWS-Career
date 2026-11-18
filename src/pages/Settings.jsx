@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Bell, Briefcase, Camera, ClipboardCopy, Database, Download, Eye, EyeOff, Globe2, KeyRound, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon, Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2 } from 'lucide-react';
+import { Bell, Briefcase, Link2, Camera, ClipboardCopy, Database, Download, Eye, EyeOff, Globe2, KeyRound, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon, Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2 } from 'lucide-react';
 import { Github, Linkedin } from '../components/common/BrandIcons.jsx';
 import { BuildStamp } from '../components/common/BuildStamp.jsx';
 import { fetchGithubIdentity, hasGithubAppSession } from '../lib/githubAppAuth.js';
@@ -16,9 +16,11 @@ import { cn, formatCurrency } from '../lib/utils.js';
 import { GoogleCalendarConnectCard } from '../components/integrations/GoogleCalendarConnectCard.jsx';
 import { GitHubAppConnectCard } from '../components/integrations/GitHubAppConnectCard.jsx';
 import { LocalAIPanel } from '../components/settings/LocalAIPanel.jsx';
+import { ConnectionsPanel } from '../components/settings/ConnectionsPanel.jsx';
 import { findRetiredData, removeRetiredData } from '../lib/retiredData.js';
 
 const SECTIONS = [
+  { id: 'connections',   label: 'Connections',      icon: Link2 },
   { id: 'profile',       label: 'Profile',          icon: User },
   { id: 'notifications', label: 'Notifications',    icon: Bell },
   { id: 'display',       label: 'Display',          icon: Palette },
@@ -30,7 +32,7 @@ export default function Settings() {
   const [params] = useSearchParams();
   const [section, setSection] = useState(() => {
     const q = params.get('section');
-    return SECTIONS.some((s) => s.id === q) ? q : 'profile';
+    return SECTIONS.some((s) => s.id === q) ? q : 'connections';
   });
 
   /**
@@ -64,7 +66,7 @@ export default function Settings() {
       <PageHeader
         eyebrow="Settings"
         title="Make it yours."
-        subtitle="Profile, notifications, display, integrations, data management."
+        subtitle="Connections, profile, notifications, display, integrations, data management."
         icon={SettingsIcon}
       />
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
@@ -89,6 +91,7 @@ export default function Settings() {
 
         <motion.div ref={panelRef} key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}
                     className="scroll-mt-24 space-y-4">
+          {section === 'connections'   && <ConnectionsSection />}
           {section === 'profile'       && <ProfileSection />}
           {section === 'notifications' && <NotificationSection />}
           {section === 'display'       && <DisplaySection />}
@@ -100,6 +103,16 @@ export default function Settings() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+// ============================ CONNECTIONS ============================
+
+function ConnectionsSection() {
+  return (
+    <Section title="Connections" subtitle="Your other computer, GitHub, Google Calendar, AWS, local AI, draw.io and the account controller — what is linked and what needs you.">
+      <ConnectionsPanel />
+    </Section>
   );
 }
 
