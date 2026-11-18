@@ -359,7 +359,7 @@ export default function SolutionStudio() {
                 ? <><Loader2 size={15} className="animate-spin" /> Designing your solution…</>
                 : <><Wand2 size={15} /> Build my solution</>}
             </button>
-            <Link to="/freelance?tab=gigs" className="btn btn-ghost !text-[12px] tap-44 gap-1.5">
+            <Link to="/find/gigs" className="btn btn-ghost !text-[12px] tap-44 gap-1.5">
               <Briefcase size={13} /> Pick from live gigs
             </Link>
           </div>
@@ -1124,7 +1124,7 @@ function BlueprintPanel({ solution }) {
         </details>
       )}
 
-      <Link to={`/architecture?${architectureSearch}`} className="btn btn-ghost !text-[11.5px] tap-44 gap-1.5 w-full sm:w-auto">
+      <Link to={`/build/diagram?${architectureSearch}`} className="btn btn-ghost !text-[11.5px] tap-44 gap-1.5 w-full sm:w-auto">
         <Layers size={13} /> Open in Architecture Studio
       </Link>
     </div>
@@ -1249,7 +1249,7 @@ function PlanPanel({ solution }) {
         <PlanChecklist title="Validation and evidence" items={plan.evidenceChecklist} />
         <PlanChecklist title="Operations and handover" items={plan.handoverChecklist} />
       </div>
-      <Link to="/project-plan" className="btn btn-ghost !text-[11.5px] tap-44 gap-1.5">
+      <Link to="/jobs/plan" className="btn btn-ghost !text-[11.5px] tap-44 gap-1.5">
         <ClipboardList size={13} /> Open full Project Plan tool
       </Link>
       <DeliveryStandardPanel standard={solution.deliveryStandard} />
@@ -1606,7 +1606,7 @@ function TeardownPanel({ solution, liveStacks, onTeardown }) {
 
       <div className="text-[10.5px] text-muted leading-relaxed">
         Tip: always tear down test builds the same day. Set a billing alarm at $1 in{' '}
-        <Link to="/aws-accounts" className="text-aws-orange font-bold hover:underline">AWS Account Manager</Link>{' '}
+        <Link to="/build/accounts" className="text-aws-orange font-bold hover:underline">AWS Account Manager</Link>{' '}
         so nothing can creep up on you.
       </div>
     </div>
@@ -1658,16 +1658,16 @@ function NextActions({ solution }) {
   const projectId = encodeURIComponent(solution.id);
   const evidenceProjectId = `custom-solution-${solution.id}`;
   const actions = [
-    { n: 1, to: `/job-analyzer?prefill=${brief}`, icon: Target, label: 'Confirm scope and fit', hint: 'Review requirements, risks, missing facts, and rate before promising anything' },
+    { n: 1, to: `/find/check?prefill=${brief}`, icon: Target, label: 'Confirm scope and fit', hint: 'Review requirements, risks, missing facts, and rate before promising anything' },
     { n: 2, to: `/freelance?tab=proposals&sub=smart&prefill=${brief}`, icon: FileText, label: 'Draft the proposal', hint: 'Uses this exact client brief; review it before submitting manually' },
-    { n: 3, to: `/discovery-call?prefill=${brief}&title=${title}&budget=${budget}`, icon: Briefcase, label: 'Prepare discovery questions', hint: 'Confirm assumptions directly with the client before final scope' },
-    { n: 4, to: `/project-plan?prefill=${brief}&title=${title}&budget=${budget}`, icon: ClipboardList, label: 'Create the project plan', hint: 'Milestones, dependencies, estimates, validation, and handover' },
-    { n: 5, to: `/documents?tab=contracts&projectId=${projectId}&prefill=${brief}&title=${title}&budget=${budget}`, icon: FileText, label: 'Draft the contract', hint: 'Same scope and price; legal review and client signature still required' },
-    { n: 6, to: `/architecture?projectId=${projectId}&prefill=${brief}&title=${title}&services=${services}&region=${region}`, icon: Layers, label: 'Create the client architecture', hint: 'Starts an editable diagram from this solution; review every connection before export' },
-    { n: 7, to: `/presentation?projectId=${projectId}&prefill=${brief}&title=${title}&services=${services}&budget=${budget}`, icon: FileText, label: 'Build the presentation', hint: 'Creates an editable client-facing deck from this same approved scope' },
-    { n: 8, to: `/email?prefill=${brief}&title=${title}`, icon: FileText, label: 'Draft the client email', hint: 'Prepares a draft only; you review it and send from your own email account' },
-    { n: 9, to: '/deploy', icon: Rocket, label: 'Validate in AWS', hint: 'Deploy only evidence-ready artifacts, then test and tear down' },
-    { n: 10, to: `/documents?tab=deliveries&projectId=${projectId}`, icon: Package, label: 'Build the handover package', hint: 'Uses this project’s diagram, runbook, templates, testing record, and teardown guidance' },
+    { n: 3, to: `/jobs/call?prefill=${brief}&title=${title}&budget=${budget}`, icon: Briefcase, label: 'Prepare discovery questions', hint: 'Confirm assumptions directly with the client before final scope' },
+    { n: 4, to: `/jobs/plan?prefill=${brief}&title=${title}&budget=${budget}`, icon: ClipboardList, label: 'Create the project plan', hint: 'Milestones, dependencies, estimates, validation, and handover' },
+    { n: 5, to: `/clients/paperwork?tab=contracts&projectId=${projectId}&prefill=${brief}&title=${title}&budget=${budget}`, icon: FileText, label: 'Draft the contract', hint: 'Same scope and price; legal review and client signature still required' },
+    { n: 6, to: `/build/diagram?projectId=${projectId}&prefill=${brief}&title=${title}&services=${services}&region=${region}`, icon: Layers, label: 'Create the client architecture', hint: 'Starts an editable diagram from this solution; review every connection before export' },
+    { n: 7, to: `/jobs/deck?projectId=${projectId}&prefill=${brief}&title=${title}&services=${services}&budget=${budget}`, icon: FileText, label: 'Build the presentation', hint: 'Creates an editable client-facing deck from this same approved scope' },
+    { n: 8, to: `/clients/emails?prefill=${brief}&title=${title}`, icon: FileText, label: 'Draft the client email', hint: 'Prepares a draft only; you review it and send from your own email account' },
+    { n: 9, to: '/build/deploy', icon: Rocket, label: 'Validate in AWS', hint: 'Deploy only evidence-ready artifacts, then test and tear down' },
+    { n: 10, to: `/clients/paperwork?tab=deliveries&projectId=${projectId}`, icon: Package, label: 'Build the handover package', hint: 'Uses this project’s diagram, runbook, templates, testing record, and teardown guidance' },
     { n: 11, to: `/portfolio/${evidenceProjectId}`, icon: Briefcase, label: 'Open evidence workspace', hint: 'Capture, review, export, and package approved evidence here' },
   ];
   return (

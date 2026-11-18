@@ -193,7 +193,7 @@ export default function WinThisJob() {
               <>
                 <div className="flex flex-wrap gap-2">
                   <CopyButton text={intakeAsText(intake)} label="Copy the questions" icon={ClipboardList} />
-                  <Link to="/workspace" className="btn btn-ghost !text-[11px]">Open in the workspace</Link>
+                  <Link to="/jobs/all" className="btn btn-ghost !text-[11px]">Open in the workspace</Link>
                 </div>
                 <ul className="mt-3 space-y-1">
                   {intake.sections.flatMap((s) => s.questions).filter((q) => q.required).slice(0, 6)

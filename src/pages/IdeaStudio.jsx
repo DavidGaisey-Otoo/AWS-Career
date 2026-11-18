@@ -450,7 +450,7 @@ function ProposalCard({ entry, onReask }) {
 
       {/* Footer — actions */}
       <div className="px-5 py-3 border-t border-token flex items-center gap-2 flex-wrap bg-[var(--card-2)]/30">
-        <Link to="/project-builder">
+        <Link to="/grow/builder">
           <Button variant="primary" size="sm" icon={Wand2}>Promote to Project Builder</Button>
         </Link>
         <Button variant="ghost" size="sm" icon={RefreshCw} onClick={() => onReask?.(entry.input)}>

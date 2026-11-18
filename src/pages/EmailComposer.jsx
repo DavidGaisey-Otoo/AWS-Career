@@ -18,6 +18,8 @@ import {
   EMAIL_TYPES, generateEmail, gmailComposeUrl, mailtoUrl, outlookComposeUrl,
 } from '../data/emailTemplates.js';
 import { cn } from '../lib/utils.js';
+import { CLAIM_LABELS, findUnsupportedClaims } from '../lib/claimSafety.js';
+import { findDraftMarkers } from '../lib/businessWorkflow.js';
 
 const TABS = [
   { id: 'composer', label: 'Composer', icon: MailPlus },
@@ -31,7 +33,7 @@ export default function EmailComposer() {
 
   return (
     <div className="space-y-4">
-      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+      <Link to="/find/gigs" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
         <ChevronLeft size={14} /> Earn
       </Link>
 
@@ -123,7 +125,25 @@ function ComposerTab({ params }) {
     }, 280);
   };
 
+  // Before anything leaves the app: a claim you cannot back up is blocked
+  // outright, and a leftover {placeholder} or [bracket] needs a yes. These
+  // checks lived in the old hub's outreach composer; this is now the only
+  // place emails are written, so they live here.
+  const draftText = `${generated.subject || ''}\n${generated.body || ''}`;
+  const claims = findUnsupportedClaims(draftText);
+  const markers = findDraftMarkers(draftText);
+  const cleared = () => {
+    if (claims.length) {
+      toast.error(`Remove or prove ${claims.length === 1 ? 'the claim' : `${claims.length} claims`} flagged above before this email leaves the app.`);
+      return false;
+    }
+    if (markers.length && !window.confirm(`This email still has ${markers.length} unfilled placeholder(s): ${markers.slice(0, 4).join(', ')}. Use it anyway?`)) return false;
+    return true;
+  };
+  const guardLink = (e) => { if (!cleared()) e.preventDefault(); };
+
   const copy = async () => {
+    if (!cleared()) return;
     try {
       await navigator.clipboard.writeText(`Subject: ${generated.subject}\n\n${generated.body}`);
       toast.success('Copied to clipboard');
@@ -204,7 +224,7 @@ function ComposerTab({ params }) {
               ))}
             </select>
             {fre.clients.length === 0 && (
-              <div className="text-[10px] text-muted">No clients yet — <Link to="/freelance" className="text-aws-orange font-bold hover:underline">add one in the CRM</Link>.</div>
+              <div className="text-[10px] text-muted">No clients yet — <Link to="/clients/list" className="text-aws-orange font-bold hover:underline">add one in the CRM</Link>.</div>
             )}
 
             <label className="block text-[10px] font-bold text-muted mt-2">Project name</label>
@@ -241,7 +261,7 @@ function ComposerTab({ params }) {
             Email → proposal workflow
           </h3>
           <p className="text-[11px] text-muted leading-relaxed">
-            Client emailed you a job? Paste it into the <Link to="/job-analyzer" className="text-aws-orange font-bold hover:underline">Job Analyzer</Link>, then come back here to draft the reply. Full pipeline in under 2 minutes.
+            Client emailed you a job? Paste it into the <Link to="/find/check" className="text-aws-orange font-bold hover:underline">Job Analyzer</Link>, then come back here to draft the reply. Full pipeline in under 2 minutes.
           </p>
         </div>
       </div>
@@ -289,11 +309,27 @@ function ComposerTab({ params }) {
               />
             </div>
 
+            {(claims.length > 0 || markers.length > 0) && (
+              <div role="alert" className="rounded-2xl border border-warning/40 bg-warning/5 p-3 text-xs space-y-1.5">
+                {claims.length > 0 && (
+                  <div>
+                    <strong className="text-danger">Can't send yet — this email {claims.map((c) => CLAIM_LABELS[c] || c).join('; ')}.</strong>
+                    <span className="text-muted"> Remove it, or replace it with something you can show proof of.</span>
+                  </div>
+                )}
+                {markers.length > 0 && (
+                  <div className="text-muted">
+                    <strong className="text-warning">Unfilled:</strong> {markers.slice(0, 6).join(', ')}{markers.length > 6 ? ` and ${markers.length - 6} more` : ''}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="surface rounded-2xl p-3 flex flex-wrap items-center gap-2">
               <button onClick={copy} className="btn btn-ghost !text-xs"><ClipboardCopy size={12} /> Copy email</button>
-              <a href={links.gmail}   target="_blank" rel="noreferrer" className="btn btn-ghost !text-xs"><Mail size={12} /> Open in Gmail</a>
-              <a href={links.outlook} target="_blank" rel="noreferrer" className="btn btn-ghost !text-xs"><Mail size={12} /> Open in Outlook</a>
-              <a href={links.mailto} className="btn btn-ghost !text-xs"><Mail size={12} /> mailto:</a>
+              <a href={links.gmail}   onClick={guardLink} target="_blank" rel="noreferrer" className="btn btn-ghost !text-xs"><Mail size={12} /> Open in Gmail</a>
+              <a href={links.outlook} onClick={guardLink} target="_blank" rel="noreferrer" className="btn btn-ghost !text-xs"><Mail size={12} /> Open in Outlook</a>
+              <a href={links.mailto}  onClick={guardLink} className="btn btn-ghost !text-xs"><Mail size={12} /> mailto:</a>
               <button
                 onClick={() => setShowReview((v) => !v)}
                 className={cn('btn !text-xs', showReview ? 'btn-primary' : 'btn-ghost')}

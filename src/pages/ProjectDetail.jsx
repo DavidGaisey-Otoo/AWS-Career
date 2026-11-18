@@ -55,7 +55,7 @@ export default function ProjectDetail() {
       <div className="surface rounded-3xl p-12 text-center">
         <div className="text-2xl mb-2">🤷</div>
         <h2 className="text-xl font-bold">Project not found</h2>
-        <Link to="/portfolio" className="mt-4 inline-flex items-center gap-1 text-aws-orange font-semibold hover:underline">
+        <Link to="/grow/portfolio" className="mt-4 inline-flex items-center gap-1 text-aws-orange font-semibold hover:underline">
           <ArrowLeft size={14} /> Back to portfolio
         </Link>
       </div>
@@ -88,7 +88,7 @@ export default function ProjectDetail() {
   return (
     <div className="space-y-6">
       <Link
-        to="/portfolio"
+        to="/grow/portfolio"
         className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange transition print:hidden"
       >
         <ArrowLeft size={14} /> Portfolio board

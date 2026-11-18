@@ -102,7 +102,7 @@ export function CommandPalette() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={onKey}
-                placeholder="Search anything — pages, projects, services, walkthroughs, settings…"
+                placeholder="Search tools, projects, walkthroughs, settings…"
                 className="flex-1 bg-transparent text-base font-medium placeholder:text-muted focus:outline-none"
               />
               {!index && <Loader2 size={14} className="animate-spin opacity-50" />}

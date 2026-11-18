@@ -52,7 +52,7 @@ export function AccountStatusBadge({ compact = false }) {
 
   return (
     <Link
-      to="/aws-accounts"
+      to="/build/accounts"
       title={classification.reason}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold transition focus-ring',

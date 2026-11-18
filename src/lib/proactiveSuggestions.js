@@ -109,7 +109,7 @@ const RULES = [
         severity: 'danger',
         title: `Production-grade work but baseline security gaps: ${missing.length} items`,
         body: `Before deploying client work, lock down: ${missing.join(', ')}. AWS Account Manager → My Setup Documentation has the checklist with CLI verification commands.`,
-        action: { label: 'Open Setup Documentation', to: '/aws-accounts' },
+        action: { label: 'Open Setup Documentation', to: '/build/accounts' },
       });
     }
     return out;

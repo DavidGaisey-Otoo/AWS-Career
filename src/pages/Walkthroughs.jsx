@@ -25,7 +25,7 @@ export default function Walkthroughs() {
     return (
       <div className="text-center py-12">
         <p className="opacity-60">Walkthrough not found.</p>
-        <button onClick={() => navigate('/walkthroughs')} className="mt-3 text-sm underline">Back to list</button>
+        <button onClick={() => navigate('/grow/walkthroughs')} className="mt-3 text-sm underline">Back to list</button>
       </div>
     );
   }
@@ -38,7 +38,7 @@ export default function Walkthroughs() {
         <main className="min-w-0">
           {active ? (
             <>
-              <button onClick={() => navigate('/walkthroughs')} className="text-xs opacity-60 hover:opacity-100 mb-3 flex items-center gap-1">
+              <button onClick={() => navigate('/grow/walkthroughs')} className="text-xs opacity-60 hover:opacity-100 mb-3 flex items-center gap-1">
                 <ArrowLeft size={12} /> All walkthroughs
               </button>
               <WalkthroughViewer walkthrough={active} />

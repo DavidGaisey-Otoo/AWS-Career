@@ -215,7 +215,7 @@ export default function ResourceSearch() {
             Resource Search reads your account through the same encrypted vault the Deploy Console
             uses. Set it up once — read-only keys are enough for everything on this page.
           </p>
-          <Link to="/deploy">
+          <Link to="/build/deploy">
             <Button variant="primary" icon={Lock}>Set up the vault</Button>
           </Link>
         </section>

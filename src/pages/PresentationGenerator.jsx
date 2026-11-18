@@ -225,7 +225,7 @@ export default function PresentationGenerator() {
 
   return (
     <div className="space-y-4">
-      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+      <Link to="/find/gigs" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
         <ChevronLeft size={14} /> Earn
       </Link>
 
@@ -383,7 +383,7 @@ function BriefForm({ brief, setBrief, onGenerate, diagram, lastAnalysis }) {
         <div className="rounded-lg border border-aws-orange/30 bg-aws-orange/5 px-2.5 py-1.5 flex items-center gap-1.5 text-[10px]">
           <Sparkles size={11} className="text-aws-orange shrink-0" />
           <span>
-            Auto-filled from your last <Link to="/job-analyzer" className="font-bold text-aws-orange hover:underline">Job Analyzer</Link> run
+            Auto-filled from your last <Link to="/find/check" className="font-bold text-aws-orange hover:underline">Job Analyzer</Link> run
             {' · '}
             <span className="text-muted">{new Date(lastAnalysis.at).toLocaleString()}</span>
           </span>
@@ -424,7 +424,7 @@ function BriefForm({ brief, setBrief, onGenerate, diagram, lastAnalysis }) {
       {!diagram && (
         <div className="rounded-lg border border-warning/30 bg-warning/10 p-2.5 text-[10px] leading-relaxed flex items-start gap-1.5">
           <AlertCircle size={11} className="text-warning shrink-0 mt-0.5" />
-          <span>No saved diagram found in Architecture Studio. Slide 4 will show a placeholder — generate a diagram in <Link to="/architecture" className="font-bold text-aws-orange hover:underline">Architecture Studio</Link> first for the best result.</span>
+          <span>No saved diagram found in Architecture Studio. Slide 4 will show a placeholder — generate a diagram in <Link to="/build/diagram" className="font-bold text-aws-orange hover:underline">Architecture Studio</Link> first for the best result.</span>
         </div>
       )}
 
@@ -743,7 +743,7 @@ function ArchitectureSlide({ slide, diagram, editable, onChange, fullScreen }) {
           <div className="text-center text-muted text-sm">
             <Layers size={26} className="mx-auto mb-2 text-aws-orange/60" />
             <p className="font-bold">No diagram bound to this deck</p>
-            <p className="text-[11px] mt-1">Open <Link to="/architecture" className="text-aws-orange font-bold underline">Architecture Studio</Link> and save a diagram — slide 4 will use the most recent one.</p>
+            <p className="text-[11px] mt-1">Open <Link to="/build/diagram" className="text-aws-orange font-bold underline">Architecture Studio</Link> and save a diagram — slide 4 will use the most recent one.</p>
           </div>
         )}
       </div>

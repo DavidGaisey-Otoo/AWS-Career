@@ -144,7 +144,7 @@ export function GigFeed() {
         <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
           <div>
             <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-1">
-              FR-01 · Live Gig Feed
+              Live Gig Feed
             </div>
             <h2 className="text-xl font-extrabold flex items-center gap-2">
               <Briefcase size={18} className="text-aws-orange" />
@@ -425,11 +425,11 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
   const applicationBrief = buildEntryLevelApplicationBrief(gig, { careerLevel: career.current.id, headline: career.current.headline });
   const briefForActions = encodeURIComponent(applicationBrief);
   const proposalHref = `/freelance?tab=proposals&sub=smart&prefill=${briefForActions}`;
-  const analyzeHref = `/job-analyzer?prefill=${briefForActions}`;
+  const analyzeHref = `/find/check?prefill=${briefForActions}`;
   const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(gig.title)}&brief=${briefForActions}&source=freelance`;
   // GIG-01: carry the whole gig (not just text) into Solution Studio so it
   // keeps the budget, company, skills + source link for the solution header.
-  const solutionHref = `/solution?gig=${encodeGig(gig)}`;
+  const solutionHref = `/build/design?gig=${encodeGig(gig)}`;
 
   const postedAgo = gig.postedAt ? humanAge(gig.postedAt) : null;
   const learnedMatch = learningProfile ? scoreOpportunity(gig, learningProfile) : null;

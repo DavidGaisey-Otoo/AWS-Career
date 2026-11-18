@@ -10,11 +10,11 @@
  *
  * Storage shape:
  *   localStorage[`awscl-pro::v1::route-memory`] = {
- *     lastPath:   '/job-analyzer',
+ *     lastPath:   '/find/check',
  *     lastAt:     1716540000000,
  *     scroll: {
- *       '/job-analyzer': 420,
- *       '/freelance':     1200,
+ *       '/find/check': 420,
+ *       '/money/overview':     1200,
  *       ...
  *     }
  *   }

@@ -61,7 +61,7 @@ export function RateBenchmarkCard({ brief = '', variant = 'full', className = ''
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-0.5">
-            FR-06 · Rate Benchmark
+            Rate Benchmark
           </div>
           <h3 className="text-[14px] font-extrabold flex items-center gap-2">
             <DollarSign size={14} className="text-success" />

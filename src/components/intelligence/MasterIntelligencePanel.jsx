@@ -391,7 +391,7 @@ function DeploymentColumn({ title, subtitle, tone, analysis, mode, scriptOpts, c
       );
       // Navigate to Deploy Console
       window.location.hash = '#/deploy';
-      window.location.href = '/deploy';
+      window.location.href = '/build/deploy';
     } catch (err) {
       console.error('✗ [MasterIntel] Deployment failed:', err);
       toast.error('Could not queue deploy — ' + (err.message || err));
@@ -628,8 +628,8 @@ function TestTab({ analysis }) {
         </div>
       </div>
       <div className="flex gap-2">
-        <Link to="/deploy"><Button variant="primary" icon={Rocket} size="sm">✅ Open Deploy Console</Button></Link>
-        <Link to="/aws-accounts"><Button variant="ghost" icon={Cloud} size="sm">AWS profile</Button></Link>
+        <Link to="/build/deploy"><Button variant="primary" icon={Rocket} size="sm">✅ Open Deploy Console</Button></Link>
+        <Link to="/build/accounts"><Button variant="ghost" icon={Cloud} size="sm">AWS profile</Button></Link>
       </div>
     </div>
   );
@@ -653,10 +653,10 @@ function ClientTab({ analysis }) {
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Link to="/architecture"><Button variant="ghost" size="sm" icon={LayoutGrid}>Architecture</Button></Link>
-        <Link to="/deploy"><Button variant="ghost" size="sm" icon={FileCode}>CloudFormation</Button></Link>
-        <Link to="/deploy"><Button variant="ghost" size="sm" icon={Code2}>Terraform</Button></Link>
-        <Link to="/deploy"><Button variant="ghost" size="sm" icon={Terminal}>AWS CLI</Button></Link>
+        <Link to="/build/diagram"><Button variant="ghost" size="sm" icon={LayoutGrid}>Architecture</Button></Link>
+        <Link to="/build/deploy"><Button variant="ghost" size="sm" icon={FileCode}>CloudFormation</Button></Link>
+        <Link to="/build/deploy"><Button variant="ghost" size="sm" icon={Code2}>Terraform</Button></Link>
+        <Link to="/build/deploy"><Button variant="ghost" size="sm" icon={Terminal}>AWS CLI</Button></Link>
       </div>
     </div>
   );

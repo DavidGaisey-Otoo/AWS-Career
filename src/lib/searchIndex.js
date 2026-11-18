@@ -96,10 +96,10 @@ export async function buildIndex() {
 
   // ── 4. Quick actions ──
   items.push(
-    { id: 'action-deploy', title: 'Open Deploy Console', hint: 'Approve AWS deploys with strict tiers', kind: 'Action', icon: Rocket, path: '/deploy', keywords: ['deploy', 'aws', 'console', 'vault'] },
-    { id: 'action-session-log', title: 'Open Session Log', hint: 'Documentation of what you did', kind: 'Action', icon: FileText, path: '/session-log', keywords: ['session', 'log', 'history', 'docs', 'pdf'] },
+    { id: 'action-deploy', title: 'Open Deploy Console', hint: 'Approve AWS deploys with strict tiers', kind: 'Action', icon: Rocket, path: '/build/deploy', keywords: ['deploy', 'aws', 'console', 'vault'] },
+    { id: 'action-session-log', title: 'Open Session Log', hint: 'Documentation of what you did', kind: 'Action', icon: FileText, path: '/build/log', keywords: ['session', 'log', 'history', 'docs', 'pdf'] },
     { id: 'action-renew-token', title: 'Renew GitHub token', hint: 'Step-by-step PAT renewal', kind: 'Action', icon: Wand2, path: '/renew-github', keywords: ['github', 'token', 'pat', 'renew', 'expire'] },
-    { id: 'action-build-anything', title: 'Idea Studio — Build anything', hint: 'Describe your project, get instant architecture + plan', kind: 'Action', icon: Wand2, path: '/idea-studio', keywords: ['idea', 'build', 'architect', 'design', 'plan', 'gig', 'job', 'project', 'ai', 'chat'] },
+    { id: 'action-build-anything', title: 'Idea Studio — Build anything', hint: 'Describe your project, get instant architecture + plan', kind: 'Action', icon: Wand2, path: '/build/ideas', keywords: ['idea', 'build', 'architect', 'design', 'plan', 'gig', 'job', 'project', 'ai', 'chat'] },
     { id: 'action-settings', title: 'Open Settings', hint: 'Theme, integrations, prefs', kind: 'Action', icon: Settings, path: '/settings', keywords: ['settings', 'preferences', 'github', 'theme'] },
   );
 

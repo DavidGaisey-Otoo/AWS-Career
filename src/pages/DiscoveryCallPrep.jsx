@@ -189,7 +189,7 @@ ${profile.name || 'Your Name'}`;
 
   return (
     <div className="space-y-4">
-      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+      <Link to="/find/gigs" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
         <ChevronLeft size={14} /> Earn
       </Link>
 
@@ -218,7 +218,7 @@ ${profile.name || 'Your Name'}`;
             {lastAnalysis.suggestedClient && <> · client <span className="font-bold">{lastAnalysis.suggestedClient}</span></>}
             <span className="text-muted"> · {new Date(lastAnalysis.at).toLocaleString()}</span>
           </span>
-          <Link to="/job-analyzer" className="ml-auto text-[10px] font-bold text-aws-orange hover:underline">
+          <Link to="/find/check" className="ml-auto text-[10px] font-bold text-aws-orange hover:underline">
             Re-run →
           </Link>
         </div>
@@ -239,7 +239,7 @@ ${profile.name || 'Your Name'}`;
               className="w-full bg-[var(--card-2)] border border-token rounded-md px-2 py-1.5 text-xs focus-ring focus:border-aws-orange resize-y"
             />
             <div className="text-[10px] text-muted">
-              Already analyzed in <Link to="/job-analyzer" className="text-aws-orange font-bold hover:underline">Job Analyzer</Link>? Just paste the same text here.
+              Already analyzed in <Link to="/find/check" className="text-aws-orange font-bold hover:underline">Job Analyzer</Link>? Just paste the same text here.
             </div>
           </div>
 
@@ -310,7 +310,7 @@ ${profile.name || 'Your Name'}`;
               ))}
             </select>
             {fre.clients.length === 0 && (
-              <div className="text-[10px] text-muted">No clients yet — <Link to="/freelance" className="text-aws-orange font-bold hover:underline">add one in the CRM</Link>.</div>
+              <div className="text-[10px] text-muted">No clients yet — <Link to="/clients/list" className="text-aws-orange font-bold hover:underline">add one in the CRM</Link>.</div>
             )}
           </div>
 
@@ -421,7 +421,7 @@ ${profile.name || 'Your Name'}`;
               <button onClick={savePostToCRM} className="btn btn-primary !text-xs">
                 <Save size={11} /> Save to CRM
               </button>
-              <Link to={`/freelance`} className="btn btn-ghost !text-xs">
+              <Link to="/clients/list" className="btn btn-ghost !text-xs">
                 <User size={11} /> Open CRM
               </Link>
             </div>
@@ -465,7 +465,7 @@ ${profile.name || 'Your Name'}`;
           </div>
 
           <div className="grid sm:grid-cols-3 gap-2">
-            <Link to="/job-analyzer" className="surface rounded-2xl p-3 hover:border-aws-orange/40 transition focus-ring">
+            <Link to="/find/check" className="surface rounded-2xl p-3 hover:border-aws-orange/40 transition focus-ring">
               <div className="text-[10px] uppercase tracking-widest text-muted font-extrabold">Step 1</div>
               <div className="text-sm font-extrabold">Analyze the job</div>
             </Link>
@@ -473,7 +473,7 @@ ${profile.name || 'Your Name'}`;
               <div className="text-[10px] uppercase tracking-widest text-aws-orange font-extrabold">Step 2 (you are here)</div>
               <div className="text-sm font-extrabold">Discovery call prep</div>
             </div>
-            <Link to="/presentation" className="surface rounded-2xl p-3 hover:border-aws-orange/40 transition focus-ring">
+            <Link to="/jobs/deck" className="surface rounded-2xl p-3 hover:border-aws-orange/40 transition focus-ring">
               <div className="text-[10px] uppercase tracking-widest text-muted font-extrabold">Step 3</div>
               <div className="text-sm font-extrabold">Build the proposal</div>
             </Link>

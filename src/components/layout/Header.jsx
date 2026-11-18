@@ -53,7 +53,7 @@ export function Header({ onMobileMenu }) {
           className="hidden sm:flex flex-1 max-w-xl items-center gap-3 px-3.5 py-2.5 rounded-xl surface-2 text-sm text-muted hover:text-current transition focus-ring group"
         >
           <Search size={16} className="text-aws-orange" />
-          <span className="flex-1 text-left truncate">Search anything — pages, lessons, services, jobs…</span>
+          <span className="flex-1 text-left truncate">Search tools, projects, walkthroughs…</span>
           <kbd className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold border border-token rounded-md px-1.5 py-0.5">
             <span className="opacity-80">⌘</span>K
           </kbd>

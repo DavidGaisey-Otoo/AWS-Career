@@ -80,7 +80,7 @@ export const SESSION_TONIGHT = {
     },
     {
       n: 6, phase: 'Integration', title: 'Linked account to AWS Career Launchpad Pro',
-      action: { type: 'goto', url: '/aws-accounts' },
+      action: { type: 'goto', url: '/build/accounts' },
       body: 'In-app: AWS Account Manager → active profile → entered David\'s access key ID + secret access key → Save → Test connection.',
       checkpoint: 'STS GetCallerIdentity succeeded; profile shows Connected ✓ + account ID 123456789012.',
       durationMin: 4,

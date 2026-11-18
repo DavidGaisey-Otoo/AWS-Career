@@ -118,13 +118,20 @@ is how three different `StatCard`s happened.
 
 - Route in `src/App.jsx` via `lazyWithRecovery`, never bare `React.lazy`
   (it handles stale-chunk recovery after a deploy).
-- Add to `src/lib/navSections.js` under one of the three sections
-  (Home / Win work / Deliver). `appRoutes.test.js` fails if a menu entry
-  has no route or a route renders a component that was never imported.
+- The app is an office: **Today** (the front page) and six rooms — Find work,
+  Jobs, Clients, Money, Build, Grow. Each room is one page with a row of
+  tabs. A new tool goes in as a tab: add it to `ROOMS` in `src/lib/rooms.js`
+  and to `TAB_COMPONENTS` in `src/pages/Room.jsx`. `rooms.test.js` fails if
+  either side is missing. Do not add a new sidebar entry for a tool.
+- When a tool moves, add its old address to `LEGACY_PATHS` so links and
+  bookmarks keep working, and carry the query string across.
+- When two tools do the same job, keep one. Before deleting the other, move
+  across any safeguard only it had (claim checks, payment proof, placeholder
+  warnings). That happened when the hub was merged, and it is easy to miss.
 - The app is for freelance AWS work. The study, exam, community, wellness
   and UK pages were removed in November 2026 (exam practice lives in the
-  separate Exam Prep app). A new page has to help win or deliver client
-  work; anything else is a decision to raise, not to make.
+  separate Exam Prep app). A new tool has to help find, win, deliver, get
+  paid for or prove client work; anything else is a decision to raise.
 - Page components are default exports; shared components are named exports.
 
 ---

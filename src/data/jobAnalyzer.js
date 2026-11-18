@@ -364,7 +364,7 @@ function workflows({ type, services, deployment, budget }) {
     id: 'generate-architecture',
     label: 'Generate Architecture',
     blurb: 'Open Architecture Studio with these services pre-loaded and laid out.',
-    to: '/architecture',
+    to: '/build/diagram',
     primary: true,
   });
   // Always offer to generate a proposal
@@ -372,7 +372,7 @@ function workflows({ type, services, deployment, budget }) {
     id: 'generate-proposal',
     label: 'Generate Proposal',
     blurb: 'Draft a client-ready proposal based on this JD + your match score.',
-    to: '/freelance',
+    to: '/jobs/proposals?view=write',
   });
 
   // Show "Build on My Account" if we'd benefit from a sandbox demo
@@ -381,7 +381,7 @@ function workflows({ type, services, deployment, budget }) {
       id: 'build-on-my-account',
       label: 'Build on My Account',
       blurb: 'Deploy a small demo into your Free-Tier AWS profile with auto-destroy on.',
-      to: '/aws-accounts',
+      to: '/build/accounts',
     });
   }
 
@@ -401,7 +401,7 @@ function workflows({ type, services, deployment, budget }) {
       id: 'check-market',
       label: 'Check market rate',
       blurb: 'Compare this rate vs typical $25-150 quick-infra gigs.',
-      to: '/market',
+      to: '/find/market',
     });
   }
 

@@ -47,7 +47,7 @@ export function ProposalWinRateTracker() {
       {/* ─────── Header ─────── */}
       <div className="surface rounded-2xl p-5 gradient-border">
         <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-1">
-          FR-05 · Proposal Win Rate Tracker
+          Proposal Win Rate Tracker
         </div>
         <h2 className="text-xl font-extrabold flex items-center gap-2">
           <Trophy size={18} className="text-aws-orange" />

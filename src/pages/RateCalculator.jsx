@@ -95,12 +95,12 @@ export default function RateCalculator() {
 
   return (
     <div className="space-y-4">
-      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+      <Link to="/find/gigs" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
         <ChevronLeft size={14} /> Earn
       </Link>
 
       <PageHeader
-        eyebrow="EA-01 · Rate Calculator"
+        eyebrow="Rate calculator"
         title="What hourly rate should I actually charge?"
         subtitle="Plug in your expenses, available hours, and platform — the calculator works backward from there. Every keystroke updates live."
         icon={Calculator}

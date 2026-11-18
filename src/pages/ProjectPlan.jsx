@@ -218,7 +218,7 @@ export default function ProjectPlan() {
   // ----- render -----
   return (
     <div className="space-y-4">
-      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+      <Link to="/find/gigs" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
         <ChevronLeft size={14} /> Earn
       </Link>
 
@@ -251,7 +251,7 @@ export default function ProjectPlan() {
             project <strong>"{lastAnalysis.suggestedName}"</strong>
             {lastAnalysis.suggestedClient && <> · client <strong>{lastAnalysis.suggestedClient}</strong></>}
           </span>
-          <Link to="/job-analyzer" className="ml-auto text-[10px] font-bold text-aws-orange hover:underline">
+          <Link to="/find/check" className="ml-auto text-[10px] font-bold text-aws-orange hover:underline">
             Re-run →
           </Link>
         </div>
@@ -351,7 +351,7 @@ function GenerateForm({ form, setForm, generating, onGenerate, clients, hasAnaly
 
       {!hasAnalysis && (
         <div className="text-[10px] text-muted leading-relaxed pt-1">
-          Tip: <Link to="/job-analyzer" className="text-aws-orange font-bold hover:underline">analyze a job description</Link> first
+          Tip: <Link to="/find/check" className="text-aws-orange font-bold hover:underline">analyze a job description</Link> first
           to pre-fill the plan with project type + AWS services + timeline.
         </div>
       )}

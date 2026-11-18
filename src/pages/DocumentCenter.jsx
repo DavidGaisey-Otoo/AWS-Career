@@ -24,6 +24,7 @@ import { InvoiceReviewPanel } from '../components/invoice-review/InvoiceReviewPa
 import { DocReviewPanel } from '../components/doc-review/DocReviewPanel.jsx';
 import { analyzeJob } from '../data/jobAnalyzer.js';
 import { listSolutions } from '../lib/solutionStore.js';
+import { createManualPaymentRecord, findDraftMarkers } from '../lib/businessWorkflow.js';
 import {
   deleteVaultDocument, downloadVaultDocument, listVaultDocuments, saveVaultDocument,
 } from '../lib/documentVault.js';
@@ -70,7 +71,7 @@ function MyDocuments() {
             </h3>
             <p className="text-xs text-muted mt-1">
               {items.length} document{items.length === 1 ? '' : 's'}. Open them together in{' '}
-              <Link to="/workspace" className="text-aws-orange font-bold">My Workspace</Link>.
+              <Link to="/jobs/all" className="text-aws-orange font-bold">My Workspace</Link>.
             </p>
           </div>
           <div className="grid gap-2 md:grid-cols-2">
@@ -114,7 +115,7 @@ export default function DocumentCenter() {
 
   return (
     <div className="space-y-4">
-      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+      <Link to="/find/gigs" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
         <ChevronLeft size={14} /> Earn
       </Link>
 
@@ -395,8 +396,16 @@ function ContractsTab({ linkedContext }) {
     toast.success('Contract saved');
   };
 
+  // A contract that still says [Client name] or {{start date}} must not go
+  // out looking finished. Ask before it leaves the app in any form.
+  const contractReady = () => {
+    const markers = findDraftMarkers(contractToMarkdown(draft));
+    if (!markers.length) return true;
+    return window.confirm(`This contract still has ${markers.length} unfilled placeholder(s): ${markers.slice(0, 4).join(', ')}. Send it as an incomplete draft anyway?`);
+  };
+
   const exportPdf = () => {
-    if (!draft) return;
+    if (!draft || !contractReady()) return;
     const fmt = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     openPrintable({
       documentType: 'Engagement Contract',
@@ -417,14 +426,14 @@ function ContractsTab({ linkedContext }) {
   };
 
   const copyMd = async () => {
-    if (!draft) return;
+    if (!draft || !contractReady()) return;
     try {
       await navigator.clipboard.writeText(contractToMarkdown(draft));
       toast.success('Markdown copied');
     } catch { toast.error('Copy failed'); }
   };
 
-  const sendEmailLink = (mailto) => window.open(mailto, '_blank');
+  const sendEmailLink = (mailto) => { if (contractReady()) window.open(mailto, '_blank'); };
 
   return (
     <div className="grid gap-3 lg:grid-cols-[280px_1fr]">
@@ -717,10 +726,17 @@ function InvoicesTab() {
     toast.success('Invoice saved');
   };
 
+  // This app cannot see a bank account. "Paid" is only ever what you
+  // recorded, with the reference that proves it — never a bare click.
   const markPaid = () => {
     if (!draft) return;
+    const reference = window.prompt('Enter the bank or platform transaction reference, or a receipt note. This app cannot check payments itself.');
+    if (!reference?.trim()) { toast.warning('A payment reference is required to mark this paid.'); return; }
+    if (!window.confirm('Confirm you checked the money actually arrived. This records the payment; it does not verify it.')) return;
     const { total } = invoiceTotals(draft);
-    updateInvoice(draft.id, { status: 'paid', paidAt: new Date().toISOString() });
+    const record = createManualPaymentRecord(reference);
+    updateInvoice(draft.id, record);
+    setDraft((d) => (d ? { ...d, ...record } : d));
     addPayment({
       clientName: draft.clientName,
       projectTitle: '',
@@ -729,7 +745,7 @@ function InvoicesTab() {
       method: 'invoice',
       invoiceId: draft.id,
     });
-    toast.success('Marked paid + earnings updated');
+    toast.success('Payment recorded, with its reference, and added to earnings');
   };
 
   const sendReminder = () => {

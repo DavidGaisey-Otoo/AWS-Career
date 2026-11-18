@@ -12,8 +12,8 @@ export function FloatingActionButton() {
 
   const actions = [
     { id: 'palette', label: 'Command palette', icon: Command, onClick: () => openPalette() },
-    { id: 'job',     label: 'Win a new job',   icon: Rocket, onClick: () => nav('/start') },
-    { id: 'project', label: 'New portfolio project', icon: Briefcase, onClick: () => nav('/portfolio') },
+    { id: 'job',     label: 'Win a new job',   icon: Rocket, onClick: () => nav('/jobs/new') },
+    { id: 'project', label: 'New portfolio project', icon: Briefcase, onClick: () => nav('/grow/portfolio') },
     { id: 'win',     label: 'Log a win',       icon: Sparkles, onClick: () => fireConfetti() },
   ];
 

@@ -33,7 +33,7 @@ export default function AICoach() {
 
   return (
     <div className="space-y-5">
-      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+      <Link to="/find/gigs" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
         <ChevronLeft size={14} /> Win work
       </Link>
 

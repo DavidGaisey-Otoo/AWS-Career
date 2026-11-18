@@ -4,7 +4,7 @@ import { MOBILE_NAV, SECTIONS } from '../../lib/navSections.js';
 import { cn } from '../../lib/utils.js';
 
 /**
- * Bottom navigation — exactly 5 tabs matching the 5 top-level sections.
+ * Bottom navigation on a phone: Today and four rooms (see MOBILE_NAV).
  * A tab is "active" if the current path matches the section landing OR
  * any of its children.
  */

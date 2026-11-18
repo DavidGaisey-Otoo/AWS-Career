@@ -114,7 +114,7 @@ export default function ContentQueue() {
 
   return (
     <div className="space-y-4">
-      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+      <Link to="/find/gigs" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
         <ChevronLeft size={14} /> Earn
       </Link>
 
@@ -280,7 +280,7 @@ function QuickGenerator({ profile, portfolio, onStaged, stageInQueue }) {
           LinkedIn post · from a completed project
         </div>
         {completed.length === 0 ? (
-          <div className="text-[11px] text-muted">No completed projects yet. <Link to="/portfolio" className="text-aws-orange font-bold hover:underline">Start one →</Link></div>
+          <div className="text-[11px] text-muted">No completed projects yet. <Link to="/grow/portfolio" className="text-aws-orange font-bold hover:underline">Start one →</Link></div>
         ) : (
           <>
             <select

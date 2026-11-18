@@ -18,6 +18,15 @@ export function findUnsupportedClaims(text) {
     .map(({ id }) => id);
 }
 
+/** What each rule catches, in words a person can act on. */
+export const CLAIM_LABELS = Object.freeze({
+  'certification': 'claims an AWS certification',
+  'production-history': 'claims past production or client delivery',
+  'years-experience': 'claims a number of years of experience',
+  'guarantee': 'makes a guarantee ("guaranteed", "zero risk", "proven working")',
+  'unverified-observation': "states something about the client's systems you have not seen",
+});
+
 export function hasUnsupportedClaims(text) {
   return findUnsupportedClaims(text).length > 0;
 }

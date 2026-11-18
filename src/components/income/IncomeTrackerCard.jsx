@@ -44,7 +44,7 @@ export function IncomeTrackerCard() {
     <div className="space-y-4">
       <div className="surface rounded-2xl p-5 gradient-border">
         <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-1">
-          EA-02 · Income Tracker
+          Income Tracker
         </div>
         <h2 className="text-xl font-extrabold flex items-center gap-2">
           <Target size={18} className="text-aws-orange" />
@@ -167,7 +167,7 @@ export function IncomeTrackerWidget() {
       <div className="flex items-start justify-between gap-3 mb-2">
         <div>
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-0.5">
-            EA-02 · {stats.monthLabel}
+            {stats.monthLabel}
           </div>
           <h3 className="text-[14px] font-extrabold flex items-center gap-1.5">
             <Target size={14} className="text-aws-orange" />
@@ -175,7 +175,7 @@ export function IncomeTrackerWidget() {
           </h3>
         </div>
         <Link
-          to="/freelance"
+          to="/money/overview"
           className="text-[10.5px] font-bold opacity-70 hover:opacity-100 inline-flex items-center gap-0.5"
         >
           Open <ArrowRight size={10} />
@@ -413,7 +413,7 @@ function LogPaymentModal({ onClose, onSaved }) {
         <div className="flex items-start justify-between gap-2 mb-3">
           <div>
             <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-0.5">
-              EA-02 · Log payment
+              Log payment
             </div>
             <h3 className="text-lg font-extrabold flex items-center gap-2">
               <Plus size={16} className="text-aws-orange" /> Add a gig payment

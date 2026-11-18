@@ -97,7 +97,7 @@ export function ApproachRecommendationPanel({
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-aws-orange mb-0.5">
-            FR-04 · Recommended Approach
+            Recommended Approach
           </div>
           <h3 className="text-[14px] font-extrabold flex items-center gap-1.5">
             How to deliver this work

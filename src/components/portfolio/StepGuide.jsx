@@ -307,7 +307,7 @@ function AccountCallout({ aws, isConnected, activeProfile }) {
             then run the CLI commands in your terminal — they'll hit your linked account.{' '}
             <span className="text-warning font-bold">AWS Account Manager previews plans only. Use Deploy Console for evidence-backed AWS writes.</span>
           </div>
-          <Link to="/aws-accounts" className="shrink-0 text-[10px] font-bold text-success hover:underline whitespace-nowrap">
+          <Link to="/build/accounts" className="shrink-0 text-[10px] font-bold text-success hover:underline whitespace-nowrap">
             Switch profile →
           </Link>
         </div>
@@ -330,7 +330,7 @@ function AccountCallout({ aws, isConnected, activeProfile }) {
         link one in the AWS Account Manager. You can link <strong className="text-current">two profiles</strong> —
         Free Tier (personal) and Client — and switch between them.
       </div>
-      <Link to="/aws-accounts" className="shrink-0 text-[10px] font-bold text-electric hover:underline whitespace-nowrap">
+      <Link to="/build/accounts" className="shrink-0 text-[10px] font-bold text-electric hover:underline whitespace-nowrap">
         Link account →
       </Link>
     </div>

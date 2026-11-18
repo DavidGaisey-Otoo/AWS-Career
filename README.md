@@ -31,13 +31,18 @@ is live in your account.
 
 ## What else it does
 
-The app has three sections:
+The app is laid out as an office. **Today** is the front page: late invoices,
+AWS resources left running, follow-ups that are due, and the next step on
+every job. Everything else is in six rooms, each one page with tabs:
 
-| Section | Features |
+| Room | Tabs |
 |---|---|
-| 🏠 **Home** | My Workspace (every client job in one place), Win this job (one-page brief → proposal → deploy flow), Settings |
-| 💰 **Win work** | Freelance Hub (live gigs, proposals, win-rate tracker, client CRM, contracts, invoices, earnings), Job Analyzer, Rate Calculator, Market Rates, Discovery Call Prep, Project Plan, Client Presentation, Client Emails, Documents, AI Freelance Coach, Content Queue |
-| 🔨 **Deliver** | **Solution Studio**, Architecture Studio, Idea Studio, Project Builder, Applications & Deploy (GitHub), AWS Account Manager, Deploy Console, Resource Search, Project Walkthroughs, Session Log, Portfolio |
+| 🔎 **Find work** | Live gigs, Check a job post, Market rates, Rate calculator |
+| 💼 **Jobs** | All jobs, New job, Proposals (write · track · templates), Call prep, Project plan, Client deck |
+| 👥 **Clients** | Clients, Emails, Contracts & invoices |
+| 💰 **Money** | Earnings, Expenses, Goals, Currency |
+| 🔨 **Build** | Design (**Solution Studio**), Ideas, Diagram, Deploy, From GitHub, AWS accounts, What's running, Session log |
+| 🌱 **Grow** | Portfolio, Walkthroughs, Project builder, Content queue, Branding, AI coach |
 
 Exam practice is not part of this app; it lives in the separate Exam Prep app.
 

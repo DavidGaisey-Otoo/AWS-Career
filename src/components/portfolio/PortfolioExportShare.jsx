@@ -38,7 +38,7 @@ export function PortfolioExportShare({ previewDevice, setPreviewDevice, previewM
       });
     }
     const url = new URL(window.location.href);
-    url.pathname = '/portfolio';
+    url.pathname = '/grow/portfolio';
     url.searchParams.set('view', 'public');
     try {
       await navigator.clipboard.writeText(url.toString());

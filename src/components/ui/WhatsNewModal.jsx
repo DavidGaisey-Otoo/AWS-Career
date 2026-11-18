@@ -4,9 +4,19 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 // Bump this string when you want to show the modal again to everyone.
-export const CURRENT_VERSION = '2026.11.18';
+export const CURRENT_VERSION = '2026.11.18b';
 
 const WHATS_NEW = {
+  '2026.11.18b': {
+    title: 'Your office: Today, and six rooms.',
+    bullets: [
+      'Today is the front desk: late invoices, AWS left running, follow-ups due, and the next step on every job.',
+      'Everything else is in six rooms — Find work, Jobs, Clients, Money, Build, Grow — each with its own tabs.',
+      'Duplicates are merged: one place to write proposals, one for emails, one for contracts and invoices.',
+      'Emails with claims you cannot prove are stopped before sending, and marking an invoice paid now needs its payment reference.',
+      'Old links and bookmarks still work; they open the tab that holds that tool now.',
+    ],
+  },
   '2026.11.18': {
     title: 'One job now: winning and delivering freelance AWS work.',
     bullets: [

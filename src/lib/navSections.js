@@ -1,80 +1,40 @@
 /**
- * Navigation map: Home, Win work, Deliver.
+ * Navigation: Today, six rooms, Settings.
  *
- * The app is for freelance AWS work. The study, exam and personal-tracking
- * pages were removed in November 2026; old bookmarks to them land on the
- * workspace. Adding a route: add it as a child of one of the three sections.
+ * The rooms and their tabs are defined once, in src/lib/rooms.js. This file
+ * adds the icons and builds the list the sidebar, the phone bar, the
+ * breadcrumbs and the search palette all read. A room's tabs are its
+ * children here, so search finds "Invoices" and breadcrumbs show
+ * "Clients › Contracts & invoices"; the sidebar itself stays flat.
  */
-import { Briefcase, BriefcaseBusiness, Calculator, Cloud, DollarSign, FileSearch, FileText, GanttChart, Hammer, Home, Inbox, Layers, Mail, PhoneCall, Presentation, Settings, Sparkles, TrendingUp, Wand2, Rocket, ListChecks } from 'lucide-react';
-import { Github } from '../components/common/BrandIcons.jsx';
+import { Briefcase, Hammer, Home, Search, Settings, Sprout, Users, Wallet } from 'lucide-react';
+import { ROOMS, roomPath } from './rooms.js';
+
+const ROOM_ICONS = { find: Search, jobs: Briefcase, clients: Users, money: Wallet, build: Hammer, grow: Sprout };
 
 export const SECTIONS = [
   {
-    id: 'home',
-    label: 'Home',
-    icon: Home,
-    path: '/',
-    blurb: 'Every client job in one place, and the one-page flow for a new brief.',
-    children: [
-      { id: 'workspace', label: 'My Workspace', icon: Layers, path: '/',
-        hint: 'Every job in one place — its solution, architecture, proposal, emails, documents, contract and invoice' },
-      { id: 'start',     label: '🚀 Win this job', icon: Rocket, path: '/start',
-        hint: 'Paste what the client sent you and work down one page: design, questions, proposal, email, deploy' },
-      { id: 'settings',  label: 'Settings',       icon: Settings, path: '/settings' },
-    ],
+    id: 'today', label: 'Today', icon: Home, path: '/',
+    blurb: 'What needs you now, and where every job stands.',
+    children: [],
   },
+  ...ROOMS.map((room) => ({
+    id: room.id,
+    label: room.label,
+    icon: ROOM_ICONS[room.id] || Briefcase,
+    path: roomPath(room.id),
+    blurb: room.blurb,
+    children: room.tabs.map((t) => ({
+      id: `${room.id}-${t.id}`,
+      label: t.label,
+      icon: ROOM_ICONS[room.id] || Briefcase,
+      path: roomPath(room.id, t.id),
+    })),
+  })),
   {
-    id: 'earn',
-    label: 'Win work',
-    icon: BriefcaseBusiness,
-    path: '/earn',
-    blurb: 'Find gigs, price them, pitch them, and get paid.',
-    children: [
-      // ── Finding and pricing the work ──
-      { id: 'freelance',      label: 'Freelance Hub',     icon: DollarSign, path: '/freelance',
-        hint: 'Live gigs, proposals, client CRM, contracts, invoices and earnings' },
-      { id: 'job-analyzer',   label: 'Job Analyzer',      icon: FileSearch, path: '/job-analyzer' },
-      { id: 'rate-calc',      label: 'Rate Calculator',   icon: Calculator, path: '/rate-calculator' },
-      { id: 'market',         label: 'Market Rates',      icon: TrendingUp, path: '/market',
-        hint: 'What clients pay, which skills are in demand' },
-      // ── Pitching and the paperwork a client receives ──
-      { id: 'discovery-call', label: 'Discovery Call Prep', icon: PhoneCall,  path: '/discovery-call' },
-      { id: 'project-plan',   label: 'Project Plan',      icon: GanttChart,   path: '/project-plan' },
-      { id: 'presentation',   label: 'Client Presentation', icon: Presentation, path: '/presentation' },
-      { id: 'email',          label: 'Client Emails',     icon: Mail,         path: '/email' },
-      { id: 'documents',      label: 'Documents',         icon: FileText,     path: '/documents' },
-      // ── Getting noticed ──
-      { id: 'ai-coach',       label: 'AI Freelance Coach', icon: Sparkles,    path: '/ai/coach',
-        hint: 'Profile review, proposal writer, pricing and negotiation drills' },
-      { id: 'content-queue',  label: 'Content Queue',     icon: Inbox,        path: '/content-queue',
-        hint: 'LinkedIn posts and GitHub pushes that bring clients to you' },
-    ],
-  },
-  {
-    id: 'build',
-    label: 'Deliver',
-    icon: Hammer,
-    path: '/build',
-    blurb: 'Design the solution, build it in AWS, and prove it in your portfolio.',
-    children: [
-      // ── Designing it ──
-      { id: 'solution-studio', label: '⚡ Solution Studio', icon: Wand2,   path: '/solution',
-        hint: 'Paste a gig → get the architecture, plan, code, review + a build button' },
-      { id: 'architecture',   label: 'Architecture Studio', icon: Layers,   path: '/architecture' },
-      { id: 'idea-studio',    label: 'Idea Studio',        icon: Sparkles, path: '/idea-studio' },
-      { id: 'project-builder', label: 'Project Builder',   icon: Wand2,    path: '/project-builder' },
-      // ── Building it in AWS ──
-      { id: 'github-projects', label: 'Applications & Deploy', icon: Github, path: '/applications',
-        hint: 'Choose a GitHub application, see the required AWS services, then follow Deploy → Verify → Destroy' },
-      { id: 'aws-accounts',   label: 'AWS Account Manager', icon: Cloud,      path: '/aws-accounts' },
-      { id: 'deploy',         label: 'Deploy Console',     icon: Rocket,     path: '/deploy' },
-      { id: 'resource-search', label: 'Resource Search',   icon: FileSearch, path: '/resource-search',
-        hint: 'Search your live AWS account read-only — what is running, what it costs, what is misconfigured' },
-      { id: 'walkthroughs',   label: 'Project Walkthroughs', icon: ListChecks, path: '/walkthroughs' },
-      { id: 'session-log',    label: 'Session Log',        icon: FileText,   path: '/session-log' },
-      // ── Proving it ──
-      { id: 'portfolio',      label: 'Portfolio',          icon: Briefcase,  path: '/portfolio' },
-    ],
+    id: 'settings', label: 'Settings', icon: Settings, path: '/settings',
+    blurb: 'Profile, display, integrations and your data.',
+    children: [],
   },
 ];
 
@@ -136,6 +96,9 @@ function prettifySegment(seg) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export const MOBILE_NAV = SECTIONS.map((s) => ({
-  id: s.id, label: s.label, icon: s.icon, path: s.path,
-}));
+/** The phone's bottom bar has room for five; the rest are in the menu. */
+const MOBILE_IDS = ['today', 'find', 'jobs', 'money', 'build'];
+export const MOBILE_NAV = MOBILE_IDS
+  .map((id) => SECTIONS.find((s) => s.id === id))
+  .filter(Boolean)
+  .map((s) => ({ id: s.id, label: s.label, icon: s.icon, path: s.path }));
