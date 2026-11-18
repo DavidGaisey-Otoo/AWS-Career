@@ -9,6 +9,8 @@
 import { PROPOSAL_TEMPLATES, GENERIC_HOOKS, templateById } from '../data/proposalTemplates.js';
 import { RATE_BANDS } from '../data/marketIntel.js';
 import { HEADLINE_OPTIONS, WEBSITE_BLOCKS } from '../data/linkedinPosts.js';
+import { mentions } from './clientVoice.js';
+import { extractProjectName } from './briefExtractor.js';
 
 // ---------- common ----------
 
@@ -21,31 +23,46 @@ function pickTemplateForJD(jd) {
   let bestScore = -1;
   for (const t of PROPOSAL_TEMPLATES) {
     let score = 0;
-    for (const s of t.services || []) if (text.includes(s.toLowerCase())) score += 2;
+    for (const s of t.services || []) if (mentions(text, s.toLowerCase())) score += 2;
     if (text.includes(t.type.toLowerCase().split(' ')[0])) score += 1;
     if (text.includes('migrat'))   score += t.id === 'migration' ? 3 : 0;
-    if (text.includes('vpc'))      score += t.id === 'network' ? 3 : 0;
-    if (text.includes('serverless') || text.includes('lambda'))
+    if (mentions(text, 'vpc'))      score += t.id === 'network' ? 3 : 0;
+    if (mentions(text, 'serverless') || mentions(text, 'lambda'))
       score += t.id === 'serverless' ? 3 : 0;
     if (text.includes('cost') || text.includes('optimi'))
       score += t.id === 'cost-opt' ? 3 : 0;
-    if (text.includes('cicd') || text.includes('pipeline') || text.includes('codepipeline'))
+    if (mentions(text, 'cicd') || mentions(text, 'pipeline') || mentions(text, 'codepipeline'))
       score += t.id === 'cicd' ? 3 : 0;
-    if (text.includes('security') || text.includes('audit') || text.includes('iam'))
+    if (mentions(text, 'security') || mentions(text, 'audit') || mentions(text, 'iam'))
       score += t.id === 'security-audit' ? 3 : 0;
     if (text.includes('dr ') || text.includes('disaster recovery'))
       score += t.id === 'dr' ? 3 : 0;
-    if (text.includes('eks') || text.includes('kubernetes') || text.includes('container'))
+    if (mentions(text, 'eks') || mentions(text, 'kubernetes') || mentions(text, 'container'))
       score += t.id === 'container-platform' ? 3 : 0;
-    if (text.includes('rds') || text.includes('database') || text.includes('mysql') || text.includes('postgres'))
+    if (mentions(text, 'rds') || mentions(text, 'database') || mentions(text, 'mysql') || mentions(text, 'postgres'))
       score += t.id === 'db-migration' ? 2 : 0;
-    if (text.includes('cloudwatch') || text.includes('observability') || text.includes('monitor'))
+    if (mentions(text, 'cloudwatch') || mentions(text, 'observability') || text.includes('monitor'))
       score += t.id === 'monitoring' ? 3 : 0;
-    if (text.includes('static') || text.includes('cloudfront'))
+    if (mentions(text, 'static') || mentions(text, 'cloudfront'))
       score += t.id === 'cdn-static' ? 2 : 0;
     if (score > bestScore) { bestScore = score; best = t; }
   }
   return best || PROPOSAL_TEMPLATES[0];
+}
+
+/**
+ * Services implied by what a non-technical brief describes. Most clients
+ * write "move our website, own domain, HTTPS, a contact form" — not
+ * "S3, CloudFront, ACM, Route 53". Conservative on purpose: anything
+ * dynamic (WordPress, a database, logins) is left for discovery.
+ */
+export function inferServices(lower = '') {
+  const out = [];
+  const dynamic = /\b(wordpress|php|database|login|accounts?|e-?commerce|shop(?:ping)? cart|checkout|django|rails|laravel)\b/.test(lower);
+  if (!dynamic && /\b(static (?:web)?site|html|landing page|brochure site|portfolio site|website|web site)\b/.test(lower)) out.push('s3', 'cloudfront');
+  if (/\b(own domain|custom domain|our domain|domain name|\.com\b|\.example\b|https|ssl|tls)\b/.test(lower)) out.push('route53');
+  if (/\b(contact form|enquiry form|inquiry form|form that (?:e-?mails|sends))\b/.test(lower)) out.push('apigateway', 'lambda');
+  return [...new Set(out)];
 }
 
 // Heuristically extract keys from a JD
@@ -54,9 +71,9 @@ export function analyzeJobDescription(jd) {
   if (!text) return null;
   const lower = text.toLowerCase();
 
-  // Project title — first sentence under 80 chars
-  let projectTitle = text.split(/\.|\n/)[0].trim();
-  if (projectTitle.length > 80) projectTitle = projectTitle.slice(0, 80) + '…';
+  // Project title — the same rule as everywhere else: greeting skipped,
+  // the "we need …" sentence preferred, cut at a whole word.
+  const projectTitle = extractProjectName(text) || text.split(/\.|\n/)[0].trim().slice(0, 80);
 
   // Budget hints
   const budgetMatch = text.match(/(\$|usd|£|gbp|€|eur)\s?([\d,]+)(?:\s?-\s?(\$|usd|£|gbp|€|eur)?\s?([\d,]+))?/i);
@@ -83,7 +100,9 @@ export function analyzeJobDescription(jd) {
     'tgw','transit gateway','direct connect','vpn','ecs','eks','fargate','codepipeline',
     'codebuild','codedeploy','cloudwatch','xray','glue','athena','redshift','bedrock',
     'route 53','route53','sagemaker','kinesis','cloudformation','cdk','terraform'];
-  const found = SERVICES.filter((s) => lower.includes(s));
+  // Whole words only: "weeks" contains "eks" and "words" contains "rds",
+  // and that once turned a static-site brief into a Kubernetes proposal.
+  const found = SERVICES.filter((s) => mentions(lower, s));
 
   // Senior/junior hint
   const level = /senior|principal|lead/i.test(text) ? 'Senior'
@@ -103,6 +122,9 @@ export function analyzeJobDescription(jd) {
     budget,
     isHourly,
     services: [...new Set(found)].slice(0, 6),
+    // What the brief describes but does not name. Kept apart from
+    // `services` so nothing reads as "the client asked for CloudFront".
+    inferredServices: found.length ? [] : inferServices(lower),
     level,
     clientName,
     recommendedTemplateId: template.id,

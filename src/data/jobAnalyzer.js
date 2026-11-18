@@ -243,10 +243,17 @@ function difficultyOf(text) {
 // - timeline reasonableness
 function matchScore(text, type, diff, profile) {
   // Default profile if none provided
-  const me = profile || {
+  // A partial profile (the app's own profile has no strongAreas) used to
+  // crash the whole analysis on `undefined.includes`. Fill what is missing.
+  const DEFAULT_ME = {
     level: 3, // 1..5
     strongAreas: ['Serverless API', 'Container Workload', 'CI/CD Pipeline', 'Quick Infra Setup', 'Database / Storage'],
     weakAreas:   ['Landing Zone / Multi-account', 'Network Architecture', 'Security / Compliance'],
+  };
+  const me = {
+    level: Number.isFinite(profile?.level) ? profile.level : DEFAULT_ME.level,
+    strongAreas: Array.isArray(profile?.strongAreas) ? profile.strongAreas : DEFAULT_ME.strongAreas,
+    weakAreas: Array.isArray(profile?.weakAreas) ? profile.weakAreas : DEFAULT_ME.weakAreas,
   };
 
   let score = 60;
@@ -457,6 +464,35 @@ function suggestClientCompany(text) {
   return '';
 }
 
+/** The largest "N+ years" (or "N years of experience") the post asks for; 0 if none. */
+export function experienceYearsAsked(text = '') {
+  let max = 0;
+  const re = /\b(\d{1,2})\s*\+?\s*(?:years?|yrs?)\b(?:\s+of)?(?:\s+(?:commercial|professional|hands-on|production|relevant))?(?:\s+(?:experience|exp\b))?/gi;
+  for (const m of String(text).matchAll(re)) {
+    const n = Number(m[1]);
+    // Only count it as a requirement when experience is actually meant,
+    // not "a 2 year contract" or "3 years of logs".
+    const around = String(text).slice(Math.max(0, m.index - 40), m.index + m[0].length + 40);
+    if (n > 0 && n < 30 && /experience|exp\b|as an?\s|working with|using|commercial|professional/i.test(around)) max = Math.max(max, n);
+  }
+  return max;
+}
+
+/** Talent-network / recruiter wording rather than a client describing a project. */
+export function isRecruiterAd(text = '') {
+  const t = String(text);
+  const hits = [
+    /\bapply and (?:complete|create) your profile\b/i,
+    /\bjoin (?:the|our) (?:community|network|talent)/i,
+    /\bwe (?:find|match) (?:you|the projects)\b/i,
+    /\btime to (?:your )?first project\b/i,
+    /\bno client hunting\b/i,
+    /\bhelps? companies .{0,40}hire\b/i,
+    /\b(?:talent network|talent pool|vetted (?:engineers|developers))\b/i,
+  ].filter((re) => re.test(t)).length;
+  return hits >= 2;
+}
+
 export function analyzeJob(text, profile) {
   const cleaned = (text || '').trim();
   if (!cleaned) return null;
@@ -487,7 +523,19 @@ export function analyzeJob(text, profile) {
   if (services.includes('dx') && !/\b(provid|existing|already setup)\b/i.test(cleaned)) {
     flags.push({ kind: 'red', msg: 'Direct Connect mentioned — verify the circuit is already provisioned before quoting.' });
   }
-  if (match >= 80) flags.push({ kind: 'green', msg: 'Strong match for your profile.' });
+  // Experience the post demands. A good technical match means nothing if
+  // the post asks for years you cannot honestly show, and the proposal
+  // must never claim them (claimSafety blocks that later anyway).
+  const yearsAsked = experienceYearsAsked(cleaned);
+  if (yearsAsked >= 3) {
+    flags.push({ kind: 'red', msg: `Asks for ${yearsAsked}+ years of experience. Only apply if you can show that honestly; never claim it.` });
+  }
+  // A talent network or recruiter ad is not a client with a project. It
+  // cannot be quoted, planned or delivered — the next step is a profile.
+  if (isRecruiterAd(cleaned)) {
+    flags.push({ kind: 'amber', msg: 'This is a talent-network or recruiter ad, not a client project. There is nothing to quote — the next step is applying to the network.' });
+  }
+  if (match >= 80 && yearsAsked < 3) flags.push({ kind: 'green', msg: 'Strong match for your profile.' });
   if (deployment.tag === 'Terraform (IaC)' && (budget.kind === 'fixed' && budget.amount < 300)) {
     flags.push({ kind: 'amber', msg: 'IaC scope at fixed price under $300 — re-scope before committing.' });
   }

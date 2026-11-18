@@ -14,8 +14,31 @@
 // ════════════════════════════════════════════════════════════════════
 // 1. Project name extraction
 // ════════════════════════════════════════════════════════════════════
+import { sentences, stripGreeting } from './clientVoice.js';
+
+/** Words a title should never end on once it has been cut short. */
+const DANGLING = /\s+(?:a|an|the|and|or|of|in|on|at|for|to|with|by|from|our|my|your)$/i;
+
+/**
+ * Shorten to at most `max` characters without cutting a word in half,
+ * then drop a trailing joining word or punctuation left hanging.
+ */
+export function shortenAtWord(text, max = 60) {
+  let s = String(text || '').trim();
+  if (s.length > max) {
+    const cut = s.slice(0, max + 1);
+    const lastSpace = cut.lastIndexOf(' ');
+    s = (lastSpace > max * 0.5 ? cut.slice(0, lastSpace) : s.slice(0, max)).trim();
+  }
+  let prev;
+  do { prev = s; s = s.replace(/[\s,;:—–-]+$/, '').replace(DANGLING, ''); } while (s !== prev);
+  return s;
+}
+
 export function extractProjectName(brief = '') {
-  const text = String(brief || '').trim();
+  // "Hi, I run a bakery…" is how many real briefs open, and the greeting
+  // used to become the project's name in AWS tags and on the invoice.
+  const text = stripGreeting(brief);
   if (!text) return '';
 
   // Structured briefs place the value on the line after the label.
@@ -31,6 +54,19 @@ export function extractProjectName(brief = '') {
     /^([A-Z][^\.;\n]{4,80})$/m,   // any single-line title-like line
   ];
 
+  // The need is often the second sentence ("I run a bakery. We need our
+  // website moved…"), so try the need/build patterns on every sentence
+  // before falling back to the first line.
+  for (const s of sentences(text)) {
+    for (const p of patterns.slice(0, 2)) {
+      const m = s.match(p);
+      if (m && m[1]) {
+        const candidate = m[1].trim().replace(/[\.,;:]$/, '').replace(/^(?:our|my|your|the)\s+/i, '');
+        if (candidate.length >= 6) return titleCase(shortenAtWord(candidate, 60));
+      }
+    }
+  }
+
   for (const p of patterns) {
     const m = text.match(p);
     if (m && m[1]) {
@@ -43,11 +79,11 @@ export function extractProjectName(brief = '') {
     }
   }
 
-  // Fallback: take first sentence, truncate to 60 chars
+  // Fallback: the first sentence, cut to 60 characters at a whole word.
+  // A plain slice gave names like "A Small Bakery In Ac", and that name
+  // goes into AWS tags, the intake form and the invoice.
   const firstSentence = (text.split(/\n|\.(?:\s+|$)/)[0] || '').trim();
-  if (firstSentence.length > 0) {
-    return titleCase(firstSentence.slice(0, 60));
-  }
+  if (firstSentence.length > 0) return titleCase(shortenAtWord(firstSentence, 60));
 
   return '';
 }

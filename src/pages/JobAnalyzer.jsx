@@ -248,8 +248,14 @@ function Analysis({ result }) {
   const inferredTitle = autoFill.name || (briefText.split(/\n/)[0] || 'Freelance job walkthrough').slice(0, 80);
   const generateHref = `/walkthroughs/deep/new?title=${encodeURIComponent(inferredTitle)}&brief=${encodeURIComponent((autoFill.brief || briefText).slice(0, 2000))}&services=${pickedServices.join(',')}&source=freelance`;
 
+  // Warnings go first. They used to sit only in the collapsed "legacy"
+  // section at the bottom, so a post asking for five years of experience
+  // showed a 64% match and no warning anyone would see.
+  const warnings = (result.flags || []).filter((f) => f.kind === 'red' || f.kind === 'amber');
+
   return (
     <div className="space-y-3">
+      {warnings.length > 0 && <FlagsPanel flags={warnings} />}
       {/* AD-03: Auto-Fill from pasted job description (top — drives the rest) */}
       <section className="surface rounded-2xl p-4">
         <AutoFillFromBrief

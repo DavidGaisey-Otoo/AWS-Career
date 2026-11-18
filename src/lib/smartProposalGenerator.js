@@ -19,6 +19,7 @@
  */
 
 import { analyzeJobDescription } from './freelanceEngine.js';
+import { clientNeed } from './clientVoice.js';
 
 // ════════════════════════════════════════════════════════════════════
 // Never infer certifications or delivery history from a job description.
@@ -29,9 +30,9 @@ import { analyzeJobDescription } from './freelanceEngine.js';
 // ════════════════════════════════════════════════════════════════════
 const APPROACH_PHRASES = {
   ec2:        'Provision right-sized EC2 instances with Auto Scaling so you only pay for what you actually use',
-  lambda:     'Build the core logic as Lambda functions so there are no idle servers to manage',
-  s3:         'Use S3 with lifecycle rules for durable, cheap object storage',
-  cloudfront: 'Put CloudFront in front so global users get sub-100ms response times',
+  lambda:     'Run the logic as small Lambda functions, so there is no server sitting idle and costing money',
+  s3:         'Keep the site files in a private S3 bucket, so there is no web server to patch',
+  cloudfront: 'Serve it through CloudFront with HTTPS, so pages are cached close to visitors in each country',
   dynamodb:   'Model the data in DynamoDB with on-demand capacity to handle traffic spikes',
   rds:        'Stand up a Multi-AZ RDS database with automated backups and point-in-time recovery',
   aurora:     'Use Aurora for production-grade SQL with up to 15 read replicas',
@@ -40,10 +41,10 @@ const APPROACH_PHRASES = {
   ecs:        'Containerise the workload on ECS Fargate so there are no EC2 hosts to patch',
   eks:        'Run the platform on EKS with managed node groups and IRSA for pod-level IAM',
   fargate:    'Use Fargate so containers are billed per second with zero infra to manage',
-  apigateway: 'Expose the API through API Gateway with usage plans, throttling, and built-in auth',
+  apigateway: 'Give it an API Gateway endpoint with throttling, so it cannot be spammed into a bill',
   cognito:    'Hand authentication to Cognito so you get sign-in, MFA, and federation out of the box',
   cloudfront_acm: 'Add a custom domain through Route 53 + ACM for free TLS',
-  route53:    'Manage DNS in Route 53 with health-checked failover records',
+  route53:    'Point your domain at it with Route 53, with a free HTTPS certificate from ACM',
   cloudwatch: 'Wire CloudWatch dashboards + alarms so you know about problems before users do',
   cloudformation: 'Define everything in CloudFormation so the stack is one-click reproducible',
   terraform:  'Write the infra as Terraform modules so changes go through code review',
@@ -63,12 +64,12 @@ const APPROACH_PHRASES = {
 // ════════════════════════════════════════════════════════════════════
 // Hook variations — picked by seed so Regenerate gives a different one
 // ════════════════════════════════════════════════════════════════════
-function pickHook(seed, painPoint, projectTitle, primaryService) {
+function pickHook(seed, need, projectTitle, primaryService) {
   const variants = [
-    `${painPoint}${endPunct(painPoint)} I would start by confirming the scope, constraints, and success checks before proposing an AWS design.`,
-    `It sounds like ${shortPain(painPoint)} is the main concern. I would confirm the impact and acceptance criteria before choosing an AWS design.`,
-    `I reviewed your post carefully. ${primaryService.toUpperCase()} may fit ${shortPain(painPoint)}, but I would validate the requirements and alternatives first.`,
-    `Your project caught my eye because ${shortPain(painPoint)} can be broken into clear, reviewable AWS milestones.`,
+    `You need ${need}. I would start by confirming the scope, constraints, and success checks before proposing an AWS design.`,
+    `You need ${need}, and the first thing I would do is confirm what success looks like before choosing an AWS design.`,
+    `I read your post carefully: you need ${need}. ${primaryService === 'aws' ? 'There are a few ways to do that on AWS' : `${primaryService.toUpperCase()} may fit`}, and I would check the requirements and alternatives first.`,
+    `You need ${need}, and that breaks down into clear, reviewable AWS milestones.`,
     `Quick proposal for "${projectTitle}" — I think you'll like how lean the AWS approach makes this.`,
   ];
   return variants[seed % variants.length];
@@ -146,11 +147,14 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
   const primaryService = analysis.services?.[0] || 'aws';
 
   // ──────── HOOK (1 sentence)
-  const hook = pickHook(seed, analysis.painPoint, analysis.projectTitle, primaryService);
+  // What they need, in your words: "your website moved to AWS", not
+  // "we need our website…" pasted back and lowercased into "aws".
+  const need = clientNeed(jd) || shortPain(analysis.painPoint);
+  const hook = pickHook(seed, need, analysis.projectTitle, primaryService);
 
   // ──────── UNDERSTANDING ("I understand you need…")
   const understandingBits = [];
-  understandingBits.push(`I understand you need ${shortPain(analysis.painPoint).toLowerCase()}`);
+  understandingBits.push(`I understand you need ${need}`);
   if (analysis.services?.length) {
     understandingBits.push(`with a focus on ${analysis.services.slice(0, 3).map((s) => s.toUpperCase()).join(', ')}`);
   }
@@ -161,7 +165,8 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
   const understanding = capitalise(understandingBits.join(' ')) + '.';
 
   // ──────── MY APPROACH (numbered, ordered network → security → storage → data → compute → integration → monitoring)
-  const ordered = orderServicesForApproach(analysis.services);
+  // Named services first; when the brief names none, what it describes.
+  const ordered = orderServicesForApproach(analysis.services?.length ? analysis.services : (analysis.inferredServices || []));
   const approachSteps = ordered.length
     ? ordered.map((s) => APPROACH_PHRASES[s] || `Use ${s.toUpperCase()} where it fits the workload best`).slice(0, 6)
     : [
@@ -279,12 +284,6 @@ function orderServicesForApproach(svc) {
 export function wordCount(text) {
   if (!text) return 0;
   return text.trim().split(/\s+/).filter(Boolean).length;
-}
-
-function endPunct(s) {
-  const t = String(s || '').trim();
-  if (!t) return '.';
-  return /[.!?]$/.test(t) ? '' : '.';
 }
 
 function shortPain(s) {
