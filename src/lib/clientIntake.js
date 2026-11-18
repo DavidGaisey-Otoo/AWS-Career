@@ -68,6 +68,30 @@ function serviceSet(project) {
 const touches = (set, ...names) => names.some((n) => [...set].some((s) => s.includes(n)));
 
 /**
+ * The client's domain, if the brief names one.
+ *
+ * Email addresses and file names are not domains ("name@shop.com",
+ * "index.html"), and "AWS.amazon.com" is not the client's. Only a
+ * domain found in their own words counts — nothing is guessed.
+ */
+export function domainFromBrief(text) {
+  const source = String(text || '');
+  const pattern = /(?<![@\w.-])(?:https?:\/\/)?((?:www\.)?(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:co\.uk|org\.uk|com|net|org|io|dev|app|co|uk|gh|ng|ke|za|shop|studio|store|site|online|biz|info))(?![\w@-])/gi;
+  for (const m of source.matchAll(pattern)) {
+    const domain = m[1].toLowerCase().replace(/\.$/, '');
+    if (/(^|\.)(amazon|amazonaws|aws|upwork|fiverr|freelancer|github|google|gmail|outlook|hotmail|yahoo|lemon)\.(com|io|co)$/.test(domain)) continue;
+    return domain;
+  }
+  return null;
+}
+
+/** The brief, wherever this project carries it. */
+function briefOf(project) {
+  const solution = (project.artifacts?.solution || [])[0] || {};
+  return project.brief || solution.input?.brief || solution.brief || '';
+}
+
+/**
  * Build the intake form for a project.
  *
  * @param {object} project — a workspace project (see projectWorkspace.js)
@@ -84,6 +108,7 @@ export function buildIntakeForm(project = {}, options = {}) {
   if (has(project.client)) known.push({ label: 'Client', value: project.client });
   if (has(project.region)) known.push({ label: 'Proposed AWS region', value: project.region });
   if (project.services?.length) known.push({ label: 'AWS services in scope', value: project.services.join(', ') });
+  const domain = domainFromBrief(briefOf(project));
 
   const section = (id, heading, why, questions) => {
     const live = questions.filter(Boolean);
@@ -132,9 +157,15 @@ export function buildIntakeForm(project = {}, options = {}) {
 
   // ── 4. Domain and certificates — only when it applies ────────────
   if (touches(services, 'cloudfront', 'route53', 'acm', 's3', 'amplify', 'apigateway')) {
+    // A domain the client already named is confirmed, not asked again.
+    if (domain) known.push({ label: 'Domain (from your message)', value: domain });
     section('domain', 'Domain and certificates',
       'Nothing can go live on your own name until these are settled.', [
-        q('domainName', 'What domain should this use?', 'For example www.yourcompany.com', { required: true }),
+        domain
+          ? q('domainName', `Is ${domain} the domain this should use?`, 'Say if it should be www., a subdomain, or a different name', {
+            kind: 'choice', options: [`Yes — ${domain}`, 'No, a different domain'], required: true,
+          })
+          : q('domainName', 'What domain should this use?', 'For example www.yourcompany.com', { required: true }),
         q('registrar', 'Where is the domain registered?', 'GoDaddy, Namecheap, Route 53, somewhere else'),
         q('dnsControl', 'Who can change the DNS records?', 'I will need either access or someone who can apply the records I send', {
           kind: 'choice', options: ['I can change them', 'Our IT provider does', 'You can have access', 'Not sure'],

@@ -1,5 +1,5 @@
 import {
-  buildIntakeForm, intakeAsEmail, intakeAsText, nameSuggestions, outstanding, slugForAws,
+  buildIntakeForm, domainFromBrief, intakeAsEmail, intakeAsText, nameSuggestions, outstanding, slugForAws,
 } from '../clientIntake.js';
 
 /**
@@ -170,6 +170,29 @@ export function runClientIntakeTests() {
     const blanks = {};
     for (const s of form.sections) for (const q of s.questions) if (q.required) blanks[q.id] = '   ';
     assert(outstanding(form, blanks).length === form.requiredCount, 'whitespace was accepted as an answer');
+  });
+
+  // ───────── a domain the client already named ─────────
+
+  test('a domain named in the brief is confirmed, not asked for again', () => {
+    const withBrief = { ...PROJECT, artifacts: { solution: [{ ...PROJECT.artifacts.solution[0], input: { brief: 'Please move lumenbakery.com off shared hosting onto AWS.' } }] } };
+    const form = buildIntakeForm(withBrief);
+    const q = form.sections.flatMap((s) => s.questions).find((x) => x.id === 'domainName');
+    assert(q && /lumenbakery.com/.test(q.label) && q.kind === 'choice', q && q.label);
+    assert(!/What domain should this use/.test(intakeAsText(form)), 'asked for a domain the client gave');
+    assert(form.knownFacts.some((k) => k.value === 'lumenbakery.com'), 'domain not listed as known');
+  });
+
+  test('without a domain in the brief, the open question stays', () => {
+    const form = buildIntakeForm(PROJECT);
+    assert(/What domain should this use/.test(intakeAsText(form)), 'the domain question went missing');
+  });
+
+  test('emails, file names and platform sites are not taken as the client domain', () => {
+    assert(domainFromBrief('Email me at owner@lumenbakery.com') === null, 'took the email domain');
+    assert(domainFromBrief('Upload index.html and style.css') === null, 'took a file name');
+    assert(domainFromBrief('Found you on upwork.com, host it on aws.amazon.com') === null, 'took a platform domain');
+    assert(domainFromBrief('Site is https://www.Lumen-Bakery.co.uk/menu') === 'www.lumen-bakery.co.uk', domainFromBrief('Site is https://www.Lumen-Bakery.co.uk/menu'));
   });
 
   // ───────── it must not fall over ─────────
