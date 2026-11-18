@@ -43,17 +43,35 @@ jobs:
         # deploy during an npm outage that had nothing to do with this repo.
         # Real vulnerabilities still fail the build; an unreachable endpoint
         # is reported as a warning and does not.
+        #
+        # Only what ships to the browser blocks. The build tools (Vite,
+        # Tailwind, PostCSS) never reach a visitor, and in November 2026 a
+        # picomatch advisory with no patched version blocked every deploy:
+        # npm's only offer was downgrading Vite 8 to 6. Build-tool advisories
+        # are still printed and raised as a warning on every run.
         run: |
           set +e
-          out=$(npm audit --audit-level=moderate 2>&1)
+          outage="audit endpoint returned an error|Service Unavailable|performing maintenance|Invalid package tree|ENOTFOUND|ETIMEDOUT|ECONNRESET|socket hang up"
+
+          echo "── Shipped dependencies (blocking) ──"
+          out=$(npm audit --omit=dev --audit-level=moderate 2>&1)
           code=$?
           echo "$out"
-          if [ $code -eq 0 ]; then exit 0; fi
-          if echo "$out" | grep -qiE "audit endpoint returned an error|Service Unavailable|performing maintenance|Invalid package tree|ENOTFOUND|ETIMEDOUT|ECONNRESET|socket hang up"; then
-            echo "::warning::npm audit endpoint unavailable — audit skipped for this run, not a vulnerability."
-            exit 0
+          if [ $code -ne 0 ]; then
+            if echo "$out" | grep -qiE "$outage"; then
+              echo "::warning::npm audit endpoint unavailable — audit skipped for this run, not a vulnerability."
+              exit 0
+            fi
+            exit $code
           fi
-          exit $code
+
+          echo "── Build tools (warning only) ──"
+          dev=$(npm audit --audit-level=moderate 2>&1)
+          if [ $? -ne 0 ] && ! echo "$dev" | grep -qiE "$outage"; then
+            echo "$dev"
+            echo "::warning::Build-tool dependencies have advisories (they do not ship to the browser). Run npm audit and upgrade when a fix is published."
+          fi
+          exit 0
 
       - name: Run regression suites
         run: npm test
