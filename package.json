@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node scripts/runAgentTests.mjs",
-    "test:agents": "node scripts/runAgentTests.mjs"
+    "test:agents": "node scripts/runAgentTests.mjs",
+    "serve:always": "node scripts/keepAlive.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-budgets": "^3.1136.0",

@@ -99,7 +99,9 @@ export default defineConfig({
   plugins: [react(), localBackupPlugin()],
   server: {
     port: 5273,
-    strictPort: false,
+    // Fail loudly rather than drift to 5274+ when 5273 is taken: a silent
+    // port change left bookmarks pointing at a different project's server.
+    strictPort: true,
     open: true,
   },
   build: {
