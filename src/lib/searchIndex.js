@@ -2,23 +2,17 @@
  * searchIndex.js — universal index for the command palette.
  *
  * Pulls EVERY searchable thing into one ranked list:
- *   • Pages (legacy NAV_ITEMS + 5-section SECTIONS + children)
+ *   • Pages (SECTIONS + children)
  *   • Portfolio projects (data/projects.js)
  *   • Walkthroughs (data/walkthroughs.js)
- *   • Roadmap tasks (data/roadmap.js)
- *   • AWS services (data/stepGuide.js)
  *   • Quick actions (toggle theme, run readiness, etc.)
  *
  * Lazy-built on first search so it doesn't hit initial load.
  * Fuzzy match with a tiny ranker (no Fuse.js dependency).
  */
 
-import { NAV_ITEMS } from './constants.js';
 import { SECTIONS } from './navSections.js';
-import {
-  Award, BookOpen, Briefcase, Compass, FileText, Folder, GraduationCap,
-  Layers, Map as MapIcon, Rocket, Search, Settings, Sparkles, Wand2,
-} from 'lucide-react';
+import { Briefcase, Compass, FileText, Rocket, Settings, Wand2 } from 'lucide-react';
 
 let CACHE = null;
 
@@ -34,20 +28,7 @@ export async function buildIndex() {
 
   const items = [];
 
-  // ── 1. Legacy nav items ──
-  for (const n of NAV_ITEMS) {
-    items.push({
-      id: `nav-${n.id}`,
-      title: n.label,
-      hint: `Go to ${n.label}`,
-      kind: 'Page',
-      icon: n.icon,
-      path: n.path,
-      keywords: [n.label.toLowerCase(), n.id],
-    });
-  }
-
-  // ── 2. SECTIONS (5-section nav) + their children ──
+  // ── 1. SECTIONS + their children ──
   for (const sec of SECTIONS) {
     items.push({
       id: `section-${sec.id}`,
@@ -113,65 +94,9 @@ export async function buildIndex() {
     }
   } catch (e) { /* non-fatal */ }
 
-  // ── 5. Roadmap tasks ──
-  try {
-    const { ROADMAP } = await import('../data/roadmap.js');
-    for (const phase of ROADMAP || []) {
-      items.push({
-        id: `roadmap-phase-${phase.id}`,
-        title: `Roadmap phase · ${phase.title}`,
-        hint: phase.blurb || '',
-        kind: 'Roadmap',
-        icon: MapIcon,
-        path: '/roadmap',
-        keywords: [(phase.title || '').toLowerCase(), phase.id],
-      });
-      for (const task of phase.tasks || []) {
-        items.push({
-          id: `roadmap-task-${task.id}`,
-          title: `Roadmap task · ${task.title}`,
-          hint: `${phase.title} · ${task.minutes} min`,
-          kind: 'Roadmap task',
-          icon: MapIcon,
-          path: '/roadmap',
-          keywords: [
-            (task.title || '').toLowerCase(),
-            (task.description || '').toLowerCase().slice(0, 200),
-            phase.id,
-            task.id,
-          ],
-        });
-      }
-    }
-  } catch (e) { /* non-fatal */ }
-
-  // ── 6. AWS services from stepGuide ──
-  try {
-    const { GUIDES } = await import('../data/stepGuide.js');
-    for (const [id, g] of Object.entries(GUIDES || {})) {
-      items.push({
-        id: `guide-${id}`,
-        title: `AWS · ${g.title || id}`,
-        hint: g.tagline || g.service || '',
-        kind: 'AWS service',
-        icon: Sparkles,
-        // Link into the roadmap (guides are tied to roadmap tasks).
-        path: '/roadmap',
-        keywords: [
-          (g.title || '').toLowerCase(),
-          (g.tagline || '').toLowerCase(),
-          (g.service || '').toLowerCase(),
-          id,
-        ],
-      });
-    }
-  } catch (e) { /* non-fatal */ }
-
-  // ── 7. Quick actions ──
+  // ── 4. Quick actions ──
   items.push(
-    { id: 'action-readiness', title: 'Run readiness check', hint: 'See what\'s working and what\'s missing', kind: 'Action', icon: Compass, path: '/readiness', keywords: ['readiness', 'check', 'health', 'audit', 'status'] },
     { id: 'action-deploy', title: 'Open Deploy Console', hint: 'Approve AWS deploys with strict tiers', kind: 'Action', icon: Rocket, path: '/deploy', keywords: ['deploy', 'aws', 'console', 'vault'] },
-    { id: 'action-updates', title: 'See app + AWS updates', hint: 'Changelog + live AWS news', kind: 'Action', icon: Sparkles, path: '/updates', keywords: ['updates', 'changelog', 'news', 'whats new'] },
     { id: 'action-session-log', title: 'Open Session Log', hint: 'Documentation of what you did', kind: 'Action', icon: FileText, path: '/session-log', keywords: ['session', 'log', 'history', 'docs', 'pdf'] },
     { id: 'action-renew-token', title: 'Renew GitHub token', hint: 'Step-by-step PAT renewal', kind: 'Action', icon: Wand2, path: '/renew-github', keywords: ['github', 'token', 'pat', 'renew', 'expire'] },
     { id: 'action-build-anything', title: 'Idea Studio — Build anything', hint: 'Describe your project, get instant architecture + plan', kind: 'Action', icon: Wand2, path: '/idea-studio', keywords: ['idea', 'build', 'architect', 'design', 'plan', 'gig', 'job', 'project', 'ai', 'chat'] },

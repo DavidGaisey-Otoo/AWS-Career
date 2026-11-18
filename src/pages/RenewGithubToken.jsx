@@ -347,8 +347,7 @@ function DoneCard() {
         You can close this page.
       </p>
       <div className="flex gap-2 justify-center flex-wrap">
-        <Link to="/readiness"><Button variant="primary" icon={ShieldCheck}>Open Readiness check</Button></Link>
-        <Link to="/settings"><Button variant="ghost" icon={KeyRound}>Open Settings</Button></Link>
+        <Link to="/settings"><Button variant="primary" icon={KeyRound}>Open Settings</Button></Link>
       </div>
     </div>
   );

@@ -33,8 +33,8 @@ export default function AICoach() {
 
   return (
     <div className="space-y-5">
-      <Link to="/ai" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
-        <ChevronLeft size={14} /> AI hub
+      <Link to="/earn" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+        <ChevronLeft size={14} /> Win work
       </Link>
 
       <PageHeader
@@ -332,9 +332,6 @@ function InterviewPrep() {
           ['ml','ML Engineer']]} />
         <SmallSelect label="Level" value={level} onChange={setLevel}
           options={[['junior','Junior'],['mid','Mid'],['senior','Senior'],['principal','Principal']]} />
-        <Link to="/ai/interview" className="ml-auto btn btn-primary !text-xs">
-          <Mic size={12} /> Run full mock interview
-        </Link>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">

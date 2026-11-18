@@ -14,7 +14,7 @@
  *     lastAt:     1716540000000,
  *     scroll: {
  *       '/job-analyzer': 420,
- *       '/exam/saa-c03':  1200,
+ *       '/freelance':     1200,
  *       ...
  *     }
  *   }

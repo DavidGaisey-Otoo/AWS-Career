@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, Command, Sparkles, BookOpen, Briefcase } from 'lucide-react';
+import { Plus, Command, Sparkles, Rocket, Briefcase } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext.jsx';
@@ -12,7 +12,7 @@ export function FloatingActionButton() {
 
   const actions = [
     { id: 'palette', label: 'Command palette', icon: Command, onClick: () => openPalette() },
-    { id: 'lesson',  label: 'Start a lesson',  icon: BookOpen, onClick: () => nav('/learning') },
+    { id: 'job',     label: 'Win a new job',   icon: Rocket, onClick: () => nav('/start') },
     { id: 'project', label: 'New portfolio project', icon: Briefcase, onClick: () => nav('/portfolio') },
     { id: 'win',     label: 'Log a win',       icon: Sparkles, onClick: () => fireConfetti() },
   ];

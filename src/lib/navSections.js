@@ -1,14 +1,11 @@
 /**
- * 5-section navigation map.
+ * Navigation map: Home, Win work, Deliver.
  *
- * Every existing route is kept addressable directly; this file just groups
- * the routes into five parent sections for sidebar + breadcrumb logic.
- *
- * Adding a new route: add it to BOTH the legacy NAV_ITEMS (for backwards
- * compatibility with code that still reads it) AND a child under one of
- * the five sections below.
+ * The app is for freelance AWS work. The study, exam and personal-tracking
+ * pages were removed in November 2026; old bookmarks to them land on the
+ * workspace. Adding a route: add it as a child of one of the three sections.
  */
-import { Activity, Award, BarChart3, BookOpen, Brain, Briefcase, BriefcaseBusiness, Calculator, Calendar, Cloud, DollarSign, FileSearch, FileText, FlaskConical, GanttChart, GraduationCap, Hammer, Heart, Home, Inbox, Layers, Library, Mail, Map as MapIcon, Newspaper, PhoneCall, Plane, Presentation, Settings, Sparkles, Target, TrendingUp, Trophy, Users, Wand2, Mic, ShieldCheck, Rocket, ListChecks, Swords, KeyRound, RotateCcw } from 'lucide-react';
+import { Briefcase, BriefcaseBusiness, Calculator, Cloud, DollarSign, FileSearch, FileText, GanttChart, Hammer, Home, Inbox, Layers, Mail, PhoneCall, Presentation, Settings, Sparkles, TrendingUp, Wand2, Rocket, ListChecks } from 'lucide-react';
 import { Github } from '../components/common/BrandIcons.jsx';
 
 export const SECTIONS = [
@@ -17,116 +14,66 @@ export const SECTIONS = [
     label: 'Home',
     icon: Home,
     path: '/',
-    blurb: 'Your live progress, focus for today, and recent activity.',
+    blurb: 'Every client job in one place, and the one-page flow for a new brief.',
     children: [
-      { id: 'dashboard', label: 'SAA-C03 Dashboard', icon: Home,       path: '/' },
-      { id: 'career-dashboard', label: 'Career Dashboard', icon: TrendingUp, path: '/career-dashboard' },
-      { id: 'profile',   label: 'Profile + Badges',  icon: Trophy,     path: '/profile' },
-      { id: 'community', label: 'Community',         icon: Users,      path: '/community' },
-      { id: 'wellness',  label: 'Wellness',          icon: Heart,      path: '/wellness' },
-      { id: 'analytics', label: 'Analytics',         icon: BarChart3,  path: '/analytics' },
-      { id: 'readiness', label: 'Readiness check',   icon: ShieldCheck,path: '/readiness' },
-      { id: 'updates',   label: 'Updates',           icon: Sparkles,   path: '/updates' },
-      { id: 'settings',  label: 'Settings',          icon: Settings,   path: '/settings' },
-    ],
-  },
-  {
-    id: 'learn',
-    label: 'Learn',
-    icon: BookOpen,
-    path: '/learn',
-    blurb: 'The full AWS curriculum + study tools + AI tutor.',
-    children: [
-      { id: 'roadmap',     label: 'My Roadmap',        icon: MapIcon,     path: '/roadmap' },
-      { id: 'learning',    label: 'Learning Lab',      icon: BookOpen,    path: '/learning' },
-      { id: 'ai',          label: 'AI hub',            icon: Brain,       path: '/ai' },
-      { id: 'ai-assistant',label: 'AI Study Assistant',icon: Brain,       path: '/ai/assistant' },
-      { id: 'daily-plan',  label: 'Daily Plan',        icon: Calendar,    path: '/',              // dashboard hosts the live daily plan card
-        hint: 'Today\'s study + work focus (lives on the Dashboard)' },
-      { id: 'study-plan',  label: 'Study plan generator', icon: Calendar, path: '/ai/study-plan' },
-      { id: 'my-notes',    label: 'My Notes',          icon: ListChecks,  path: '/my-notes' },        // NT-01
-      { id: 'aws-updates', label: 'What\'s New in AWS',icon: Newspaper,   path: '/aws-updates' },
-      { id: 'resources',   label: 'Resources',         icon: Library,     path: '/resources' },
-    ],
-  },
-  {
-    id: 'exam',
-    label: 'Exam',
-    icon: GraduationCap,
-    path: '/exam-hub',
-    blurb: 'All 13 AWS certifications — mocks, practice, learning mode.',
-    children: [
-      { id: 'saa-roadmap',  label: '🎯 SAA-C03 Roadmap',    icon: Target,        path: '/saa-roadmap' },  // SAA-01
-      { id: 'exam',         label: 'Exam Center',           icon: GraduationCap, path: '/exam' },
-      { id: 'saa-questions', label: 'SAA-C03 Questions',      icon: Target,        path: '/exam/saa-c03',
-        hint: 'Practice, learning mode, service drills, and the full 65-question mock exam' },
-      { id: 'exam-strategy', label: 'Exam Strategy',         icon: KeyRound,      path: '/exam-strategy' },
-      { id: 'service-battles', label: 'Service Comparisons', icon: Swords,        path: '/service-comparisons' },
-      { id: 'saa-review',   label: 'Mistakes & Bookmarks',   icon: RotateCcw,      path: '/saa-review' },
-      { id: 'certs',        label: 'Certifications',        icon: Award,         path: '/certifications' },
-      { id: 'flashcards',   label: 'Flashcards',            icon: Layers,        path: '/flashcards' },       // EX-19
-      { id: 'smart-review', label: 'Smart Review',          icon: Brain,         path: '/exam',               // EX-18 (mode inside Exam Center)
-        hint: 'Spaced-repetition mode — pick a cert in Exam Center then Smart Review' },
-      { id: 'interview',    label: 'Interview prep',        icon: Mic,           path: '/interview' },
-      { id: 'ai-interview', label: 'Interview sim (AI)',    icon: Wand2,         path: '/ai/interview' },
-    ],
-  },
-  {
-    id: 'build',
-    label: 'Build',
-    icon: Hammer,
-    path: '/build',
-    blurb: 'Portfolio projects + architecture studio + AWS account deploys.',
-    children: [
-      { id: 'start',        label: '🚀 Win this job',    icon: Rocket,      path: '/start',
-        hint: 'Paste what the client sent you and work down one page: design, questions, proposal, email, deploy' },
-      { id: 'workspace',    label: '📦 My Workspace',    icon: Layers,      path: '/workspace',
+      { id: 'workspace', label: 'My Workspace', icon: Layers, path: '/',
         hint: 'Every job in one place — its solution, architecture, proposal, emails, documents, contract and invoice' },
-      { id: 'solution-studio', label: '⚡ Solution Studio', icon: Wand2,     path: '/solution',           // GIG-01
-        hint: 'Paste a gig → get the architecture, plan, code, review + a build button' },
-      { id: 'idea-studio',  label: 'Idea Studio',          icon: Sparkles,    path: '/idea-studio' },
-      { id: 'project-builder', label: 'Project Builder',  icon: Wand2,       path: '/project-builder' },
-      { id: 'github-projects', label: 'Applications & Deploy', icon: Github,      path: '/applications',
-        hint: 'Choose a GitHub application, see the required AWS services, then follow Deploy → Verify → Destroy' },
-      { id: 'portfolio',    label: 'Portfolio',           icon: Briefcase,   path: '/portfolio' },
-      { id: 'architecture', label: 'Architecture Studio', icon: Layers,      path: '/architecture' },
-      { id: 'aws-accounts', label: 'AWS Account Manager', icon: Cloud,       path: '/aws-accounts' },
-      { id: 'deploy',       label: 'Deploy Console',      icon: Rocket,      path: '/deploy' },
-      { id: 'resource-search', label: 'Resource Search',  icon: FileSearch,  path: '/resource-search',
-        hint: 'Search your live AWS account read-only — what is running, what it costs, what is misconfigured' },
-      { id: 'walkthroughs', label: 'Project Walkthroughs',icon: ListChecks,  path: '/walkthroughs' },
-      { id: 'session-log',  label: 'Session Log',         icon: FileText,    path: '/session-log' },
+      { id: 'start',     label: '🚀 Win this job', icon: Rocket, path: '/start',
+        hint: 'Paste what the client sent you and work down one page: design, questions, proposal, email, deploy' },
+      { id: 'settings',  label: 'Settings',       icon: Settings, path: '/settings' },
     ],
   },
   {
     id: 'earn',
-    label: 'Earn',
+    label: 'Win work',
     icon: BriefcaseBusiness,
     path: '/earn',
-    blurb: 'Land paid AWS work — proposals, CRM, finance, contracts, market intel.',
+    blurb: 'Find gigs, price them, pitch them, and get paid.',
     children: [
-      // ── Money tools (calculators + trackers come first) ──
-      { id: 'rate-calc',      label: 'Rate Calculator',       icon: Calculator,   path: '/rate-calculator' },     // EA-01
-      { id: 'income-tracker', label: 'Income Tracker',        icon: TrendingUp,   path: '/freelance?tab=overview',// EA-02 (lives in Freelance Overview)
-        hint: 'Monthly goal + payment log (opens Freelance Hub Overview)' },
-      // ── Lead capture + pipeline ──
-      { id: 'solution-studio-earn', label: '⚡ Gig → Solution', icon: Wand2,      path: '/solution',          // GIG-01 cross-link
-        hint: 'Turn any gig into a buildable AWS solution (lives in Build)' },
-      { id: 'job-analyzer',   label: 'Job Analyzer',          icon: FileSearch,   path: '/job-analyzer' },
-      { id: 'freelance',      label: 'Freelance Hub',         icon: DollarSign,   path: '/freelance' },
-      { id: 'my-proposals',   label: 'My Proposals',          icon: Trophy,       path: '/freelance?tab=myproposals',// FR-05 (inside Freelance Hub)
-        hint: 'Win rate tracker — sub-tab of Freelance Hub' },
-      // ── Per-gig delivery tools ──
-      { id: 'discovery-call', label: 'Discovery Call Prep',   icon: PhoneCall,    path: '/discovery-call' },
-      { id: 'project-plan',   label: 'Project Plan',          icon: GanttChart,   path: '/project-plan' },
-      { id: 'presentation',   label: 'Presentation Generator',icon: Presentation, path: '/presentation' },
-      { id: 'email',          label: 'Email System (also in Freelance Hub)', icon: Mail, path: '/email' },        // FR-03 cross-link callout
-      { id: 'documents',      label: 'Documents & Portfolio', icon: FileText,     path: '/documents' },
-      { id: 'content-queue',  label: 'Content Queue',         icon: Inbox,        path: '/content-queue' },
-      // ── Career + market context ──
-      { id: 'ai-coach',       label: 'AI Career Coach',       icon: Sparkles,     path: '/ai/coach' },
-      { id: 'market',         label: 'Market Intel',          icon: TrendingUp,   path: '/market' },
-      { id: 'uk',             label: 'UK Transition Planner', icon: Plane,        path: '/uk' },
+      // ── Finding and pricing the work ──
+      { id: 'freelance',      label: 'Freelance Hub',     icon: DollarSign, path: '/freelance',
+        hint: 'Live gigs, proposals, client CRM, contracts, invoices and earnings' },
+      { id: 'job-analyzer',   label: 'Job Analyzer',      icon: FileSearch, path: '/job-analyzer' },
+      { id: 'rate-calc',      label: 'Rate Calculator',   icon: Calculator, path: '/rate-calculator' },
+      { id: 'market',         label: 'Market Rates',      icon: TrendingUp, path: '/market',
+        hint: 'What clients pay, which skills are in demand' },
+      // ── Pitching and the paperwork a client receives ──
+      { id: 'discovery-call', label: 'Discovery Call Prep', icon: PhoneCall,  path: '/discovery-call' },
+      { id: 'project-plan',   label: 'Project Plan',      icon: GanttChart,   path: '/project-plan' },
+      { id: 'presentation',   label: 'Client Presentation', icon: Presentation, path: '/presentation' },
+      { id: 'email',          label: 'Client Emails',     icon: Mail,         path: '/email' },
+      { id: 'documents',      label: 'Documents',         icon: FileText,     path: '/documents' },
+      // ── Getting noticed ──
+      { id: 'ai-coach',       label: 'AI Freelance Coach', icon: Sparkles,    path: '/ai/coach',
+        hint: 'Profile review, proposal writer, pricing and negotiation drills' },
+      { id: 'content-queue',  label: 'Content Queue',     icon: Inbox,        path: '/content-queue',
+        hint: 'LinkedIn posts and GitHub pushes that bring clients to you' },
+    ],
+  },
+  {
+    id: 'build',
+    label: 'Deliver',
+    icon: Hammer,
+    path: '/build',
+    blurb: 'Design the solution, build it in AWS, and prove it in your portfolio.',
+    children: [
+      // ── Designing it ──
+      { id: 'solution-studio', label: '⚡ Solution Studio', icon: Wand2,   path: '/solution',
+        hint: 'Paste a gig → get the architecture, plan, code, review + a build button' },
+      { id: 'architecture',   label: 'Architecture Studio', icon: Layers,   path: '/architecture' },
+      { id: 'idea-studio',    label: 'Idea Studio',        icon: Sparkles, path: '/idea-studio' },
+      { id: 'project-builder', label: 'Project Builder',   icon: Wand2,    path: '/project-builder' },
+      // ── Building it in AWS ──
+      { id: 'github-projects', label: 'Applications & Deploy', icon: Github, path: '/applications',
+        hint: 'Choose a GitHub application, see the required AWS services, then follow Deploy → Verify → Destroy' },
+      { id: 'aws-accounts',   label: 'AWS Account Manager', icon: Cloud,      path: '/aws-accounts' },
+      { id: 'deploy',         label: 'Deploy Console',     icon: Rocket,     path: '/deploy' },
+      { id: 'resource-search', label: 'Resource Search',   icon: FileSearch, path: '/resource-search',
+        hint: 'Search your live AWS account read-only — what is running, what it costs, what is misconfigured' },
+      { id: 'walkthroughs',   label: 'Project Walkthroughs', icon: ListChecks, path: '/walkthroughs' },
+      { id: 'session-log',    label: 'Session Log',        icon: FileText,   path: '/session-log' },
+      // ── Proving it ──
+      { id: 'portfolio',      label: 'Portfolio',          icon: Briefcase,  path: '/portfolio' },
     ],
   },
 ];
@@ -189,59 +136,6 @@ function prettifySegment(seg) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export const MOBILE_NAV_5 = SECTIONS.map((s) => ({
+export const MOBILE_NAV = SECTIONS.map((s) => ({
   id: s.id, label: s.label, icon: s.icon, path: s.path,
 }));
-
-/**
- * Focus mode — the pages you need to win and deliver a piece of work.
- *
- * There are fifty-six entries in this navigation. Most of them are for
- * studying: flashcards, exam modes, interview practice, a wellness
- * tracker, a relocation planner. All useful, none of them any help when
- * a client has just sent you a brief and you need a proposal by Friday.
- *
- * Nothing is deleted. This hides what is not part of that job, and one
- * toggle brings it all back.
- */
-const ESSENTIAL_IDS = new Set([
-  // where you are
-  'home', 'dashboard',
-  // turning a brief into a design you can quote
-  'build', 'start', 'workspace', 'solution-studio', 'architecture',
-  // the paperwork a client actually receives
-  'earn', 'freelance', 'my-proposals', 'email', 'documents',
-  'project-plan', 'discovery-call', 'rate-calc', 'job-analyzer',
-  // your account, and putting the thing live
-  'aws-accounts', 'deploy', 'resource-search', 'portfolio',
-  // settings stay reachable or you cannot turn this off again
-  'settings',
-]);
-
-/** Is this page part of winning and delivering work? */
-export function isEssential(id) {
-  return ESSENTIAL_IDS.has(id);
-}
-
-/**
- * The navigation, narrowed to delivery when focus mode is on.
- *
- * A section survives if it is essential itself or has an essential child,
- * so a section never appears with nothing under it.
- */
-export function navFor(sections, focusMode) {
-  if (!focusMode) return sections;
-  return sections
-    .map((section) => ({
-      ...section,
-      children: (section.children || []).filter((child) => isEssential(child.id)),
-    }))
-    .filter((section) => isEssential(section.id) || section.children.length > 0);
-}
-
-/** How many pages focus mode is hiding, for the toggle's own label. */
-export function hiddenCount(sections) {
-  const all = sections.reduce((n, s) => n + 1 + (s.children || []).length, 0);
-  const kept = navFor(sections, true).reduce((n, s) => n + 1 + (s.children || []).length, 0);
-  return Math.max(0, all - kept);
-}

@@ -4,7 +4,6 @@ import { runAllTests, printReport } from '../src/lib/expertAgents/__tests__/test
 import { runPipelineTests, printPipelineReport } from '../src/lib/__tests__/gigSolutionPipeline.test.js';
 import { runGistSyncTests, printGistSyncReport } from '../src/lib/__tests__/gistSync.test.js';
 import { runCustomProjectTests, printCustomProjectReport } from '../src/lib/__tests__/customProjects.test.js';
-import { runQuestionBankTests, printQuestionBankReport } from '../src/lib/__tests__/questionBank.test.js';
 import { runDrawioBridgeTests } from '../src/lib/__tests__/drawioBridge.test.js';
 import { runDeploySafetyTests } from '../src/lib/__tests__/deploySafety.test.js';
 import { runBusinessWorkflowTests } from '../src/lib/__tests__/businessWorkflow.test.js';
@@ -31,8 +30,9 @@ import { runAccountTierTests } from '../src/lib/__tests__/accountTier.test.js';
 import { runBackupRoundTripTests } from '../src/lib/__tests__/backupRoundTrip.test.js';
 import { runSyncGuardTests } from '../src/lib/__tests__/syncGuard.test.js';
 import { runSafeStorageTests } from '../src/lib/__tests__/safeStorage.test.js';
+import { runAppRoutesTests } from '../src/lib/__tests__/appRoutes.test.js';
+import { runRetiredDataTests } from '../src/lib/__tests__/retiredData.test.js';
 import { runProjectPlanDateTests } from '../src/lib/__tests__/projectPlanDate.test.js';
-import { runAwsNewsFeedTests } from '../src/lib/__tests__/awsNewsFeed.test.js';
 import { runProjectWorkspaceTests } from '../src/lib/__tests__/projectWorkspace.test.js';
 
 const agents = runAllTests();
@@ -70,10 +70,6 @@ console.log(printGistSyncReport(sync));
 const custom = runCustomProjectTests();
 console.log('');
 console.log(printCustomProjectReport(custom));
-
-const bank = runQuestionBankTests();
-console.log('');
-console.log(printQuestionBankReport(bank));
 
 const drawio = runDrawioBridgeTests();
 console.log('');
@@ -204,6 +200,20 @@ console.log('  SYNC OVERWRITE GUARD TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of syncGuard.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
+const appRoutes = runAppRoutesTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  APP ROUTES + MENU TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of appRoutes.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
+const retiredData = runRetiredDataTests();
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('  REMOVED-PAGE DATA CLEANUP TESTS');
+console.log('═══════════════════════════════════════════════════════════════');
+for (const result of retiredData.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+
 const safeStorage = runSafeStorageTests();
 console.log('');
 console.log('═══════════════════════════════════════════════════════════════');
@@ -217,13 +227,6 @@ console.log('══════════════════════�
 console.log('  PROJECT PLAN DATE TESTS');
 console.log('═══════════════════════════════════════════════════════════════');
 for (const result of planDate.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
-
-const awsNews = runAwsNewsFeedTests();
-console.log('');
-console.log('═══════════════════════════════════════════════════════════════');
-console.log('  LIVE AWS NEWS FEED TESTS');
-console.log('═══════════════════════════════════════════════════════════════');
-for (const result of awsNews.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
 const workspace = runProjectWorkspaceTests();
 const serviceWorker = await runServiceWorkerTests();
@@ -271,7 +274,6 @@ const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
 const syncOk = sync.allPassed;
 const customOk = custom.allPassed;
-const bankOk = bank.allPassed;
 const drawioOk = drawio.allPassed;
 const deploySafetyOk = deploySafety.allPassed;
 const businessOk = business.allPassed;
@@ -292,21 +294,20 @@ const backupRoundTripOk = backupRoundTrip.allPassed;
 const syncGuardOk = syncGuard.allPassed;
 const safeStorageOk = safeStorage.allPassed;
 const planDateOk = planDate.allPassed;
-const awsNewsOk = awsNews.allPassed;
 const workspaceOk = workspace.allPassed;
 const serviceWorkerOk = serviceWorker.allPassed;
 const clientIntakeOk = clientIntake.allPassed;
 const localFilesOk = localFiles.allPassed;
 const clientReportOk = clientReport.allPassed;
 const repoSecretsOk = repoSecrets.allPassed;
-const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && bankOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk && awsNewsOk && workspaceOk && serviceWorkerOk && clientIntakeOk && localFilesOk && clientReportOk && repoSecretsOk;
+const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk && workspaceOk && serviceWorkerOk && clientIntakeOk && localFilesOk && clientReportOk && repoSecretsOk && appRoutes.allPassed && retiredData.allPassed;
 
 console.log('');
 console.log(allOk
   ? '✅ ALL SUITES PASSED'
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} awsEnvironmentPolicy:${awsEnvironmentPolicyOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
-    + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} bank:${bankOk ? 'ok' : 'FAIL'} `
+    + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'} awsNews:${awsNewsOk ? 'ok' : 'FAIL'} workspace:${workspaceOk ? 'ok' : 'FAIL'} serviceWorker:${serviceWorkerOk ? 'ok' : 'FAIL'} clientIntake:${clientIntakeOk ? 'ok' : 'FAIL'} localFiles:${localFilesOk ? 'ok' : 'FAIL'} clientReport:${clientReportOk ? 'ok' : 'FAIL'} repoSecrets:${repoSecretsOk ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'} workspace:${workspaceOk ? 'ok' : 'FAIL'} serviceWorker:${serviceWorkerOk ? 'ok' : 'FAIL'} clientIntake:${clientIntakeOk ? 'ok' : 'FAIL'} localFiles:${localFilesOk ? 'ok' : 'FAIL'} clientReport:${clientReportOk ? 'ok' : 'FAIL'} repoSecrets:${repoSecretsOk ? 'ok' : 'FAIL'} appRoutes:${appRoutes.allPassed ? 'ok' : 'FAIL'} retiredData:${retiredData.allPassed ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

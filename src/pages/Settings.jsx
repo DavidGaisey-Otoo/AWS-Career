@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Bell, Brain, Briefcase, Camera, ClipboardCopy, Database, Download, Eye, EyeOff, Globe2, KeyRound, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon, Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2 } from 'lucide-react';
+import { Bell, Briefcase, Camera, ClipboardCopy, Database, Download, Eye, EyeOff, Globe2, KeyRound, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon, Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2 } from 'lucide-react';
 import { Github, Linkedin } from '../components/common/BrandIcons.jsx';
 import { BuildStamp } from '../components/common/BuildStamp.jsx';
 import { fetchGithubIdentity, hasGithubAppSession } from '../lib/githubAppAuth.js';
@@ -16,12 +16,12 @@ import { cn, formatCurrency } from '../lib/utils.js';
 import { GoogleCalendarConnectCard } from '../components/integrations/GoogleCalendarConnectCard.jsx';
 import { GitHubAppConnectCard } from '../components/integrations/GitHubAppConnectCard.jsx';
 import { LocalAIPanel } from '../components/settings/LocalAIPanel.jsx';
+import { findRetiredData, removeRetiredData } from '../lib/retiredData.js';
 
 const SECTIONS = [
   { id: 'profile',       label: 'Profile',          icon: User },
   { id: 'notifications', label: 'Notifications',    icon: Bell },
   { id: 'display',       label: 'Display',          icon: Palette },
-  { id: 'study',         label: 'Study preferences', icon: Brain },
   { id: 'integrations',  label: 'Integrations',     icon: Sliders },
   { id: 'data',          label: 'Data management',  icon: Database },
 ];
@@ -64,7 +64,7 @@ export default function Settings() {
       <PageHeader
         eyebrow="Settings"
         title="Make it yours."
-        subtitle="Profile, notifications, display, study prefs, integrations, data management."
+        subtitle="Profile, notifications, display, integrations, data management."
         icon={SettingsIcon}
       />
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
@@ -92,7 +92,6 @@ export default function Settings() {
           {section === 'profile'       && <ProfileSection />}
           {section === 'notifications' && <NotificationSection />}
           {section === 'display'       && <DisplaySection />}
-          {section === 'study'         && <StudySection />}
           {section === 'integrations'  && <IntegrationSection />}
           {section === 'data'          && <DataSection />}
 
@@ -202,21 +201,9 @@ function NotificationSection() {
   const n = prefs.notifications;
   return (
     <Section title="Notifications" subtitle="Choose what we'll ping you about + when.">
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Field label="Daily study reminder" type="time" value={n.dailyStudyReminderTime}
-               onChange={(v) => setNotificationPrefs({ dailyStudyReminderTime: v })} />
-        <Field label="Streak reminder" type="time" value={n.streakReminderTime}
-               onChange={(v) => setNotificationPrefs({ streakReminderTime: v })} />
-        <Field label="Exam practice reminder" as="select" value={n.examPracticeFrequency}
-               onChange={(v) => setNotificationPrefs({ examPracticeFrequency: v })}
-               options={[['off', 'Off'], ['weekly', 'Weekly'], ['daily', 'Daily']]} />
-      </div>
-
-      <div className="mt-5 space-y-2">
+      <div className="space-y-2">
         <Toggle label="Market intelligence alerts"             checked={n.marketAlerts}
                 onChange={(v) => setNotificationPrefs({ marketAlerts: v })} />
-        <Toggle label="Community notifications"                 checked={n.communityNotifications}
-                onChange={(v) => setNotificationPrefs({ communityNotifications: v })} />
         <Toggle label="Proposal follow-up reminders"            checked={n.proposalFollowupReminders}
                 onChange={(v) => setNotificationPrefs({ proposalFollowupReminders: v })} />
         <Toggle label="AWS news alerts"                         checked={n.awsNewsAlerts}
@@ -312,69 +299,6 @@ function DisplaySection() {
         </div>
       </Section>
     </>
-  );
-}
-
-// ============================ STUDY PREFS ============================
-
-const LEARNING_STYLES = [
-  { id: 'visual',    label: 'Visual',     icon: '👁' },
-  { id: 'reading',   label: 'Reading',    icon: '📚' },
-  { id: 'hands-on',  label: 'Hands-on',   icon: '🔧' },
-  { id: 'mixed',     label: 'Mixed',      icon: '🎭' },
-];
-const DIFFICULTY = [
-  { id: 'challenge', label: 'Challenge me' },
-  { id: 'balanced',  label: 'Balanced' },
-  { id: 'easy',      label: 'Ease me in' },
-];
-
-function StudySection() {
-  const { prefs, setStudyPrefs } = useApp();
-  const s = prefs.study;
-  return (
-    <Section title="Study preferences" subtitle="Powers the recommended-focus engine + Pomodoro defaults.">
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Field label="Default Pomodoro duration (min)" type="number" value={s.pomodoroDefaultMin}
-               onChange={(v) => setStudyPrefs({ pomodoroDefaultMin: Math.max(5, Math.min(120, Number(v) || 25)) })} />
-        <Field label="Daily study goal (hours)" type="number" value={s.dailyStudyGoalHours}
-               onChange={(v) => setStudyPrefs({ dailyStudyGoalHours: Math.max(0.5, Math.min(16, Number(v) || 2)) })} />
-        <Field label="Preferred study time" as="select" value={s.preferredStudyTime}
-               onChange={(v) => setStudyPrefs({ preferredStudyTime: v })}
-               options={[['morning', 'Morning'], ['afternoon', 'Afternoon'], ['evening', 'Evening'], ['night', 'Night']]} />
-      </div>
-
-      <div className="mt-5">
-        <div className="text-[10px] uppercase tracking-widest font-extrabold text-muted mb-2">Learning style</div>
-        <div className="grid grid-cols-4 gap-2">
-          {LEARNING_STYLES.map((l) => (
-            <button key={l.id} onClick={() => setStudyPrefs({ learningStyle: l.id })}
-                    className={cn('rounded-xl py-2.5 text-xs font-bold transition border',
-                                  s.learningStyle === l.id
-                                    ? 'border-aws-orange bg-aws-orange/15 text-aws-orange'
-                                    : 'border-token text-muted hover:text-current')}>
-              <div className="text-base">{l.icon}</div>
-              <div className="mt-1">{l.label}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <div className="text-[10px] uppercase tracking-widest font-extrabold text-muted mb-2">Difficulty preference</div>
-        <div className="grid grid-cols-3 gap-2">
-          {DIFFICULTY.map((d) => (
-            <button key={d.id} onClick={() => setStudyPrefs({ difficultyPreference: d.id })}
-                    className={cn('rounded-xl py-2 text-xs font-bold transition border',
-                                  s.difficultyPreference === d.id
-                                    ? 'border-aws-orange bg-aws-orange/15 text-aws-orange'
-                                    : 'border-token text-muted hover:text-current')}>
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </Section>
   );
 }
 
@@ -611,16 +535,20 @@ function DataSection() {
   };
 
   const sections = [
-    ['roadmap',     'Roadmap progress'],
     ['portfolio',   'Portfolio'],
-    ['learning',    'Learning lab'],
-    ['exam',        'Exam attempts'],
     ['freelance',   'Freelance data'],
-    ['gamification','Gamification (XP, badges)'],
-    ['community',   'Community'],
-    ['wellness',    'Wellness'],
-    ['uk',          'UK planner'],
   ];
+
+  // Data the removed study pages left behind. Found, shown, and removed
+  // only when asked: it may be the only copy of old exam progress.
+  const [retired, setRetired] = useState(() => findRetiredData(localStorage));
+  const clearRetired = () => {
+    if (!confirm(`Remove ${retired.keys.length} saved item(s) from the removed study pages? `
+      + 'Export a backup first if you might want your old exam progress. This cannot be undone.')) return;
+    const out = removeRetiredData(localStorage);
+    setRetired(findRetiredData(localStorage));
+    toast.success(`Removed ${out.removed} item(s), freed ${formatBytes(out.bytes)}`);
+  };
 
   return (
     <>
@@ -673,6 +601,20 @@ function DataSection() {
           Browser storage used: <strong className="text-current">{formatBytes(storageUsage)}</strong>
           {' '}(localStorage cap is typically 5 MB per origin).
         </div>
+      </Section>
+
+      <Section title="Leftovers from removed pages"
+               subtitle="The study, exam, community, wellness and UK pages were removed. Their saved data is still taking up room here.">
+        {retired.keys.length === 0 ? (
+          <p className="text-xs text-muted">Nothing left over. This browser holds no data from the removed pages.</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs text-muted">
+              {retired.keys.length} item(s), <strong className="text-current">{formatBytes(retired.bytes)}</strong>, that nothing reads any more.
+            </span>
+            <Button variant="outline" icon={Trash2} onClick={clearRetired}>Remove leftovers</Button>
+          </div>
+        )}
       </Section>
 
       <Section title="Reset specific sections" subtitle="Wipes one subsystem and reloads the app. Cannot be undone — back up first.">

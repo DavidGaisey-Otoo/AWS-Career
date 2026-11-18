@@ -4,9 +4,18 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 // Bump this string when you want to show the modal again to everyone.
-export const CURRENT_VERSION = '2026.09.19';
+export const CURRENT_VERSION = '2026.11.18';
 
 const WHATS_NEW = {
+  '2026.11.18': {
+    title: 'One job now: winning and delivering freelance AWS work.',
+    bullets: [
+      'The study, exam, community, wellness and UK-planning pages are gone. Exam practice lives in the separate Exam Prep app.',
+      'The app opens on My Workspace: every client job in one place.',
+      'The menu is now three sections: Home, Win work, Deliver.',
+      'Your saved data is untouched. Settings → Data management still exports all of it.',
+    ],
+  },
   '2026.09.19': {
     title: 'Safer accounts, honest costs, one app.',
     bullets: [
@@ -40,7 +49,7 @@ export function WhatsNewModal() {
     // in front of a client it is worse than bad. Announce on the home
     // pages only; the work pages stay clear.
     const path = window.location.hash.replace(/^#/, '').split('?')[0];
-    const isWorkPage = !['/', '/career-dashboard', '/profile'].includes(path);
+    const isWorkPage = path !== '/';
     if (isWorkPage) return undefined;
     const t = setTimeout(() => setOpen(true), 800);
     return () => clearTimeout(t);

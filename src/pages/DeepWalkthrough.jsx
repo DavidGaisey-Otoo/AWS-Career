@@ -23,7 +23,6 @@ import { cn } from '../lib/utils.js';
 import { GenerateFullScriptModal } from '../components/walkthrough/GenerateFullScriptModal.jsx';
 import { CostEstimatorCard } from '../components/build/CostEstimatorCard.jsx';
 import { RegionSuggestionChip } from '../components/build/RegionSuggestionChip.jsx';
-import { GenerateNoteButton } from '../components/notes/GenerateNoteButton.jsx';
 import { useProjectRegion } from '../lib/projectRegion.js';
 import {
   useSavedWalkthroughs, getStoredView, setStoredView,
@@ -416,19 +415,6 @@ function WalkthroughView({ walkthrough }) {
           <div className="flex items-center gap-2 flex-wrap">
             {/* AD-01: Region suggestion chip */}
             <RegionSuggestionChip projectId={walkthrough.id} brief={briefForSuggestion} />
-            {/* NT-01: Generate study notes from this walkthrough */}
-            <GenerateNoteButton
-              mode="walkthrough"
-              walkthrough={{
-                id: walkthrough.id,
-                title: walkthrough.title,
-                brief: walkthrough.blurb || '',
-                services: walkthrough.services || [],
-                steps: walkthrough.steps || [],
-                difficulty: walkthrough.difficulty,
-              }}
-              variant="outline"
-            />
           </div>
         </div>
         <p className="text-sm text-muted mb-3">{walkthrough.blurb}</p>

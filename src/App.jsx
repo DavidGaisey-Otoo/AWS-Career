@@ -10,60 +10,31 @@ import { DeployProvider } from './context/DeployContext.jsx';
 import { DeployApprovalDialog } from './components/deploy/DeployApprovalDialog.jsx';
 import { PWAInstallPrompt } from './components/common/PWAInstallPrompt.jsx';
 import { RecorderProvider } from './context/RecorderContext.jsx';
-import { CommunityProvider } from './context/CommunityContext.jsx';
 import { EarnProvider } from './context/EarnContext.jsx';
-import { ExamProvider } from './context/ExamContext.jsx';
 import { FreelanceProvider } from './context/FreelanceContext.jsx';
-import { GamificationProvider } from './context/GamificationContext.jsx';
-import { LearningProvider } from './context/LearningContext.jsx';
 import { PortfolioProvider } from './context/PortfolioContext.jsx';
-import { RoadmapProvider } from './context/RoadmapContext.jsx';
 import { DialogProvider } from './context/DialogContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
-import { UKProvider } from './context/UKContext.jsx';
-import { WellnessProvider } from './context/WellnessContext.jsx';
 import { SyncProvider } from './context/SyncContext.jsx';
 import { SyncModal } from './components/sync/SyncModal.jsx';
 import { lazyWithRecovery } from './lib/lazyWithRecovery.js';
 
 // Eager — entry point + tiny pages that load instantly
-import Dashboard from './pages/Dashboard.jsx';
-import SAAHome from './pages/SAAHome.jsx';
 import SectionLanding from './pages/SectionLanding.jsx';
 
 // Lazy — everything else. Loads on demand for a smaller initial bundle.
 // Keep the short alias so every existing and future route below receives the
 // same stale-deployment recovery behavior.
 const lazy = lazyWithRecovery;
-const Roadmap              = lazyWithRecovery(() => import('./pages/Roadmap.jsx'));
 const Portfolio            = lazy(() => import('./pages/Portfolio.jsx'));
 const ProjectDetail        = lazy(() => import('./pages/ProjectDetail.jsx'));
-const Learning             = lazy(() => import('./pages/Learning.jsx'));
-const LearningTopic        = lazy(() => import('./pages/LearningTopic.jsx'));
-const Exam                 = lazy(() => import('./pages/Exam.jsx'));
-const ExamCertDetail       = lazy(() => import('./pages/ExamCertDetail.jsx'));
-const ExamRun              = lazy(() => import('./pages/ExamRun.jsx'));
-const TopicStudyGuide      = lazy(() => import('./pages/TopicStudyGuide.jsx'));
-const Flashcards           = lazy(() => import('./pages/Flashcards.jsx'));
 const DeepWalkthrough      = lazy(() => import('./pages/DeepWalkthrough.jsx'));
 const NewWalkthrough       = lazy(() => import('./pages/NewWalkthrough.jsx'));
-const Certifications       = lazy(() => import('./pages/Certifications.jsx'));
-const AIHub                = lazy(() => import('./pages/AIHub.jsx'));
-const AIAssistant          = lazy(() => import('./pages/AIAssistant.jsx'));
 const AICoach              = lazy(() => import('./pages/AICoach.jsx'));
-const StudyPlanGenerator   = lazy(() => import('./pages/StudyPlanGenerator.jsx'));
-const InterviewSimulator   = lazy(() => import('./pages/InterviewSimulator.jsx'));
 const Freelance            = lazy(() => import('./pages/Freelance.jsx'));
 const Market               = lazy(() => import('./pages/Market.jsx'));
-const Interview            = lazy(() => import('./pages/Interview.jsx'));
 const Architecture         = lazy(() => import('./pages/Architecture.jsx'));
-const Community            = lazy(() => import('./pages/Community.jsx'));
-const Resources            = lazy(() => import('./pages/Resources.jsx'));
-const Analytics            = lazy(() => import('./pages/Analytics.jsx'));
-const Profile              = lazy(() => import('./pages/Profile.jsx'));
-const UKPlanner            = lazy(() => import('./pages/UKPlanner.jsx'));
-const Wellness             = lazy(() => import('./pages/Wellness.jsx'));
 const Settings             = lazy(() => import('./pages/Settings.jsx'));
 const AWSAccounts          = lazy(() => import('./pages/AWSAccounts.jsx'));
 const JobAnalyzer          = lazy(() => import('./pages/JobAnalyzer.jsx'));
@@ -71,7 +42,6 @@ const PresentationGenerator = lazy(() => import('./pages/PresentationGenerator.j
 const EmailComposer        = lazy(() => import('./pages/EmailComposer.jsx'));
 const DocumentCenter       = lazy(() => import('./pages/DocumentCenter.jsx'));
 const DiscoveryCallPrep    = lazy(() => import('./pages/DiscoveryCallPrep.jsx'));
-const AWSUpdates           = lazy(() => import('./pages/AWSUpdates.jsx'));
 const ProjectPlan          = lazy(() => import('./pages/ProjectPlan.jsx'));
 const ContentQueue         = lazy(() => import('./pages/ContentQueue.jsx'));
 const DeployConsole        = lazy(() => import('./pages/DeployConsole.jsx'));
@@ -82,19 +52,11 @@ const Walkthroughs         = lazy(() => import('./pages/Walkthroughs.jsx'));
 const SessionLog           = lazy(() => import('./pages/SessionLog.jsx'));
 const ProjectBuilder       = lazy(() => import('./pages/ProjectBuilder.jsx'));
 const GitHubProjects       = lazy(() => import('./pages/GitHubProjects.jsx'));
-const Updates              = lazy(() => import('./pages/Updates.jsx'));
-const Readiness            = lazy(() => import('./pages/Readiness.jsx'));
 const RenewGithubToken     = lazy(() => import('./pages/RenewGithubToken.jsx'));
 const IdeaStudio           = lazy(() => import('./pages/IdeaStudio.jsx'));
 const SolutionStudio       = lazy(() => import('./pages/SolutionStudio.jsx'));   // GIG-01
 const GoogleCallback       = lazy(() => import('./pages/GoogleCallback.jsx'));
-const SAARoadmap           = lazy(() => import('./pages/SAARoadmap.jsx'));
 const RateCalculator       = lazy(() => import('./pages/RateCalculator.jsx'));
-const MyNotes              = lazy(() => import('./pages/MyNotes.jsx'));
-const ExamStrategy          = lazy(() => import('./pages/ExamStrategy.jsx'));
-const ServiceComparisons    = lazy(() => import('./pages/ServiceComparisons.jsx'));
-const SAAReview             = lazy(() => import('./pages/SAAReview.jsx'));
-const NoteDetail           = lazy(() => import('./pages/MyNotes.jsx').then((m) => ({ default: m.NoteDetail })));
 
 /**
  * Lightweight fallback while a lazy chunk loads. Two SkeletonCards keep
@@ -109,12 +71,6 @@ function RouteFallback() {
   );
 }
 
-/**
- * Provider order matters — Gamification reads from every other domain
- * context, plus the Community + Wellness snapshots written via
- * `window.__community_snapshot` / `__wellness_snapshot`. So it MUST sit
- * inside all of them.
- */
 export default function App() {
   return (
     <ErrorBoundary>
@@ -122,64 +78,30 @@ export default function App() {
       <ToastProvider>
        <DialogProvider>
         <AppProvider>
-         <RoadmapProvider>
           <PortfolioProvider>
-           <LearningProvider>
-            <ExamProvider>
              <AIProvider>
               <FreelanceProvider>
-               <CommunityProvider>
-                <WellnessProvider>
-                 <UKProvider>
                  <AWSProvider>
                  <DeployProvider>
                  <RecorderProvider>
                  <EarnProvider>
-                 <GamificationProvider>
                   <SyncProvider>
                    <DeployApprovalDialog />
                    <PWAInstallPrompt />
                    <SyncModal />
                    <Routes>
                      <Route element={<AppShell />}>
-                       <Route path="/" element={<SAAHome />} />
-                       <Route path="/career-dashboard" element={<Dashboard />} />
-                       <Route path="/exam-strategy" element={<Suspended><ExamStrategy /></Suspended>} />
-                       <Route path="/service-comparisons" element={<Suspended><ServiceComparisons /></Suspended>} />
-                       <Route path="/saa-review" element={<Suspended><SAAReview /></Suspended>} />
-                       <Route path="/roadmap" element={<Suspended><Roadmap /></Suspended>} />
+                       <Route path="/" element={<Suspended><Workspace /></Suspended>} />
                        <Route path="/portfolio" element={<Suspended><Portfolio /></Suspended>} />
                        <Route path="/portfolio/:projectId" element={<Suspended><ProjectDetail /></Suspended>} />
-                       <Route path="/learning" element={<Suspended><Learning /></Suspended>} />
-                       <Route path="/learning/:categoryId/:topicId" element={<Suspended><LearningTopic /></Suspended>} />
-                       <Route path="/exam" element={<Suspended><Exam /></Suspended>} />
-                       <Route path="/exam/:certId" element={<Suspended><ExamCertDetail /></Suspended>} />
-                       <Route path="/exam/:certId/run/:mode" element={<Suspended><ExamRun /></Suspended>} />
-                       <Route path="/exam/:certId/study/:topicId" element={<Suspended><TopicStudyGuide /></Suspended>} />
-                       <Route path="/flashcards" element={<Suspended><Flashcards /></Suspended>} />
-                       <Route path="/flashcards/:categoryId" element={<Suspended><Flashcards /></Suspended>} />
                        <Route path="/walkthroughs/deep" element={<Suspended><DeepWalkthrough /></Suspended>} />
                        <Route path="/walkthroughs/deep/new" element={<Suspended><NewWalkthrough /></Suspended>} />
                        <Route path="/walkthroughs/deep/:id" element={<Suspended><DeepWalkthrough /></Suspended>} />
-                       <Route path="/certifications" element={<Suspended><Certifications /></Suspended>} />
-                       <Route path="/ai" element={<Suspended><AIHub /></Suspended>} />
-                       <Route path="/ai/assistant" element={<Suspended><AIAssistant /></Suspended>} />
                        <Route path="/ai/coach" element={<Suspended><AICoach /></Suspended>} />
-                       <Route path="/ai/study-plan" element={<Suspended><StudyPlanGenerator /></Suspended>} />
-                       <Route path="/ai/interview" element={<Suspended><InterviewSimulator /></Suspended>} />
                        <Route path="/freelance" element={<Suspended><Freelance /></Suspended>} />
                        <Route path="/market" element={<Suspended><Market /></Suspended>} />
-                       <Route path="/interview" element={<Suspended><Interview /></Suspended>} />
                        <Route path="/architecture" element={<Suspended><Architecture /></Suspended>} />
-                       <Route path="/community" element={<Suspended><Community /></Suspended>} />
-                       <Route path="/resources" element={<Suspended><Resources /></Suspended>} />
-                       <Route path="/analytics" element={<Suspended><Analytics /></Suspended>} />
-                       <Route path="/profile" element={<Suspended><Profile /></Suspended>} />
-                       <Route path="/wellness" element={<Suspended><Wellness /></Suspended>} />
-                       <Route path="/uk" element={<Suspended><UKPlanner /></Suspended>} />
                        {/* 5-section landing pages */}
-                       <Route path="/learn" element={<SectionLanding sectionId="learn" />} />
-                       <Route path="/exam-hub" element={<SectionLanding sectionId="exam" />} />
                        <Route path="/build" element={<SectionLanding sectionId="build" />} />
                        <Route path="/earn" element={<SectionLanding sectionId="earn" />} />
                        <Route path="/aws-accounts" element={<Suspended><AWSAccounts /></Suspended>} />
@@ -190,7 +112,6 @@ export default function App() {
                        <Route path="/discovery-call" element={<Suspended><DiscoveryCallPrep /></Suspended>} />
                        <Route path="/project-plan"  element={<Suspended><ProjectPlan /></Suspended>} />
                        <Route path="/content-queue" element={<Suspended><ContentQueue /></Suspended>} />
-                       <Route path="/aws-updates"   element={<Suspended><AWSUpdates /></Suspended>} />
                        <Route path="/deploy"        element={<Suspended><DeployConsole /></Suspended>} />
                        <Route path="/resource-search" element={<Suspended><ResourceSearch /></Suspended>} />
                        <Route path="/workspace"     element={<Suspended><Workspace /></Suspended>} />
@@ -201,35 +122,24 @@ export default function App() {
                        <Route path="/project-builder" element={<Suspended><ProjectBuilder /></Suspended>} />
                        <Route path="/github-projects" element={<Suspended><GitHubProjects /></Suspended>} />
                        <Route path="/applications" element={<Suspended><GitHubProjects /></Suspended>} />
-                       <Route path="/updates"         element={<Suspended><Updates /></Suspended>} />
-                       <Route path="/readiness"       element={<Suspended><Readiness /></Suspended>} />
                        <Route path="/renew-github"    element={<Suspended><RenewGithubToken /></Suspended>} />
                        <Route path="/idea-studio"     element={<Suspended><IdeaStudio /></Suspended>} />
                        <Route path="/solution"        element={<Suspended><SolutionStudio /></Suspended>} />
                        <Route path="/settings" element={<Suspended><Settings /></Suspended>} />
                        <Route path="/integrations/google/callback" element={<Suspended><GoogleCallback /></Suspended>} />
-                       <Route path="/saa-roadmap" element={<Suspended><SAARoadmap /></Suspended>} />
                        <Route path="/rate-calculator" element={<Suspended><RateCalculator /></Suspended>} />
-                       <Route path="/my-notes" element={<Suspended><MyNotes /></Suspended>} />
-                       <Route path="/my-notes/:noteId" element={<Suspended><NoteDetail /></Suspended>} />
-                       <Route path="*" element={<Dashboard />} />
+                       {/* Old bookmarks to the removed study pages land on the workspace. */}
+                       <Route path="*" element={<Suspended><Workspace /></Suspended>} />
                      </Route>
                    </Routes>
                   </SyncProvider>
-                 </GamificationProvider>
                  </EarnProvider>
                  </RecorderProvider>
                  </DeployProvider>
                  </AWSProvider>
-                 </UKProvider>
-                </WellnessProvider>
-               </CommunityProvider>
               </FreelanceProvider>
              </AIProvider>
-            </ExamProvider>
-           </LearningProvider>
           </PortfolioProvider>
-         </RoadmapProvider>
         </AppProvider>
        </DialogProvider>
       </ToastProvider>

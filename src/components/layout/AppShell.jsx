@@ -3,18 +3,12 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext.jsx';
 import { useHotkey } from '../../hooks/useHotkey.js';
-import { BadgeUnlockToast } from '../gamification/BadgeUnlockToast.jsx';
-import { LevelUpModal } from '../gamification/LevelUpModal.jsx';
 import { CommandPalette } from '../ui/CommandPalette.jsx';
 import { KeyboardShortcuts } from '../ui/KeyboardShortcuts.jsx';
 import { WhatsNewModal } from '../ui/WhatsNewModal.jsx';
 import { Breadcrumbs } from './Breadcrumbs.jsx';
 import { GradientMesh } from '../ui/GradientMesh.jsx';
 import { OnboardingModal } from '../onboarding/OnboardingModal.jsx';
-import { AchievementPopup } from '../roadmap/AchievementPopup.jsx';
-import { RoadmapEffects } from '../roadmap/RoadmapEffects.jsx';
-import { TaskDetailPanel } from '../roadmap/TaskDetailPanel.jsx';
-import { XPFloaterLayer } from '../roadmap/XPFloaterLayer.jsx';
 import { FloatingActionButton } from './FloatingActionButton.jsx';
 import { Header } from './Header.jsx';
 import { MobileNav } from './MobileNav.jsx';
@@ -110,12 +104,6 @@ export function AppShell() {
       <FloatingActionButton />
       <EmergencyStopFAB />
       <CommandPalette />
-      <TaskDetailPanel />
-      <XPFloaterLayer />
-      <AchievementPopup />
-      <RoadmapEffects />
-      <LevelUpModal />
-      <BadgeUnlockToast />
       <KeyboardShortcuts />
       <WhatsNewModal />
       {!profile.onboarded ? <OnboardingModal /> : null}

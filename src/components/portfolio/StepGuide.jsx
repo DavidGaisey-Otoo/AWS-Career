@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import {
   AlertOctagon, BookOpen, CheckCircle2, ChevronDown, ChevronRight, Clock,
   Cloud, GraduationCap, Info, Lightbulb, Link as LinkIcon, MonitorSmartphone,
-  RefreshCw, Sparkles, Target, Terminal, Wand2,
+  Sparkles, Target, Terminal, Wand2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -206,9 +206,6 @@ function ConsoleFreshnessBadge({ guide }) {
         }>{label}</strong>
         <span className="opacity-70 ml-1">· Last reviewed {reviewedAt} ({days} day{days === 1 ? '' : 's'} ago)</span>
       </span>
-      <a href="/updates" className="ml-auto text-electric underline shrink-0 font-bold flex items-center gap-1">
-        <RefreshCw size={9} /> Check for updates
-      </a>
     </div>
   );
 }

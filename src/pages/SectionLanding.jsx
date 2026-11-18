@@ -9,8 +9,6 @@ import { SECTIONS } from '../lib/navSections.js';
  * Renders the section's children as a card grid.
  *
  * Usage in App.jsx:
- *   <Route path="/learn"     element={<SectionLanding sectionId="learn" />} />
- *   <Route path="/exam-hub"  element={<SectionLanding sectionId="exam" />} />
  *   <Route path="/build"     element={<SectionLanding sectionId="build" />} />
  *   <Route path="/earn"      element={<SectionLanding sectionId="earn" />} />
  */

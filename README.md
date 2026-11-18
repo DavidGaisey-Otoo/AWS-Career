@@ -1,6 +1,6 @@
 # AWS Career Launchpad Pro
 
-An end-to-end platform for AWS career building — exam prep, project portfolio, freelance pipeline, and AWS account management — built as a single-page React app.
+A workbench for freelance AWS work — find the gig, design and price the solution, send the paperwork, build it in AWS, and prove it in a portfolio — built as a single-page React app.
 
 **Author:** David Gaisey-Otoo
 **Repository:** https://github.com/DavidGaisey-Otoo/AWS-Career
@@ -31,15 +31,15 @@ is live in your account.
 
 ## What else it does
 
-The app covers five integrated sections:
+The app has three sections:
 
 | Section | Features |
 |---|---|
-| 🏠 **Home** | Dashboard with daily study plan, income tracker, live-stack watch, getting-started checklist, recent activity, AI updates feed |
-| 📚 **Learn** | Roadmap, Learning Lab, AI Study Assistant, Study Plan generator, AWS What's New, Resources, auto-generated Study Notes |
-| 🎓 **Exam** | Exam Center (5 modes inc. Smart Review spaced repetition + Flashcards), Certifications hub, Interview prep, AI Interview Simulator |
-| 🔨 **Build** | **Solution Studio**, Idea Studio, Project Builder, Portfolio, Architecture Studio, AWS Account Manager + Setup Documentation, Deploy Console, Project Walkthroughs, Session Log |
-| 💰 **Earn** | Rate Calculator, Income Tracker, Job Analyzer, Freelance Hub (Live Gigs feed, Smart Proposal Generator, Win Rate Tracker, Email Outreach, CRM, Finance, Contracts, Branding), Career Coach, Market Intel, UK Transition Planner |
+| 🏠 **Home** | My Workspace (every client job in one place), Win this job (one-page brief → proposal → deploy flow), Settings |
+| 💰 **Win work** | Freelance Hub (live gigs, proposals, win-rate tracker, client CRM, contracts, invoices, earnings), Job Analyzer, Rate Calculator, Market Rates, Discovery Call Prep, Project Plan, Client Presentation, Client Emails, Documents, AI Freelance Coach, Content Queue |
+| 🔨 **Deliver** | **Solution Studio**, Architecture Studio, Idea Studio, Project Builder, Applications & Deploy (GitHub), AWS Account Manager, Deploy Console, Resource Search, Project Walkthroughs, Session Log, Portfolio |
+
+Exam practice is not part of this app; it lives in the separate Exam Prep app.
 
 ### Live gig sources
 
@@ -99,7 +99,7 @@ Nine suites, all pure functions — no network, no AWS, no browser needed:
 ## Privacy & data
 
 The main app is client-side and has no application database or analytics.
-Notes, proposals, exam progress and business records start in this browser's
+Proposals, client jobs and business records start in this browser's
 localStorage. When cross-device sync is enabled, a sanitized subset is copied
 to an access-controlled private repository in the connected GitHub account.
 

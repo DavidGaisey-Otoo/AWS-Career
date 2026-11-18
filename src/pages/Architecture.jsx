@@ -388,8 +388,8 @@ img{max-width:100%;height:auto}
 
   return (
     <div className="space-y-4">
-      <Link to="/ai" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
-        <ChevronLeft size={14} /> AI hub
+      <Link to="/build" className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-aws-orange">
+        <ChevronLeft size={14} /> Deliver
       </Link>
 
       <PageHeader

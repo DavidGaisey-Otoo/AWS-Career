@@ -118,8 +118,13 @@ is how three different `StatCard`s happened.
 
 - Route in `src/App.jsx` via `lazyWithRecovery`, never bare `React.lazy`
   (it handles stale-chunk recovery after a deploy).
-- Add to `src/lib/navSections.js` under one of the five sections
-  (Home / Learn / Exam / Build / Earn).
+- Add to `src/lib/navSections.js` under one of the three sections
+  (Home / Win work / Deliver). `appRoutes.test.js` fails if a menu entry
+  has no route or a route renders a component that was never imported.
+- The app is for freelance AWS work. The study, exam, community, wellness
+  and UK pages were removed in November 2026 (exam practice lives in the
+  separate Exam Prep app). A new page has to help win or deliver client
+  work; anything else is a decision to raise, not to make.
 - Page components are default exports; shared components are named exports.
 
 ---

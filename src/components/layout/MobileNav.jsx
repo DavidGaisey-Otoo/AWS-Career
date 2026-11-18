@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { NavLink, useLocation } from 'react-router-dom';
-import { MOBILE_NAV_5, SECTIONS } from '../../lib/navSections.js';
+import { MOBILE_NAV, SECTIONS } from '../../lib/navSections.js';
 import { cn } from '../../lib/utils.js';
 
 /**
@@ -26,7 +26,7 @@ export function MobileNav() {
       aria-label="Mobile primary navigation"
     >
       <ul className="grid grid-cols-5">
-        {MOBILE_NAV_5.map((item) => {
+        {MOBILE_NAV.map((item) => {
           const Icon = item.icon;
           const active = isSectionActive(item.id);
           return (
