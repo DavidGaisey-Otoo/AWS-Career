@@ -216,8 +216,8 @@ function StatusPanel({ gig, writable, onSave }) {
 function readable(text) {
   return String(text || '')
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/^~\s*(.+)$/gm, (_, flow) => `**Flow:** ${flow}`)
-    .replace(/^>\s?(.*)$/gm, '$1');
+    .replace(/^~\s*(.+)$/gm, (_, flow) => `\n**Flow:** ${flow}\n`)
+    .replace(/^>\s?(.*)$/gm, '\n$1\n');
 }
 
 function GuidesPanel({ guides }) {
