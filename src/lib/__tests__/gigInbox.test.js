@@ -3,7 +3,7 @@
  * text is checked before David copies it into Upwork.
  */
 import {
-  budgetLabel, checkClientText, normalizeStatus, parseGigFolder, parseLesson, serializeStatus,
+  budgetLabel, checkClientText, guideMeta, newGuides, normalizeStatus, sortGuides, parseGigFolder, parseLesson, serializeStatus,
   speechPieces, splitSections, summarizeGigs, updateStatus,
 } from '../gigInbox.js';
 
@@ -116,6 +116,29 @@ export function runGigInboxTests() {
     const sample = { sample: true, status: normalizeStatus({ stage: 'done', amount: 500, connectsSpent: 99 }) };
     const sum = summarizeGigs([real, sample]);
     assert(sum.earned === 80 && sum.connects === 8 && sum.real === 1, JSON.stringify(sum));
+  });
+
+  test('guides take their title from the # heading and sort in numbered order', () => {
+    const list = sortGuides([
+      { name: '10-later.md', text: '# Later\nx' },
+      { name: '02-getting-paid.md', text: '<!-- added: 2026-11-20 -->\n# Getting paid\n### Escrow\n- held by Upwork\n> Upwork holds the money.' },
+    ]);
+    assert(list[0].title === 'Getting paid' && list[1].title === 'Later', list.map((g) => g.title).join(','));
+    assert(list[0].added === '2026-11-20' && list[0].slides.length === 1, 'added date or slides missing');
+  });
+
+  test('a guide with no heading is named from its file', () => {
+    assert(guideMeta({ name: '03-safety-rules.md', text: 'plain' }).title === 'safety rules', 'fallback title wrong');
+  });
+
+  test('"new" means added in the last week; no date is never new', () => {
+    const now = new Date('2026-11-25T00:00:00Z');
+    const g = sortGuides([
+      { name: '01-a.md', text: '<!-- added: 2026-11-20 -->\n# A' },
+      { name: '02-b.md', text: '<!-- added: 2026-11-01 -->\n# B' },
+      { name: '03-c.md', text: '# C' },
+    ]);
+    assert(newGuides(g, now).map((x) => x.title).join() === 'A', 'new guides wrong');
   });
 
   return { allPassed: results.every((r) => r.pass), results };

@@ -11,7 +11,7 @@
  * contents are kept in memory, never in localStorage (gig data includes
  * client details and is bulk).
  */
-import { GIG_FILES, GIG_ID, MAX_GIG_FILE_BYTES, parseGigFolder, serializeStatus } from './gigInbox.js';
+import { GIG_FILES, GIG_ID, MAX_GIG_FILE_BYTES, parseGigFolder, serializeStatus, sortGuides } from './gigInbox.js';
 
 const DB = 'aws-gigs';
 const STORE = 'handles';
@@ -77,13 +77,15 @@ async function readText(fileHandle) {
 export async function readGigsFromHandle(root) {
   const gigs = [];
   const checks = [];
+  const guides = [];
   const skipped = [];
   for await (const [name, entry] of root.entries()) {
     if (entry.kind !== 'directory') continue;
-    if (name === 'checks') {
+    if (name === 'checks' || name === 'guides') {
+      const into = name === 'checks' ? checks : guides;
       for await (const [cname, centry] of entry.entries()) {
         if (centry.kind === 'file' && /\.md$/i.test(cname)) {
-          try { checks.push({ name: cname, text: await readText(centry) }); } catch (e) { skipped.push(e.message); }
+          try { into.push({ name: cname, text: await readText(centry) }); } catch (e) { skipped.push(e.message); }
         }
       }
       continue;
@@ -97,13 +99,14 @@ export async function readGigsFromHandle(root) {
     gigs.push(parseGigFolder(name, files));
   }
   checks.sort((a, b) => b.name.localeCompare(a.name));
-  return { gigs, checks, skipped };
+  return { gigs, checks, guides: sortGuides(guides), skipped };
 }
 
 /** Fallback: files from <input webkitdirectory>, grouped by sub-folder. */
 export async function readGigsFromFileList(fileList) {
   const groups = new Map();
   const checks = [];
+  const guides = [];
   const skipped = [];
   for (const file of Array.from(fileList || [])) {
     const parts = (file.webkitRelativePath || file.name).split('/');
@@ -111,7 +114,10 @@ export async function readGigsFromFileList(fileList) {
     if (parts.length !== 3) continue;
     const [, folder, fname] = parts;
     if (file.size > MAX_GIG_FILE_BYTES) { skipped.push(`${folder}/${fname} is larger than 1 MB`); continue; }
-    if (folder === 'checks') { if (/\.md$/i.test(fname)) checks.push({ name: fname, text: await file.text() }); continue; }
+    if (folder === 'checks' || folder === 'guides') {
+      if (/\.md$/i.test(fname)) (folder === 'checks' ? checks : guides).push({ name: fname, text: await file.text() });
+      continue;
+    }
     if (!GIG_FILES.includes(fname)) continue;
     if (!groups.has(folder)) groups.set(folder, {});
     groups.get(folder)[fname] = await file.text();
@@ -122,7 +128,7 @@ export async function readGigsFromFileList(fileList) {
     else skipped.push(`${folder} (not a gig folder)`);
   }
   checks.sort((a, b) => b.name.localeCompare(a.name));
-  return { gigs, checks, skipped };
+  return { gigs, checks, guides: sortGuides(guides), skipped };
 }
 
 /** Write one gig's status.json. The only write this app makes to the folder. */

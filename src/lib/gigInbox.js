@@ -303,6 +303,34 @@ export function splitSections(md) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// Guides: the advice Claude gives David, kept where he can study it
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * guides\NN-name.md → { name, title, added, text, slides }.
+ * The title is the first `# ` line; `added:` in an HTML comment
+ * (<!-- added: 2026-11-20 -->) marks when it was written. A guide written
+ * in the lesson format (### slides) can also be read aloud.
+ */
+export function guideMeta(guide) {
+  const text = String(guide?.text || '');
+  const title = (/^#\s+(.+)$/m.exec(text)?.[1] || String(guide?.name || 'Guide').replace(/\.md$/i, '').replace(/^\d+-/, '').replace(/-/g, ' ')).trim();
+  const added = /<!--\s*added:\s*(\d{4}-\d{2}-\d{2})\s*-->/.exec(text)?.[1] || null;
+  return { name: guide?.name || '', title, added, text, slides: parseLesson(text) };
+}
+
+/** Numbered order (01-, 02-…), as Claude writes them. */
+export function sortGuides(guides = []) {
+  return guides.map(guideMeta).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+}
+
+/** Guides added in the last `days` days, so the app can say what's new. */
+export function newGuides(guides = [], now = new Date(), days = 7) {
+  const cutoff = now.getTime() - days * 86400000;
+  return guides.filter((g) => g.added && Date.parse(g.added) >= cutoff);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // Board summary
 // ═══════════════════════════════════════════════════════════════════════
 

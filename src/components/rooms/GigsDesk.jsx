@@ -30,7 +30,7 @@ import {
   readGigsFromHandle, rememberedFolder, saveStatus,
 } from '../../lib/gigFolder.js';
 import {
-  GIG_STAGES, budgetLabel, checkClientText, splitSections, sortGigs, summarizeGigs, updateStatus,
+  GIG_STAGES, budgetLabel, checkClientText, newGuides, splitSections, sortGigs, summarizeGigs, updateStatus,
 } from '../../lib/gigInbox.js';
 import { validateDrawioXml } from '../../lib/drawioBridge.js';
 import { cn } from '../../lib/utils.js';
@@ -212,6 +212,57 @@ function StatusPanel({ gig, writable, onSave }) {
   );
 }
 
+/** Lesson markup → readable markdown (flows and spoken lines as text). */
+function readable(text) {
+  return String(text || '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/^~\s*(.+)$/gm, (_, flow) => `**Flow:** ${flow}`)
+    .replace(/^>\s?(.*)$/gm, '$1');
+}
+
+function GuidesPanel({ guides }) {
+  const [openName, setOpenName] = useState(null);
+  const [mode, setMode] = useState('read');
+  const fresh = useMemo(() => new Set(newGuides(guides).map((g) => g.name)), [guides]);
+  if (!guides.length) return null;
+  const guide = guides.find((g) => g.name === openName);
+  return (
+    <div className="surface rounded-2xl p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <GraduationCap size={16} className="text-aws-orange" />
+        <h3 className="font-extrabold text-sm">Guides from Claude</h3>
+        <span className="text-[11px] text-muted">{guides.length} to study{fresh.size ? ` · ${fresh.size} new this week` : ''}</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {guides.map((g) => (
+          <button key={g.name} onClick={() => { setOpenName(g.name === openName ? null : g.name); setMode('read'); }}
+            className={cn('rounded-lg border border-token px-3 py-1.5 text-[12px] font-bold text-left', g.name === openName ? 'bg-aws-orange text-ink-950' : 'hover:bg-[var(--card-2)]')}>
+            {g.title}{fresh.has(g.name) && g.name !== openName && <span className="ml-1.5 text-success">• new</span>}
+          </button>
+        ))}
+      </div>
+      {guide && (
+        <div className="space-y-3 pt-1">
+          {guide.slides.length > 0 && (
+            <div className="flex gap-1">
+              {['read', 'listen'].map((m) => (
+                <button key={m} onClick={() => setMode(m)}
+                  className={cn('px-3 py-1 rounded-lg text-[12px] font-bold', mode === m ? 'bg-[var(--card-2)] text-current' : 'text-muted hover:text-current')}>
+                  {m === 'read' ? 'Read' : 'Listen (slides)'}
+                </button>
+              ))}
+            </div>
+          )}
+          {mode === 'listen' && guide.slides.length
+            ? <TeachPlayer key={guide.name} lesson={guide.text} title={guide.title} />
+            : <Markdown source={readable(guide.text)} />}
+          {guide.added && <p className="text-[11px] text-muted">Written {guide.added}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────
 export function GigsDesk() {
   const toast = useToast();
@@ -338,6 +389,8 @@ export function GigsDesk() {
         <StatChip icon={Coins} label="Connects spent" value={summary.connects} layout="stacked" />
         <StatChip label="Earned (done)" value={`$${summary.earned}`} tone="success" layout="stacked" />
       </div>
+
+      <GuidesPanel guides={data.guides || []} />
 
       {data.checks[0] && (
         <details className="surface rounded-2xl p-4">
