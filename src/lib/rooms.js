@@ -28,6 +28,7 @@ export const ROOMS = Object.freeze([
     id: 'jobs', label: 'Jobs',
     blurb: 'Every job from first brief to signed proposal.',
     tabs: [
+      { id: 'packs',     label: 'Gig packs', blurb: 'Every Upwork job Claude prepared: fit, proposal, plan, diagram, a lesson read aloud, and the messages to send.' },
       { id: 'all',       label: 'All jobs' },
       { id: 'new',       label: 'New job' },
       { id: 'proposals', label: 'Proposals', blurb: 'Write a proposal, track who has replied, and borrow from a template.' },

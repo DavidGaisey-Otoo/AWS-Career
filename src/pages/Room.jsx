@@ -27,6 +27,7 @@ export const TAB_COMPONENTS = {
   'find/market':        lazy(() => import('./Market.jsx')),
   'find/rates':         lazy(() => import('./RateCalculator.jsx')),
 
+  'jobs/packs':         named(() => import('../components/rooms/GigsDesk.jsx'), 'GigsDesk'),
   'jobs/all':           lazy(() => import('./Workspace.jsx')),
   'jobs/new':           lazy(() => import('./WinThisJob.jsx')),
   'jobs/proposals':     named(() => import('../components/rooms/ProposalsDesk.jsx'), 'ProposalsDesk'),
