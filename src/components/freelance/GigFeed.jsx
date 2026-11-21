@@ -25,6 +25,7 @@ import { usePortfolio } from '../../context/PortfolioContext.jsx';
 import { useFreelance } from '../../context/FreelanceContext.jsx';
 import { useLocalStorage } from '../../hooks/useLocalStorage.js';
 import { buildOpportunityLearningProfile, extractOpportunitySkills, scoreOpportunity } from '../../lib/opportunityLearningEngine.js';
+import { checkGigGenuine, isInLane, summarizeGenuine } from '../../lib/gigGenuineCheck.js';
 
 const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -54,6 +55,7 @@ export function GigFeed() {
   const [minBudget, setMinBudget] = useState(0);
   const [datePosted, setDatePosted] = useState('all'); // all | 1d | 7d | 30d
   const [experienceFit, setExperienceFit] = useState('entry'); // entry | stretch | all
+  const [showScreened, setShowScreened] = useState(false);
 
   const load = useCallback(async ({ force = false } = {}) => {
     setLoading(true);
@@ -69,11 +71,14 @@ export function GigFeed() {
     }
   }, []);
 
-  // Initial load + auto-refresh every 30 min
+  // Initial load + auto-refresh every 30 min, and again when you come back
+  // to the tab (load() reuses the cache if it is under 30 minutes old).
   useEffect(() => {
     load();
     const interval = setInterval(() => load({ force: true }), AUTO_REFRESH_MS);
-    return () => clearInterval(interval);
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
   }, [load]);
 
   function handleRefresh() {
@@ -97,6 +102,7 @@ export function GigFeed() {
                        : datePosted === '30d' ? 30 * 24 * 60 * 60 * 1000
                        : null;
     return data.gigs.filter((g) => {
+      if (!showScreened && (!isInLane(g) || !checkGigGenuine(g, { now }).keep)) return false;
       const fit = assessEntryLevelGig(g, { careerLevel: career.current.id });
       if (experienceFit === 'entry' && fit.classification !== 'good-fit') return false;
       if (experienceFit === 'stretch' && fit.classification === 'not-recommended') return false;
@@ -118,7 +124,9 @@ export function GigFeed() {
       }
       return true;
     }).sort((a, b) => scoreOpportunity(b, learningProfile).score - scoreOpportunity(a, learningProfile).score);
-  }, [data.gigs, platforms, search, datePosted, minBudget, experienceFit, career.current.id, learningProfile]);
+  }, [data.gigs, platforms, search, datePosted, minBudget, experienceFit, career.current.id, learningProfile, showScreened]);
+
+  const genuineSummary = useMemo(() => summarizeGenuine(data.gigs), [data.gigs]);
 
   function recordPreference(gig, outcome) {
     setLearningEvents((events) => [{ id: `${gig.id}-${Date.now()}`, opportunityId: gig.id, title: gig.title, skills: extractOpportunitySkills(gig), outcome, sourceType: gig.importedByUser ? 'imported' : 'live-feed', at: new Date().toISOString() }, ...events].slice(0, 300));
@@ -173,6 +181,22 @@ export function GigFeed() {
             {loading ? 'Loading…' : 'Refresh now'}
           </button>
         </div>
+
+        {!loading && genuineSummary.total > 0 && (
+          <div className="mb-3 rounded-lg border border-token bg-[var(--card-2)] px-3 py-2 text-[12px]">
+            <div className="font-extrabold">
+              Genuine check: {genuineSummary.genuine} look genuine · {genuineSummary.check} to check first · {genuineSummary.hidden} removed
+            </div>
+            <div className="text-muted mt-0.5">
+              Removed: {genuineSummary.offLane} not cloud/IT work, {genuineSummary.fake} look like scams, {genuineSummary.expired} too old (probably filled), {genuineSummary['not-open']} not open to applicants in Ghana. The list refreshes itself every 30 minutes while this page is open.
+            </div>
+            {genuineSummary.hidden > 0 && (
+              <button type="button" onClick={() => setShowScreened((v) => !v)} className="mt-1 text-[11px] font-bold text-aws-orange hover:underline">
+                {showScreened ? 'Hide the removed jobs' : `Show the ${genuineSummary.hidden} removed jobs and why`}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Source status pills */}
         <div className="flex flex-wrap gap-1.5">
@@ -431,6 +455,7 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
   // keeps the budget, company, skills + source link for the solution header.
   const solutionHref = `/build/design?gig=${encodeGig(gig)}`;
 
+  const genuine = checkGigGenuine(gig);
   const postedAgo = gig.postedAt ? humanAge(gig.postedAt) : null;
   const learnedMatch = learningProfile ? scoreOpportunity(gig, learningProfile) : null;
   const lastPreference = learningEvents.find((event) => event.opportunityId === gig.id)?.outcome;
@@ -448,6 +473,16 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
         <span className="px-2 py-0.5 rounded-full bg-[var(--card-2)] border border-token text-[9.5px] font-extrabold uppercase tracking-wide flex-shrink-0">
           {gig.sourceLabel}
         </span>
+      </div>
+
+      <div className={cn(
+        'rounded-lg border px-2.5 py-1.5 text-[11px]',
+        genuine.verdict === 'genuine' ? 'border-success/40 text-success'
+          : genuine.verdict === 'check' ? 'border-amber-400/40 text-warning'
+          : 'border-danger/40 text-danger'
+      )}>
+        <span className="font-extrabold">{genuine.label}</span>
+        {(genuine.problems[0] || genuine.notes[0]) && <span> · {genuine.problems[0] || genuine.notes[0]}</span>}
       </div>
 
       {/* Description preview */}

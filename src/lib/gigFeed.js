@@ -260,7 +260,8 @@ function parseRemoteOK(json) {
       url: j.url || j.apply_url || `https://remoteok.com/remote-jobs/${j.slug || j.id}`,
       source: 'remoteok',
       sourceLabel: 'RemoteOK',
-      postedAt: j.date || j.epoch ? new Date((j.epoch || 0) * 1000).toISOString() : null,
+      postedAt: j.epoch ? new Date(j.epoch * 1000).toISOString()
+        : (j.date && Number.isFinite(new Date(j.date).getTime()) ? new Date(j.date).toISOString() : null),
       budget: formatRemoteOKSalary(j),
       rate: null,
       skills: Array.isArray(j.tags) ? j.tags.slice(0, 10) : [],
@@ -313,7 +314,11 @@ function parseRss(xml, source, sourceLabel) {
 }
 
 function parseWeWorkRemotely(xml) {
-  return parseRss(xml, 'weworkremotely', 'We Work Remotely');
+  // WWR titles read "Company: Role" — split them so the company shows.
+  return parseRss(xml, 'weworkremotely', 'We Work Remotely').map((g) => {
+    const m = /^([^:]{2,60}):\s+(.+)$/.exec(g.title || '');
+    return m ? { ...g, company: m[1].trim(), title: m[2].trim() } : g;
+  });
 }
 
 /**
