@@ -26,6 +26,13 @@ import { useFreelance } from '../../context/FreelanceContext.jsx';
 import { useLocalStorage } from '../../hooks/useLocalStorage.js';
 import { buildOpportunityLearningProfile, extractOpportunitySkills, scoreOpportunity } from '../../lib/opportunityLearningEngine.js';
 import { checkGigGenuine, isInLane, summarizeGenuine } from '../../lib/gigGenuineCheck.js';
+import { DEFAULT_PREFS, matchPreferences, payLabel } from '../../lib/jobPreferences.js';
+
+const KIND_TABS = [
+  { id: 'freelance', label: 'Freelance & part-time', hint: 'Side work next to your job' },
+  { id: 'full-time', label: 'Full-time jobs', hint: 'Would replace your current job' },
+  { id: 'all', label: 'Everything', hint: 'Including jobs that do not say their type' },
+];
 
 const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -54,8 +61,11 @@ export function GigFeed() {
   const [platforms, setPlatforms] = useState([]);
   const [minBudget, setMinBudget] = useState(0);
   const [datePosted, setDatePosted] = useState('all'); // all | 1d | 7d | 30d
-  const [experienceFit, setExperienceFit] = useState('entry'); // entry | stretch | all
+  const [experienceFit, setExperienceFit] = useState('stretch'); // entry | stretch | all
   const [showScreened, setShowScreened] = useState(false);
+  const [kindView, setKindView] = useLocalStorage('awscl-pro::v1::gigfeed::kind', 'freelance');
+  const [perfectOnly, setPerfectOnly] = useLocalStorage('awscl-pro::v1::gigfeed::perfect', true);
+  const prefs = useMemo(() => ({ ...DEFAULT_PREFS, kind: kindView }), [kindView]);
 
   const load = useCallback(async ({ force = false } = {}) => {
     setLoading(true);
@@ -103,6 +113,9 @@ export function GigFeed() {
                        : null;
     return data.gigs.filter((g) => {
       if (!showScreened && (!isInLane(g) || !checkGigGenuine(g, { now }).keep)) return false;
+      const pm = matchPreferences(g, prefs);
+      if (kindView !== 'all' && pm.kind !== kindView) return false;
+      if (perfectOnly && !pm.perfect) return false;
       const fit = assessEntryLevelGig(g, { careerLevel: career.current.id });
       if (experienceFit === 'entry' && fit.classification !== 'good-fit') return false;
       if (experienceFit === 'stretch' && fit.classification === 'not-recommended') return false;
@@ -124,9 +137,24 @@ export function GigFeed() {
       }
       return true;
     }).sort((a, b) => scoreOpportunity(b, learningProfile).score - scoreOpportunity(a, learningProfile).score);
-  }, [data.gigs, platforms, search, datePosted, minBudget, experienceFit, career.current.id, learningProfile, showScreened]);
+  }, [data.gigs, platforms, search, datePosted, minBudget, experienceFit, career.current.id, learningProfile, showScreened, prefs, kindView, perfectOnly]);
 
   const genuineSummary = useMemo(() => summarizeGenuine(data.gigs), [data.gigs]);
+
+  // How many checked, genuine jobs fall in each tab, and how many match fully.
+  const kindCounts = useMemo(() => {
+    const counts = { freelance: { all: 0, perfect: 0 }, 'full-time': { all: 0, perfect: 0 }, all: { all: 0, perfect: 0 } };
+    for (const g of data.gigs) {
+      if (!isInLane(g) || !checkGigGenuine(g).keep) continue;
+      for (const id of ['freelance', 'full-time', 'all']) {
+        const pm = matchPreferences(g, { ...DEFAULT_PREFS, kind: id });
+        if (id !== 'all' && pm.kind !== id) continue;
+        counts[id].all += 1;
+        if (pm.perfect) counts[id].perfect += 1;
+      }
+    }
+    return counts;
+  }, [data.gigs]);
 
   function recordPreference(gig, outcome) {
     setLearningEvents((events) => [{ id: `${gig.id}-${Date.now()}`, opportunityId: gig.id, title: gig.title, skills: extractOpportunitySkills(gig), outcome, sourceType: gig.importedByUser ? 'imported' : 'live-feed', at: new Date().toISOString() }, ...events].slice(0, 300));
@@ -181,6 +209,31 @@ export function GigFeed() {
             {loading ? 'Loading…' : 'Refresh now'}
           </button>
         </div>
+
+        {/* Freelance vs full-time, and "only my perfect matches" */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {KIND_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setKindView(tab.id)}
+              title={tab.hint}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-[12px] font-extrabold border transition',
+                kindView === tab.id ? 'border-aws-orange bg-aws-orange/15 text-aws-orange' : 'border-token text-muted hover:text-current'
+              )}
+            >
+              {tab.label} · {perfectOnly ? kindCounts[tab.id].perfect : kindCounts[tab.id].all}
+            </button>
+          ))}
+          <label className="ml-auto inline-flex items-center gap-2 text-[12px] font-bold cursor-pointer">
+            <input type="checkbox" checked={perfectOnly} onChange={(e) => setPerfectOnly(e.target.checked)} />
+            Only my perfect matches
+          </label>
+        </div>
+        <p className="mb-3 text-[11.5px] text-muted">
+          Perfect match = pay shown in USD or GBP, at least ${DEFAULT_PREFS.minHourlyUsd}/hr (or the same per month), and no on-call, night shifts or 50-tickets-a-day pressure. Jobs that hide their pay never count as a perfect match.
+        </p>
 
         {!loading && genuineSummary.total > 0 && (
           <div className="mb-3 rounded-lg border border-token bg-[var(--card-2)] px-3 py-2 text-[12px]">
@@ -315,7 +368,25 @@ export function GigFeed() {
       {!loading && filtered.length === 0 && !error && (
         <div className="surface rounded-2xl p-8 text-center">
           <Briefcase size={28} className="mx-auto mb-3 opacity-50" />
-          {experienceFit === 'entry' && data.gigs.length > 0 ? (
+          {perfectOnly && data.gigs.length > 0 ? (
+            <>
+              <div className="text-sm font-bold mb-1">
+                No {kindView === 'full-time' ? 'full-time job' : kindView === 'freelance' ? 'freelance or part-time job' : 'job'} matches all your preferences right now
+              </div>
+              <div className="text-[12px] text-muted max-w-xl mx-auto">
+                {kindCounts[kindView].all} genuine {kindView === 'all' ? '' : kindView === 'freelance' ? 'freelance / part-time ' : 'full-time '}jobs were checked; each one misses at least one rule (usually the pay is not shown). Small freelance AWS gigs are mostly on Upwork, so keep the daily Upwork check going. This list refreshes itself every 30 minutes.
+              </div>
+              {kindCounts[kindView].all > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPerfectOnly(false)}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-aws-orange px-4 py-2 text-xs font-extrabold text-black hover:brightness-110"
+                >
+                  Show the {kindCounts[kindView].all} close matches and what each one misses
+                </button>
+              )}
+            </>
+          ) : experienceFit === 'entry' && data.gigs.length > 0 ? (
             <>
               <div className="text-sm font-bold mb-1">{data.gigs.length} live opportunities scanned — no safe entry-level match today</div>
               <div className="text-[12px] text-muted max-w-xl mx-auto">
@@ -456,6 +527,8 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
   const solutionHref = `/build/design?gig=${encodeGig(gig)}`;
 
   const genuine = checkGigGenuine(gig);
+  const prefMatch = matchPreferences(gig);
+  const pay = payLabel(prefMatch.view, prefMatch.kind);
   const postedAgo = gig.postedAt ? humanAge(gig.postedAt) : null;
   const learnedMatch = learningProfile ? scoreOpportunity(gig, learningProfile) : null;
   const lastPreference = learningEvents.find((event) => event.opportunityId === gig.id)?.outcome;
@@ -483,6 +556,28 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
       )}>
         <span className="font-extrabold">{genuine.label}</span>
         {(genuine.problems[0] || genuine.notes[0]) && <span> · {genuine.problems[0] || genuine.notes[0]}</span>}
+      </div>
+
+      {/* What David needs to know at a glance: type, pay, stress */}
+      <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+        <span className="px-2 py-0.5 rounded-full border border-token">
+          {prefMatch.kind === 'freelance' ? 'Freelance / part-time' : prefMatch.kind === 'full-time' ? 'Full-time job' : 'Type not stated'}
+        </span>
+        <span className={cn('px-2 py-0.5 rounded-full border', pay ? 'border-success/40 text-success' : 'border-token text-muted')}>
+          {pay ? `Pay: ${pay}` : 'Pay not shown'}
+        </span>
+        <span
+          className={cn('px-2 py-0.5 rounded-full border',
+            prefMatch.stress.level === 'high' ? 'border-danger/40 text-danger'
+              : prefMatch.stress.level === 'medium' ? 'border-amber-400/40 text-warning'
+              : 'border-success/40 text-success')}
+          title={prefMatch.stress.reasons.join(', ')}
+        >
+          Stress: {prefMatch.stress.level}{prefMatch.stress.reasons[0] ? ` (${prefMatch.stress.reasons[0]})` : ''}
+        </span>
+        {prefMatch.perfect
+          ? <span className="px-2 py-0.5 rounded-full bg-success/15 text-success">Matches your preferences</span>
+          : <span className="text-muted font-normal">Misses: {prefMatch.misses.filter((m) => !/^(Full-time job|Freelance)/.test(m)).join(' · ') || 'job type'}</span>}
       </div>
 
       {/* Description preview */}

@@ -27,6 +27,12 @@
  */
 
 import { isInLane } from './gigGenuineCheck.js';
+import { stressLevel } from './jobPreferences.js';
+
+/** Stress is judged on the FULL post at parse time; only the result is kept. */
+function stressOf(title, fullText) {
+  return stressLevel({ title, description: String(fullText || '').replace(/<[^>]+>/g, ' ') });
+}
 
 const CACHE_KEY = 'awscl-pro::v1::gig-feed';
 const CUSTOM_PROXY_KEY = 'awscl-pro::v1::gigfeed::proxy';
@@ -302,6 +308,8 @@ function parseRemoteOK(json) {
       skills: Array.isArray(j.tags) ? j.tags.slice(0, 10) : [],
       description: (j.description || '').replace(/<[^>]+>/g, '').slice(0, 300),
       location: j.location || (j.region === 'remote' ? 'Remote' : null),
+      workType: (Array.isArray(j.tags) ? j.tags : []).find((t) => /contract|part[\s-]?time|freelance/i.test(t)) || null,
+      stress: stressOf(j.position, j.description),
       raw: j,
     }))
     .filter((g) => looksAwsRelated(g));
@@ -327,6 +335,8 @@ function parseRss(xml, source, sourceLabel) {
     const link = extractTag(block, 'link');
     const desc = extractTag(block, 'description');
     const pubDate = extractTag(block, 'pubDate');
+    const type = extractTag(block, 'type');      // WWR: "Full-Time", "Contract"
+    const region = extractTag(block, 'region');  // WWR: "Anywhere in the World"
     if (!title) continue;
 
     items.push({
@@ -341,8 +351,10 @@ function parseRss(xml, source, sourceLabel) {
       rate: null,
       skills: extractSkillsFromText(desc + ' ' + title),
       description: stripHtml(desc || '').slice(0, 300),
-      location: null,
-      raw: { title, link, desc, pubDate },
+      location: region ? stripHtml(region) : null,
+      workType: type ? stripHtml(type) : null,
+      stress: stressOf(title, stripHtml(desc || '')),
+      raw: { title, link, pubDate },
     });
   }
   return items.filter(looksAwsRelated);
@@ -376,6 +388,8 @@ function parseRemotive(json) {
     skills: Array.isArray(j.tags) ? j.tags.slice(0, 10) : [],
     description: stripHtml(j.description || '').slice(0, 300),
     location: j.candidate_required_location || null,
+    workType: j.job_type || null,
+    stress: stressOf(j.title, j.description),
     raw: { id: j.id, category: j.category, job_type: j.job_type },
   })).filter(looksAwsRelated);
 }
@@ -401,6 +415,8 @@ function parseJobicy(json) {
     skills: extractSkillsFromText(`${j.jobTitle} ${j.jobExcerpt || ''}`),
     description: stripHtml(j.jobExcerpt || '').slice(0, 300),
     location: j.jobGeo || null,
+    workType: Array.isArray(j.jobType) ? j.jobType.join(', ') : (j.jobType || null),
+    stress: stressOf(j.jobTitle, `${j.jobExcerpt || ''} ${j.jobDescription || ''}`),
     raw: { id: j.id, level: j.jobLevel, industry: j.jobIndustry },
   })).filter(looksAwsRelated);
 }
@@ -425,6 +441,8 @@ function parseArbeitnow(json) {
     skills: extractSkillsFromText(`${j.title} ${(j.tags || []).join(' ')} ${j.description || ''}`),
     description: stripHtml(j.description || '').slice(0, 300),
     location: j.location || (j.remote ? 'Remote' : null),
+    workType: Array.isArray(j.job_types) ? j.job_types.join(', ') : null,
+    stress: stressOf(j.title, j.description),
     raw: { slug: j.slug, tags: j.tags, types: j.job_types },
   })).filter(looksAwsRelated);
 }
@@ -453,6 +471,8 @@ function parseHimalayas(json) {
     ].slice(0, 8),
     description: stripHtml(j.excerpt || j.description || '').slice(0, 300),
     location: himalayasLocation(j.locationRestrictions),
+    workType: j.employmentType || null,
+    stress: stressOf(j.title, j.description),
     raw: { guid: j.guid, seniority: j.seniority },
   })).filter(looksAwsRelated);
 }

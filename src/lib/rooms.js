@@ -18,7 +18,7 @@ export const ROOMS = Object.freeze([
     id: 'find', label: 'Find work',
     blurb: 'Gigs worth your time, and what to charge for them.',
     tabs: [
-      { id: 'gigs',   label: 'Live gigs', blurb: 'Remote AWS work from six job boards, matched to your level.' },
+      { id: 'gigs',   label: 'Live gigs', blurb: 'Freelance gigs and remote jobs from seven job boards: checked, split by type, and matched to your preferences.' },
       { id: 'check',  label: 'Check a job post' },
       { id: 'market', label: 'Market rates' },
       { id: 'rates',  label: 'Rate calculator' },

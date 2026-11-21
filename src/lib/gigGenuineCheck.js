@@ -38,6 +38,7 @@ const RESTRICTED_TEXT = [
   /\b(security|secret|top secret|public trust)\s+clearance\b/i,
   /\bmust\s+(be\s+)?(based|located|reside|live)\s+in\s+(the\s+)?(?!africa|ghana|emea)\w+/i,
   /\b(w-?2|1099)\s+only\b/i,
+  /\b(federal|govcon|government contract)\b/i,   // US government work needs US citizenship
 ];
 
 /** A title that asks for a language other than English. */
