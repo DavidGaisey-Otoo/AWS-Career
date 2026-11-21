@@ -40,6 +40,10 @@ const RESTRICTED_TEXT = [
   /\b(w-?2|1099)\s+only\b/i,
 ];
 
+/** A title that asks for a language other than English. */
+const LANGS = 'german|french|dutch|arabic|spanish|portuguese|italian|japanese|mandarin|chinese|polish|turkish|swedish|danish|norwegian|finnish|korean|hebrew|russian';
+const NEEDS_LANGUAGE = new RegExp(`\\b(${LANGS})[- ]speak(?:ing|er)\\b|\\(([^)]*?\\b(?:${LANGS})\\b)[^)]*\\)`, 'i');
+
 function textOf(gig) {
   return `${gig?.title || ''} ${gig?.description || ''}`;
 }
@@ -86,6 +90,15 @@ export function checkGigGenuine(gig, { now = Date.now() } = {}) {
     return { verdict: 'expired', keep: false, label: 'Too old: probably filled', problems: [`Posted ${days} days ago.`], notes };
   }
   if (t === null) notes.push('Posting date unknown: check it is still open.');
+
+  const language = NEEDS_LANGUAGE.exec(String(gig?.title || ''));
+  if (language) {
+    const name = (language[1] || language[2] || 'another language');
+    return {
+      verdict: 'not-open', keep: false, label: 'Needs another language',
+      problems: [`Needs ${name[0].toUpperCase()}${name.slice(1).toLowerCase()} speakers.`], notes,
+    };
+  }
 
   const access = locationAccess(gig);
   if (access === 'closed') {

@@ -24,8 +24,20 @@ const SOURCES = {
     url: 'https://himalayas.app/jobs/api?limit=50',
     type: 'application/json; charset=utf-8',
   },
+  // Jobs whose employer accepts applicants in Ghana (country=GH), for the
+  // kinds of work the user does. Several searches, merged into one
+  // { jobs: [...] } body so the app sees a single source.
+  'himalayas-ghana': {
+    urls: ['cloud', 'aws', 'support engineer', 'it support', 'devops', 'network']
+      .map((q) => `https://himalayas.app/jobs/api/search?country=GH&q=${encodeURIComponent(q)}`),
+    type: 'application/json; charset=utf-8',
+  },
   weworkremotely: {
     url: 'https://weworkremotely.com/categories/remote-programming-jobs.rss',
+    type: 'application/rss+xml; charset=utf-8',
+  },
+  'weworkremotely-devops': {
+    url: 'https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss',
     type: 'application/rss+xml; charset=utf-8',
   },
   'aws-whats-new': {
@@ -62,19 +74,47 @@ export default async function handler(req, res) {
     });
   }
 
+  const fetchOne = (url) => fetch(url, {
+    redirect: 'follow',
+    headers: {
+      Accept: 'application/json, application/rss+xml, text/xml, */*',
+      // Several of these serve a bot page to clients with no user agent.
+      'User-Agent': 'AWS-Career-Launchpad/1.0 (+https://davidgaisey-otoo.github.io/AWS-Career/)',
+    },
+  });
+
   try {
-    const upstream = await fetch(source.url, {
-      redirect: 'follow',
-      headers: {
-        Accept: 'application/json, application/rss+xml, text/xml, */*',
-        // Several of these serve a bot page to clients with no user agent.
-        'User-Agent': 'AWS-Career-Launchpad/1.0 (+https://davidgaisey-otoo.github.io/AWS-Career/)',
-      },
-    });
-    if (!upstream.ok) {
-      return res.status(502).json({ error: `${name} returned HTTP ${upstream.status}` });
+    let body;
+    if (source.urls) {
+      // Merge several JSON searches. One failed search is reported in
+      // `failed`, not hidden; all failing is an error, never "no jobs".
+      const settled = await Promise.allSettled(source.urls.map(async (url) => {
+        const r = await fetchOne(url);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      }));
+      const ok = settled.filter((s) => s.status === 'fulfilled').map((s) => s.value);
+      if (!ok.length) {
+        return res.status(502).json({ error: `${name}: every search failed` });
+      }
+      const seen = new Set();
+      const jobs = [];
+      for (const page of ok) {
+        for (const job of Array.isArray(page?.jobs) ? page.jobs : []) {
+          const key = job.guid || job.applicationLink || job.title;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          jobs.push(job);
+        }
+      }
+      body = JSON.stringify({ jobs, searches: source.urls.length, failed: source.urls.length - ok.length });
+    } else {
+      const upstream = await fetchOne(source.url);
+      if (!upstream.ok) {
+        return res.status(502).json({ error: `${name} returned HTTP ${upstream.status}` });
+      }
+      body = await upstream.text();
     }
-    const body = await upstream.text();
     if (!body.trim()) {
       // An empty body would parse into an empty job list, which reads as
       // "there are no jobs" — a claim this endpoint cannot make.

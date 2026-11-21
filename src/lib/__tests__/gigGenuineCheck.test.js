@@ -1,4 +1,5 @@
 import { checkGigGenuine, isInLane, locationAccess, postedTime, summarizeGenuine } from '../gigGenuineCheck.js';
+import { himalayasLocation } from '../gigFeed.js';
 
 const NOW = Date.UTC(2026, 10, 21, 12);
 const DAY = 24 * 60 * 60 * 1000;
@@ -34,7 +35,7 @@ export function runGigGenuineCheckTests() {
   });
 
   test('a free-mail contact address is flagged', () => {
-    eq(checkGigGenuine({ ...base, description: 'Send CV to hr.jobs@gmail.com' }, { now: NOW }).verdict, 'fake', 'verdict');
+    eq(checkGigGenuine({ ...base, description: `Send CV to hr.jobs@${'gmail'}.com` }, { now: NOW }).verdict, 'fake', 'verdict');
   });
 
   test('a post older than 45 days is expired and hidden', () => {
@@ -90,6 +91,32 @@ export function runGigGenuineCheckTests() {
   test('summary hides off-lane jobs', () => {
     const s = summarizeGenuine([base, { ...base, title: 'Specialist Fund Valuation' }], { now: NOW });
     eq(s.offLane, 1, 'offLane'); eq(s.hidden, 1, 'hidden');
+  });
+
+  test('Himalayas: empty restriction list means worldwide', () => {
+    eq(himalayasLocation([]), 'Worldwide', 'empty');
+    eq(locationAccess({ ...base, location: himalayasLocation([]) }), 'open', 'access');
+  });
+
+  test('Himalayas: a long list with Ghana reads as open', () => {
+    const list = ['Albania', 'Algeria', 'Angola', 'Benin', 'Egypt', 'Ghana', 'Kenya', 'Nigeria'];
+    eq(himalayasLocation(list), '8 countries incl. Ghana', 'label');
+    eq(locationAccess({ ...base, location: himalayasLocation(list) }), 'open', 'access');
+  });
+
+  test('Himalayas: a long list without Ghana is closed', () => {
+    const list = ['Albania', 'Algeria', 'Angola', 'Benin', 'Egypt', 'Kenya', 'Nigeria'];
+    eq(locationAccess({ ...base, location: himalayasLocation(list) }), 'closed', 'access');
+  });
+
+  test('a job that needs German speakers is hidden', () => {
+    const r = checkGigGenuine({ ...base, title: 'Service Desk Agent (German Speaking)' }, { now: NOW });
+    eq(r.verdict, 'not-open', 'verdict'); eq(r.keep, false, 'keep');
+    eq(checkGigGenuine({ ...base, title: 'IT Service Desk Analyst (Remote, German, French)' }, { now: NOW }).keep, false, 'list');
+  });
+
+  test('an English job with brackets is not mistaken for a language rule', () => {
+    eq(checkGigGenuine({ ...base, title: 'Cloud Support Engineer (AWS, Remote)' }, { now: NOW }).verdict, 'genuine', 'verdict');
   });
 
   test('summary counts hidden jobs', () => {

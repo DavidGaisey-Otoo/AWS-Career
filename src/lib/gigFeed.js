@@ -20,7 +20,13 @@
  *   }
  *
  * Cached in localStorage for 30 minutes so refreshes don't hammer APIs.
+ *
+ * 2026-11-21: searches retargeted at the user's lane and at jobs open to
+ * Ghana (Himalayas country=GH, Jobicy support, RemoteOK devops, WWR
+ * devops-sysadmin). Cloud/IT/network titles are kept even without "AWS".
  */
+
+import { isInLane } from './gigGenuineCheck.js';
 
 const CACHE_KEY = 'awscl-pro::v1::gig-feed';
 const CUSTOM_PROXY_KEY = 'awscl-pro::v1::gigfeed::proxy';
@@ -91,9 +97,26 @@ const SOURCES = [
     parse: parseRemotive,
   },
   {
+    id: 'remoteok-devops',
+    label: 'RemoteOK DevOps',
+    url: 'https://remoteok.com/api?tags=devops',
+    type: 'json',
+    needsProxy: false,
+    parse: parseRemoteOK,
+  },
+  {
     id: 'jobicy',
     label: 'Jobicy',
     url: 'https://jobicy.com/api/v2/remote-jobs?count=50&tag=aws',
+    type: 'json',
+    needsProxy: false,
+    parse: parseJobicy,
+  },
+  {
+    // Support / helpdesk / Linux support roles, often open "Anywhere".
+    id: 'jobicy-support',
+    label: 'Jobicy Support',
+    url: 'https://jobicy.com/api/v2/remote-jobs?count=50&industry=supporting',
     type: 'json',
     needsProxy: false,
     parse: parseJobicy,
@@ -107,17 +130,22 @@ const SOURCES = [
     parse: parseArbeitnow,
   },
   {
+    // Only jobs whose employer accepts applicants in Ghana. Our own
+    // api/feed merges six searches (cloud, aws, support engineer, it
+    // support, devops, network); the url is the single-search fallback.
     id: 'himalayas',
-    label: 'Himalayas',
-    url: 'https://himalayas.app/jobs/api?limit=50',
+    feedName: 'himalayas-ghana',
+    label: 'Himalayas (Ghana OK)',
+    url: 'https://himalayas.app/jobs/api/search?country=GH&q=cloud',
     type: 'json',
     needsProxy: true,
     parse: parseHimalayas,
   },
   {
     id: 'weworkremotely',
+    feedName: 'weworkremotely-devops',
     label: 'We Work Remotely',
-    url: 'https://weworkremotely.com/categories/remote-programming-jobs.rss',
+    url: 'https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss',
     type: 'rss',
     needsProxy: true,
     parse: parseWeWorkRemotely,
@@ -140,9 +168,16 @@ function readCache() {
 
 function writeCache(payload) {
   try {
+    // Keep the cache small: the full board payload (`raw`) is dropped
+    // except the two fields the fit matcher reads.
+    const gigs = (payload.gigs || []).map(({ raw, ...gig }) => ({
+      ...gig,
+      raw: raw ? { level: raw.level, seniority: raw.seniority } : undefined,
+    }));
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       ts: Date.now(),
       ...payload,
+      gigs,
     }));
   } catch { /* quota */ }
 }
@@ -184,7 +219,7 @@ export async function fetchAllGigs({ force = false } = {}) {
   await Promise.all(SOURCES.map(async (src) => {
     try {
       const urls = src.needsProxy
-        ? proxyChain(src.id).map((wrap) => wrap(src.url))
+        ? proxyChain(src.feedName || src.id).map((wrap) => wrap(src.url))
         : [src.url];
 
       let lastErr = null;
@@ -417,9 +452,7 @@ function parseHimalayas(json) {
       ...extractSkillsFromText(`${j.title} ${j.excerpt || ''}`),
     ].slice(0, 8),
     description: stripHtml(j.excerpt || j.description || '').slice(0, 300),
-    location: Array.isArray(j.locationRestrictions) && j.locationRestrictions.length
-      ? j.locationRestrictions.join(', ')
-      : 'Remote',
+    location: himalayasLocation(j.locationRestrictions),
     raw: { guid: j.guid, seniority: j.seniority },
   })).filter(looksAwsRelated);
 }
@@ -461,9 +494,25 @@ function hashCode(s) {
 
 const AWS_KEYWORDS = /\b(aws|amazon web services|lambda|s3|dynamodb|ec2|cloudfront|cloudformation|terraform|ecs|eks|rds|aurora|cognito|api gateway|sagemaker|bedrock|cloudwatch|iam|vpc|route ?53|elasticbeanstalk)\b/i;
 
+// Keep AWS jobs, and also cloud / IT / network support roles that never
+// say "AWS" (e.g. "Associate Linux Support Engineer").
+/**
+ * Himalayas lists the countries a job accepts. An empty list means no
+ * restriction (worldwide). Long lists that include Ghana are shortened.
+ */
+export function himalayasLocation(restrictions) {
+  const names = (Array.isArray(restrictions) ? restrictions : [])
+    .map((r) => (typeof r === 'string' ? r : r?.name || ''))
+    .filter(Boolean);
+  if (!names.length) return 'Worldwide';
+  const ghana = names.some((n) => /^ghana$/i.test(n.trim()));
+  if (names.length > 6) return ghana ? `${names.length} countries incl. Ghana` : `${names.length} listed countries, yours not among them`;
+  return names.join(', ');
+}
+
 function looksAwsRelated(gig) {
   const blob = `${gig.title} ${gig.description} ${(gig.skills || []).join(' ')}`;
-  return AWS_KEYWORDS.test(blob);
+  return AWS_KEYWORDS.test(blob) || isInLane(gig);
 }
 
 const BUDGET_PATTERNS = [
