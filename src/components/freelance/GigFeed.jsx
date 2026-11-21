@@ -27,6 +27,9 @@ import { useLocalStorage } from '../../hooks/useLocalStorage.js';
 import { buildOpportunityLearningProfile, extractOpportunitySkills, scoreOpportunity } from '../../lib/opportunityLearningEngine.js';
 import { checkGigGenuine, isInLane, summarizeGenuine } from '../../lib/gigGenuineCheck.js';
 import { DEFAULT_PREFS, matchPreferences, payLabel } from '../../lib/jobPreferences.js';
+import { assessQualification, takeHome, adviceFor } from '../../lib/jobBreakdown.js';
+import { MY_PROFILE } from '../../lib/myProfile.js';
+import { convert } from '../../lib/officeToday.js';
 
 const KIND_TABS = [
   { id: 'freelance', label: 'Freelance & part-time', hint: 'Side work next to your job' },
@@ -526,9 +529,19 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
   // keeps the budget, company, skills + source link for the solution header.
   const solutionHref = `/build/design?gig=${encodeGig(gig)}`;
 
+  const { state: freelanceState } = useFreelance();
   const genuine = checkGigGenuine(gig);
   const prefMatch = matchPreferences(gig);
   const pay = payLabel(prefMatch.view, prefMatch.kind);
+  const usdToGhs = convert(1, 'USD', 'GHS', freelanceState.rates);
+  const qualification = assessQualification(gig);
+  const take = takeHome({
+    view: prefMatch.view,
+    kind: prefMatch.kind,
+    upwork: /upwork/i.test(`${gig.source} ${gig.sourceLabel}`),
+    usdToGhs,
+  });
+  const advice = adviceFor({ qualification, match: prefMatch, take });
   const postedAgo = gig.postedAt ? humanAge(gig.postedAt) : null;
   const learnedMatch = learningProfile ? scoreOpportunity(gig, learningProfile) : null;
   const lastPreference = learningEvents.find((event) => event.opportunityId === gig.id)?.outcome;
@@ -579,6 +592,9 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
           ? <span className="px-2 py-0.5 rounded-full bg-success/15 text-success">Matches your preferences</span>
           : <span className="text-muted font-normal">Misses: {prefMatch.misses.filter((m) => !/^(Full-time job|Freelance)/.test(m)).join(' · ') || 'job type'}</span>}
       </div>
+
+      <BreakdownPanel qualification={qualification} take={take} benefits={gig.facts?.benefits || []} advice={advice} />
+
 
       {/* Description preview */}
       {gig.description && (
@@ -690,6 +706,69 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
         </Link>
       </div>
     </div>
+  );
+}
+
+const QUALIFY_LABEL = {
+  qualify: { text: 'You qualify', tone: 'text-success' },
+  partly: { text: 'You partly qualify', tone: 'text-warning' },
+  'not-yet': { text: 'Not yet', tone: 'text-danger' },
+  unknown: { text: 'Could not tell', tone: 'text-muted' },
+};
+
+function money(n, currency) {
+  if (n == null || !Number.isFinite(n)) return null;
+  const sym = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : currency === 'GHS' ? 'GH₵' : '$';
+  return `${sym}${Math.round(n).toLocaleString('en-US')}`;
+}
+
+/** "Your breakdown": take-home, incentives, qualification vs MY_PROFILE, advice. */
+function BreakdownPanel({ qualification, take, benefits, advice }) {
+  const q = QUALIFY_LABEL[qualification.verdict] || QUALIFY_LABEL.unknown;
+  const net = take ? `${money(take.netMin, take.currency)}${take.netMax !== take.netMin ? `–${money(take.netMax, take.currency)}` : ''}` : null;
+  return (
+    <details className="rounded-lg border border-token bg-[var(--card-2)] px-2.5 py-2 text-[11.5px]">
+      <summary className="cursor-pointer font-extrabold">
+        Your breakdown: <span className={q.tone}>{q.text}</span>
+        {net ? <> · take home about {net}/month</> : <> · take-home unknown (pay hidden)</>}
+      </summary>
+      <div className="mt-2 space-y-2">
+        <div>
+          <div className="font-extrabold">What you take home (estimate)</div>
+          {take ? (
+            <ul className="list-disc pl-4 text-muted">
+              <li>Pay: {money(take.grossMin, take.currency)}{take.grossMax !== take.grossMin ? `–${money(take.grossMax, take.currency)}` : ''} a month ({take.basis})</li>
+              <li>Minus {take.feeNote}</li>
+              <li>Minus {take.taxReservePct}% set aside for GRA income tax (confirm with GRA or an accountant)</li>
+              <li className="text-current font-bold">
+                ≈ {net} a month
+                {take.ghsMin != null
+                  ? <> ≈ {money(take.ghsMin, 'GHS')}{take.ghsMax !== take.ghsMin ? `–${money(take.ghsMax, 'GHS')}` : ''}</>
+                  : take.currency === 'USD' ? <> (add a GHS rate under Money → Currency to see cedis)</> : null}
+              </li>
+            </ul>
+          ) : <div className="text-muted">The post hides the pay, so the take-home cannot be worked out. Ask for the range before you spend time on it.</div>}
+        </div>
+        <div>
+          <div className="font-extrabold">Incentives in the post</div>
+          <div className="text-muted">{benefits.length ? benefits.join(' · ') : 'None mentioned'}</div>
+        </div>
+        <div>
+          <div className="font-extrabold">Against your certificates and skills</div>
+          <div className="text-muted">
+            Your certificates: {MY_PROFILE.certificates.map((c) => c.name).join(', ')} (studying: {MY_PROFILE.studying.map((c) => c.name).join(', ')})
+          </div>
+          {qualification.have.length > 0 && <div className="text-success">✓ You have: {qualification.have.join(', ')}</div>}
+          {qualification.missing.length > 0 && (
+            <div className="text-danger">✗ You lack: {qualification.missing.map((m) => m.label).join(', ')}</div>
+          )}
+          {qualification.notes.map((n) => <div key={n} className="text-muted">{n}</div>)}
+        </div>
+        <div className="rounded-md border border-aws-orange/30 bg-aws-orange/10 px-2 py-1.5">
+          <span className="font-extrabold text-aws-orange">Advice: </span>{advice}
+        </div>
+      </div>
+    </details>
   );
 }
 

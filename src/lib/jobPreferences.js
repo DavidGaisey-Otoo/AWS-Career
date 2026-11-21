@@ -85,6 +85,7 @@ export function payView(pay) {
   const monthly = (n) => (pay.period === 'month' ? n : pay.period === 'year' ? n / 12 : n * HOURS_PER_MONTH);
   return {
     currency: pay.currency,
+    period: pay.period,
     hourlyMin: hourly(pay.min), hourlyMax: hourly(pay.max),
     monthlyMin: monthly(pay.min), monthlyMax: monthly(pay.max),
   };
@@ -125,7 +126,7 @@ export function matchPreferences(gig, prefs = DEFAULT_PREFS) {
   if (prefs.kind !== 'all' && kind !== prefs.kind) {
     misses.push(kind === 'unknown' ? 'Job type not stated' : kind === 'full-time' ? 'Full-time job' : 'Freelance / part-time');
   }
-  const pay = parsePay(gig?.budget);
+  const pay = parsePay(gig?.budget) || parsePay(gig?.facts?.payText);
   const view = payView(pay);
   if (!pay) misses.push('Pay not shown');
   else {
@@ -149,7 +150,7 @@ export function payLabel(view, kind) {
   const sym = view.currency === 'GBP' ? '£' : view.currency === 'EUR' ? '€' : view.currency === 'USD' ? '$' : '';
   const money = (n) => `${sym}${Math.round(n).toLocaleString('en-US')}`;
   const range = (a, b) => (Math.round(a) === Math.round(b) ? money(a) : `${money(a)}–${money(b)}`);
-  if (kind === 'freelance' && view.hourlyMax < 200) {
+  if (view.period === 'hour') {
     return `${range(view.hourlyMin, view.hourlyMax)}/hr`;
   }
   return `${range(view.monthlyMin, view.monthlyMax)}/month`;

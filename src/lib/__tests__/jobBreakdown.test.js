@@ -1,0 +1,97 @@
+import { postFacts, assessQualification, takeHome, adviceFor } from '../jobBreakdown.js';
+import { payView, parsePay, matchPreferences } from '../jobPreferences.js';
+import { MY_PROFILE } from '../myProfile.js';
+
+export function runJobBreakdownTests() {
+  const results = [];
+  const test = (name, fn) => {
+    try { fn(); results.push({ name, pass: true }); }
+    catch (err) { results.push({ name, pass: false, error: err.message }); }
+  };
+  const eq = (a, b, msg) => { if (a !== b) throw new Error(`${msg}: expected ${b}, got ${a}`); };
+
+  test('profile claims only the two real certificates', () => {
+    eq(MY_PROFILE.certificates.length, 2, 'count');
+    eq(MY_PROFILE.certificates.some((c) => /solutions architect/i.test(c.name)), false, 'no SAA claimed');
+    eq(MY_PROFILE.studying.some((c) => /solutions architect/i.test(c.name)), true, 'SAA is studying');
+  });
+
+  test('facts read skills, years and benefits from the full post', () => {
+    const f = postFacts('IT Support Engineer', 'Windows and Active Directory, help desk tickets, 3+ years. We offer health insurance and paid time off.');
+    eq(f.skillsAsked.includes('windows'), true, 'windows');
+    eq(f.skillsAsked.includes('helpdesk'), true, 'helpdesk');
+    eq(f.yearsAsked, 3, 'years');
+    eq(f.benefits.includes('Health insurance'), true, 'health');
+    eq(f.benefits.includes('Paid time off'), true, 'pto');
+  });
+
+  test('the English word "go" is not read as the Go language', () => {
+    eq(postFacts('Support', 'You go above and beyond').skillsAsked.includes('go-java'), false, 'go');
+  });
+
+  test('"nice to have" and "any language (…)" lists are not requirements', () => {
+    const f = postFacts('Associate Support Engineer', 'Linux troubleshooting. Programming fundamentals in any language (bash, Ruby, Javascript, C). Nice-to-have skills: KVM, VMware');
+    eq(f.skillsAsked.includes('js'), false, 'js'); eq(f.skillsAsked.includes('virtualization'), false, 'kvm');
+    eq(f.skillsAsked.includes('linux-basic'), true, 'linux');
+  });
+
+  test('pay written only in the post body is found', () => {
+    const f = postFacts('Support Specialist', 'Compensation: Rate starts at $2.50 to $5.00 per hour, paid via Deel');
+    eq(f.payText, '$2.50 - $5.00 per hour', 'payText');
+    eq(matchPreferences({ title: 'Support Specialist', workType: 'Contract', facts: f }).misses.includes('Under $15/hr'), true, 'too low');
+  });
+
+  test('a yearly salary on a contract counts as a full month, not side hours', () => {
+    const t = takeHome({ view: payView(parsePay('$60k-$120k/yr')), kind: 'freelance', taxReservePct: 0 });
+    eq(Math.round(t.grossMin), 5000, 'month');
+  });
+
+  test('a Windows help-desk job he can do → qualify', () => {
+    const gig = { title: 'IT Support Engineer', facts: postFacts('IT Support Engineer', 'Windows, help desk, networking, 3+ years') };
+    eq(assessQualification(gig).verdict, 'qualify', 'verdict');
+  });
+
+  test('TypeScript + React + databases → not yet, with what to learn', () => {
+    const gig = { title: 'Technical Support Engineer', facts: postFacts('Technical Support Engineer', 'Strong TypeScript and React, Postgres') };
+    const q = assessQualification(gig);
+    eq(q.verdict, 'not-yet', 'verdict');
+    eq(q.missing.some((m) => m.label.includes('React')), true, 'react gap');
+  });
+
+  test('one missing skill → partly', () => {
+    const gig = { title: 'Cloud Support Engineer', facts: postFacts('Cloud Support Engineer', 'Linux, networking, Kubernetes') };
+    eq(assessQualification(gig).verdict, 'partly', 'verdict');
+  });
+
+  test('a senior title is not yet, even if the skills match', () => {
+    const gig = { title: 'Senior Network Engineer', facts: postFacts('Senior Network Engineer', 'networking, firewall') };
+    eq(assessQualification(gig).verdict, 'not-yet', 'verdict');
+  });
+
+  test('no skills listed is unknown, never a pass', () => {
+    eq(assessQualification({ title: 'Analyst', facts: postFacts('Analyst', 'Great team.') }).verdict, 'unknown', 'verdict');
+  });
+
+  test('take-home on Upwork hourly work: fees and tax reserve come off', () => {
+    const t = takeHome({ view: payView(parsePay('$20/hour')), kind: 'freelance', upwork: true, hoursPerMonth: 40, taxReservePct: 20, usdToGhs: 12 });
+    // 800 gross − 80 fee − 2 = 718; × 0.8 = 574.4
+    eq(Math.round(t.netMin), 574, 'net'); eq(Math.round(t.ghsMin), 6893, 'ghs');
+  });
+
+  test('take-home has no cedi figure without a USD rate', () => {
+    const t = takeHome({ view: payView(parsePay('$60k/yr')), kind: 'full-time', usdToGhs: null });
+    eq(t.ghsMin, null, 'ghs');
+  });
+
+  test('hidden pay gives no take-home', () => {
+    eq(takeHome({ view: null, kind: 'full-time' }), null, 'null');
+  });
+
+  test('advice says skip and what to learn for not-yet jobs', () => {
+    const gig = { title: 'Support Engineer', facts: postFacts('Support Engineer', 'TypeScript, React, Postgres') };
+    const a = adviceFor({ qualification: assessQualification(gig), match: matchPreferences(gig) });
+    eq(a.startsWith('Skip for now'), true, a);
+  });
+
+  return { allPassed: results.every((r) => r.pass), results };
+}
