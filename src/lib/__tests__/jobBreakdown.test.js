@@ -93,5 +93,32 @@ export function runJobBreakdownTests() {
     eq(a.startsWith('Skip for now'), true, a);
   });
 
+  test('"benefits do not apply" lists no perks', () => {
+    const f = postFacts('AI Task Auditor', 'Freelance contract. Company-sponsored benefits such as health insurance and PTO do not apply.');
+    eq(f.noBenefits, true, 'flag'); eq(f.benefits.length, 0, 'benefits');
+  });
+
+  test('a post that names perks normally still lists them', () => {
+    const f = postFacts('Support Engineer', 'We offer health insurance and paid time off.');
+    eq(f.noBenefits, false, 'flag'); eq(f.benefits.length, 2, 'benefits');
+  });
+
+  test('"deep professional experience" in an AI-chip niche is not yet, not qualify', () => {
+    const gig = { title: 'AWS Trainium/NKI (TRN) AI Task Auditor', facts: postFacts('AWS Trainium/NKI (TRN) AI Task Auditor', 'Demonstrable professional experience and deep technical knowledge in AWS Trainium architecture and NKI frameworks.') };
+    const q = assessQualification(gig);
+    eq(q.verdict, 'not-yet', 'verdict');
+    eq(q.missing.some((m) => /AI chips/.test(m.label)), true, 'chip gap');
+    eq(matchPreferences(gig).misses.includes('Wants deep professional experience'), true, 'pref miss');
+  });
+
+  test('deep expertise with no named gap is at best partly', () => {
+    const gig = { title: 'Network Support', facts: postFacts('Network Support', 'Extensive experience with networking and firewalls.') };
+    eq(assessQualification(gig).verdict, 'partly', 'verdict');
+  });
+
+  test('"proven experience" in an ordinary post does not count as expert-only', () => {
+    eq(postFacts('IT Support', 'Proven experience in help desk support').deepExpertise, false, 'deep');
+  });
+
   return { allPassed: results.every((r) => r.pass), results };
 }

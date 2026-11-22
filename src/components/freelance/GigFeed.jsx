@@ -593,7 +593,7 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
           : <span className="text-muted font-normal">Misses: {prefMatch.misses.filter((m) => !/^(Full-time job|Freelance)/.test(m)).join(' · ') || 'job type'}</span>}
       </div>
 
-      <BreakdownPanel qualification={qualification} take={take} benefits={gig.facts?.benefits || []} advice={advice} />
+      <BreakdownPanel qualification={qualification} take={take} benefits={gig.facts?.benefits || []} noBenefits={Boolean(gig.facts?.noBenefits)} advice={advice} />
 
 
       {/* Description preview */}
@@ -723,7 +723,7 @@ function money(n, currency) {
 }
 
 /** "Your breakdown": take-home, incentives, qualification vs MY_PROFILE, advice. */
-function BreakdownPanel({ qualification, take, benefits, advice }) {
+function BreakdownPanel({ qualification, take, benefits, noBenefits, advice }) {
   const q = QUALIFY_LABEL[qualification.verdict] || QUALIFY_LABEL.unknown;
   const net = take ? `${money(take.netMin, take.currency)}${take.netMax !== take.netMin ? `–${money(take.netMax, take.currency)}` : ''}` : null;
   return (
@@ -751,7 +751,7 @@ function BreakdownPanel({ qualification, take, benefits, advice }) {
         </div>
         <div>
           <div className="font-extrabold">Incentives in the post</div>
-          <div className="text-muted">{benefits.length ? benefits.join(' · ') : 'None mentioned'}</div>
+          <div className="text-muted">{noBenefits ? 'None: the post says perks like health insurance and paid leave do not apply to contractors' : benefits.length ? benefits.join(' · ') : 'None mentioned'}</div>
         </div>
         <div>
           <div className="font-extrabold">Against your certificates and skills</div>

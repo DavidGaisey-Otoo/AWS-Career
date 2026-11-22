@@ -26,6 +26,12 @@ const BENEFITS = [
   [/\b401\(?k\)?\b/i, '401(k) (US staff only: usually not for you)'],
 ];
 
+const NO_BENEFITS = /\bbenefits?\b[^.]{0,80}\b(do not|don't|does not|doesn't|will not|won't) apply\b|\bnot eligible for (any )?(company[- ]sponsored |employee )?benefits\b|\bno (company[- ]sponsored |employee )?benefits\b/i;
+
+// Posts that want an expert, not a learner: a certificate plus the
+// keyword is not enough to pass these.
+const DEEP_EXPERTISE = /\b(deep|demonstrable|extensive|expert[- ]level)\s+(professional\s+|technical\s+|hands[- ]on\s+)*(experience|expertise|knowledge)\b/i;
+
 const YEARS = /\b(\d{1,2})\+?\s*(?:years?|yrs?)\b/gi;
 
 /**
@@ -41,12 +47,17 @@ export function postFacts(title, fullText) {
     .replace(/\bin any (programming )?language\s*\([^)]*\)/gi, ' ');
   const skillsAsked = SKILLS.filter((s) => s.re.test(required)).map((s) => s.id);
   const years = [...required.matchAll(YEARS)].map((m) => Number(m[1])).filter((n) => n > 0 && n < 30);
-  const benefits = BENEFITS.filter(([re]) => re.test(text)).map(([, label]) => label);
+  // "Benefits such as health insurance and PTO do not apply" names the
+  // perks only to rule them out: a contractor gets none of them.
+  const noBenefits = NO_BENEFITS.test(text);
+  const benefits = noBenefits ? [] : BENEFITS.filter(([re]) => re.test(text)).map(([, label]) => label);
   // Pay written in the post body (some boards leave the salary field empty).
   const payMatch = /([$£€]\s?\d[\d,.]*k?\s*(?:-|–|to)\s*[$£€]?\s?\d[\d,.]*k?\s*(?:\/\s*|per\s+)(?:hour|hr|month|year|annum)|[$£€]\s?\d[\d,.]*k?\s*(?:\/\s*|per\s+)(?:hour|hr|month|year|annum))/i.exec(text);
   return {
     skillsAsked,
     yearsAsked: years.length ? Math.max(...years) : null,
+    deepExpertise: DEEP_EXPERTISE.test(required),
+    noBenefits,
     benefits,
     payText: payMatch ? payMatch[1].replace(/\s+to\s+/i, ' - ') : null,
   };
@@ -76,9 +87,13 @@ export function assessQualification(gig, profile = MY_PROFILE) {
   if (!asked.length) {
     return { verdict: 'unknown', have, missing, notes: [...notes, 'The post lists no skills I could check: read it yourself.'] };
   }
+  const deep = Boolean(facts.deepExpertise);
+  if (deep) notes.push('Asks for deep professional experience: a certificate alone will not pass, you need real project work in this area first.');
   const tooManyYears = facts.yearsAsked != null && facts.yearsAsked > profile.yearsInIT;
-  const verdict = senior || tooManyYears || missing.length >= 3 ? 'not-yet'
-    : missing.length === 0 ? 'qualify'
+  // An expert-only post is never a clean "qualify" for an entry-level
+  // profile, and with any gap at all it is "not yet".
+  const verdict = senior || tooManyYears || missing.length >= 3 || (deep && missing.length >= 1) ? 'not-yet'
+    : missing.length === 0 && !deep ? 'qualify'
     : 'partly';
   return { verdict, have, missing, notes };
 }

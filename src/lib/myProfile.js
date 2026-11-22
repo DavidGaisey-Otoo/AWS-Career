@@ -58,6 +58,8 @@ export const SKILLS = Object.freeze([
   { id: 'gcp', label: 'Google Cloud', re: /\b(gcp|google cloud)\b/i, learn: 'Google Cloud basics' },
   { id: 'virtualization', label: 'KVM / OpenStack / VMware', re: /\b(kvm|openstack|vmware|hyper-v|virtuali[sz]ation)\b/i, learn: 'VMware or KVM home lab' },
   { id: 'ci-cd', label: 'CI/CD pipelines', re: /\b(ci\/cd|jenkins|github actions|gitlab ci)\b/i, learn: 'GitHub Actions basics' },
+  { id: 'serverless', label: 'AWS Lambda / serverless', re: /\b(lambda|serverless|api gateway|step functions)\b/i, learn: '2–3 small Lambda + API Gateway projects on your free tier' },
+  { id: 'ai-chips', label: 'AI chips (Trainium / Neuron / CUDA kernels)', re: /\b(trainium|inferentia|neuron sdk|nki|neuron kernel|cuda|gpu kernels?)\b/i, learn: 'specialist AI-hardware work (a different path; not worth chasing)' },
 ]);
 
 const HAVE = new Set(MY_PROFILE.skills);

@@ -136,6 +136,8 @@ export function matchPreferences(gig, prefs = DEFAULT_PREFS) {
   // At his level? Senior titles and posts the fit matcher rejects don't count.
   if (SENIOR_TITLE.test(String(gig?.title || '')) || assessEntryLevelGig(gig).classification === 'not-recommended') {
     misses.push('Above your current level');
+  } else if (gig?.facts?.deepExpertise) {
+    misses.push('Wants deep professional experience');
   }
   // The feed judges stress on the full post at parse time; fall back to
   // the short text for jobs added by hand.
