@@ -30,7 +30,20 @@ const NO_BENEFITS = /\bbenefits?\b[^.]{0,80}\b(do not|don't|does not|doesn't|wil
 
 // Posts that want an expert, not a learner: a certificate plus the
 // keyword is not enough to pass these.
-const DEEP_EXPERTISE = /\b(deep|demonstrable|extensive|expert[- ]level)\s+(professional\s+|technical\s+|hands[- ]on\s+)*(experience|expertise|knowledge)\b/i;
+// Up to five words may sit between, as in "deep cybersecurity, privacy,
+// and risk management knowledge"; a full stop ends the phrase.
+const DEEP_EXPERTISE = /\b(deep|demonstrable|extensive|expert[- ]level)\s+(?:[\w,/&-]+\s+){0,5}?(experience|expertise|knowledge)\b/i;
+
+// The post itself limits who may apply, even when the board's location
+// field says "Anywhere" (We Work Remotely does this). Read from the full
+// post, since the feed keeps only 300 characters.
+const LIMITED_TO_COUNTRY = [
+  /\b(us|u\.s\.|united states|american)\s+(citizens?|residents?|persons?)\b/i,
+  /\b(authori[sz]ed|eligible|right)\s+to\s+work\s+in\s+(the\s+)?(us|u\.s\.|united states|uk|united kingdom|eu|europe|canada|australia)\b/i,
+  /\b(security|secret|top secret|public trust)\s+clearance\b/i,
+  // Pay quoted only in US pay zones: the job is for people living in the US.
+  /\bwithin the (us|u\.s\.|united states),? our (geographic )?pay zones\b|\ball other (us|u\.s\.) locations\b/i,
+];
 
 const YEARS = /\b(\d{1,2})\+?\s*(?:years?|yrs?)\b/gi;
 
@@ -57,6 +70,7 @@ export function postFacts(title, fullText) {
     skillsAsked,
     yearsAsked: years.length ? Math.max(...years) : null,
     deepExpertise: DEEP_EXPERTISE.test(required),
+    limitedToCountry: LIMITED_TO_COUNTRY.some((re) => re.test(text)),
     noBenefits,
     benefits,
     payText: payMatch ? payMatch[1].replace(/\s+to\s+/i, ' - ') : null,

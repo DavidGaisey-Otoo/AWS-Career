@@ -120,5 +120,26 @@ export function runJobBreakdownTests() {
     eq(postFacts('IT Support', 'Proven experience in help desk support').deepExpertise, false, 'deep');
   });
 
+  test('"deep cybersecurity, privacy, and risk management knowledge" is expert-only', () => {
+    eq(postFacts('Security Analyst', 'Qualifications: Deep cybersecurity, privacy, and risk management knowledge and skill.').deepExpertise, true, 'deep');
+  });
+
+  test('a full stop ends the deep-expertise phrase', () => {
+    eq(postFacts('IT Support', 'We go deep. Experience with Windows helps.').deepExpertise, false, 'deep');
+  });
+
+  test('a GRC job asking for SOC 2 / ISO 27001 is not a clean qualify', () => {
+    const gig = { title: 'Security Analyst - GRC', facts: postFacts('Security Analyst - GRC', 'Familiarity with SOC 2, ISO 27001 and FedRAMP. Experience with AWS control environments.') };
+    const q = assessQualification(gig);
+    eq(q.missing.some((m) => /SOC 2/.test(m.label)), true, 'grc gap');
+    eq(q.verdict === 'qualify', false, 'not qualify');
+  });
+
+  test('pay quoted only in US pay zones marks the job as country-limited', () => {
+    eq(postFacts('Analyst', 'Within the United States, our geographic pay zones are... Zone 3: All other US locations: $129,900').limitedToCountry, true, 'zones');
+    eq(postFacts('Analyst', 'Must be authorized to work in the United States.').limitedToCountry, true, 'auth');
+    eq(postFacts('Support', 'We hire worldwide and pay in USD.').limitedToCountry, false, 'open');
+  });
+
   return { allPassed: results.every((r) => r.pass), results };
 }

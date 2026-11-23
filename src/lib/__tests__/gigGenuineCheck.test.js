@@ -69,6 +69,8 @@ export function runGigGenuineCheckTests() {
 
   test('EMEA and Africa count as open', () => {
     eq(locationAccess({ ...base, location: 'EMEA' }), 'open', 'emea');
+    // The board says "Anywhere" but the full post pays only in US zones.
+    eq(locationAccess({ ...base, location: 'Anywhere in the World', facts: { limitedToCountry: true } }), 'closed', 'board says anywhere');
     eq(locationAccess({ ...base, location: 'Africa, Europe' }), 'open', 'africa');
   });
 

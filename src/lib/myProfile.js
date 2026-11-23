@@ -59,6 +59,7 @@ export const SKILLS = Object.freeze([
   { id: 'virtualization', label: 'KVM / OpenStack / VMware', re: /\b(kvm|openstack|vmware|hyper-v|virtuali[sz]ation)\b/i, learn: 'VMware or KVM home lab' },
   { id: 'ci-cd', label: 'CI/CD pipelines', re: /\b(ci\/cd|jenkins|github actions|gitlab ci)\b/i, learn: 'GitHub Actions basics' },
   { id: 'serverless', label: 'AWS Lambda / serverless', re: /\b(lambda|serverless|api gateway|step functions)\b/i, learn: '2–3 small Lambda + API Gateway projects on your free tier' },
+  { id: 'grc', label: 'Compliance frameworks (SOC 2, ISO 27001, FedRAMP)', re: /\b(soc ?2|iso ?2700[12]|iso ?27701|fedramp|pci[- ]dss|hipaa|nist (800-53|csf)|grc)\b/i, learn: 'a compliance basics course (ISO 27001 Foundation) and mapping AWS controls to SOC 2' },
   { id: 'ai-chips', label: 'AI chips (Trainium / Neuron / CUDA kernels)', re: /\b(trainium|inferentia|neuron sdk|nki|neuron kernel|cuda|gpu kernels?)\b/i, learn: 'specialist AI-hardware work (a different path; not worth chasing)' },
 ]);
 

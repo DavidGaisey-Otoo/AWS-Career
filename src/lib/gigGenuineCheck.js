@@ -61,6 +61,8 @@ export function postedTime(gig, now = Date.now()) {
 export function locationAccess(gig) {
   const text = textOf(gig);
   if (RESTRICTED_TEXT.some((re) => re.test(text))) return 'closed';
+  // Found in the full post at parse time (beats a board's "Anywhere").
+  if (gig?.facts?.limitedToCountry) return 'closed';
   const loc = String(gig?.location || '').trim();
   if (OPEN_TO_GHANA.test(loc)) return 'open';
   if (NO_RULE.test(loc)) return OPEN_TO_GHANA.test(text) ? 'open' : 'unknown';
@@ -105,7 +107,9 @@ export function checkGigGenuine(gig, { now = Date.now() } = {}) {
   if (access === 'closed') {
     return {
       verdict: 'not-open', keep: false, label: 'Not open to Ghana',
-      problems: [`Limited to: ${gig?.location || 'a specific country (see the post)'}.`], notes,
+      problems: [gig?.facts?.limitedToCountry
+        ? `The full post limits who can apply (country, work permit or clearance), even though the board says "${gig?.location || 'remote'}".`
+        : `Limited to: ${gig?.location || 'a specific country (see the post)'}.`], notes,
     };
   }
   if (access === 'unknown') notes.push('No country rule shown: confirm Ghana is accepted before applying.');
