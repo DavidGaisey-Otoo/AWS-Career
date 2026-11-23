@@ -27,7 +27,7 @@ import { useLocalStorage } from '../../hooks/useLocalStorage.js';
 import { buildOpportunityLearningProfile, extractOpportunitySkills, scoreOpportunity } from '../../lib/opportunityLearningEngine.js';
 import { checkGigGenuine, isInLane, summarizeGenuine } from '../../lib/gigGenuineCheck.js';
 import { DEFAULT_PREFS, matchPreferences, payLabel } from '../../lib/jobPreferences.js';
-import { assessQualification, takeHome, adviceFor } from '../../lib/jobBreakdown.js';
+import { assessQualification, takeHome, adviceFor, jobExtras } from '../../lib/jobBreakdown.js';
 import { MY_PROFILE } from '../../lib/myProfile.js';
 import { convert } from '../../lib/officeToday.js';
 
@@ -542,6 +542,7 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
     usdToGhs,
   });
   const advice = adviceFor({ qualification, match: prefMatch, take });
+  const extras = jobExtras(gig, { qualification, match: prefMatch, genuine });
   const postedAgo = gig.postedAt ? humanAge(gig.postedAt) : null;
   const learnedMatch = learningProfile ? scoreOpportunity(gig, learningProfile) : null;
   const lastPreference = learningEvents.find((event) => event.opportunityId === gig.id)?.outcome;
@@ -593,7 +594,7 @@ function GigCard({ gig, career, learningProfile, learningEvents = [], onPreferen
           : <span className="text-muted font-normal">Misses: {prefMatch.misses.filter((m) => !/^(Full-time job|Freelance)/.test(m)).join(' · ') || 'job type'}</span>}
       </div>
 
-      <BreakdownPanel qualification={qualification} take={take} benefits={gig.facts?.benefits || []} noBenefits={Boolean(gig.facts?.noBenefits)} advice={advice} />
+      <BreakdownPanel qualification={qualification} take={take} benefits={gig.facts?.benefits || []} noBenefits={Boolean(gig.facts?.noBenefits)} advice={advice} extras={extras} />
 
 
       {/* Description preview */}
@@ -723,16 +724,30 @@ function money(n, currency) {
 }
 
 /** "Your breakdown": take-home, incentives, qualification vs MY_PROFILE, advice. */
-function BreakdownPanel({ qualification, take, benefits, noBenefits, advice }) {
+function BreakdownPanel({ qualification, take, benefits, noBenefits, advice, extras }) {
   const q = QUALIFY_LABEL[qualification.verdict] || QUALIFY_LABEL.unknown;
   const net = take ? `${money(take.netMin, take.currency)}${take.netMax !== take.netMin ? `–${money(take.netMax, take.currency)}` : ''}` : null;
+  const x = extras;
   return (
     <details className="rounded-lg border border-token bg-[var(--card-2)] px-2.5 py-2 text-[11.5px]">
       <summary className="cursor-pointer font-extrabold">
+        {x && <span className={x.priority >= 7 ? 'text-success' : x.priority >= 4 ? 'text-warning' : 'text-danger'}>Priority {x.priority}/10 · </span>}
         Your breakdown: <span className={q.tone}>{q.text}</span>
         {net ? <> · take home about {net}/month</> : <> · take-home unknown (pay hidden)</>}
       </summary>
       <div className="mt-2 space-y-2">
+        {x && (
+          <div>
+            <div className="font-extrabold">Contract, dates and hours</div>
+            <ul className="list-disc pl-4 text-muted">
+              <li>{x.contractNote}</li>
+              <li>Paid through: {x.payMethods.length ? x.payMethods.map((p) => `${p.name} (${p.cost})`).join(' · ') : 'not stated: ask how they pay people in Ghana'}</li>
+              <li>Posted: {x.postedDaysAgo == null ? 'date not shown' : x.postedDaysAgo === 0 ? 'today' : `${x.postedDaysAgo} day${x.postedDaysAgo === 1 ? '' : 's'} ago`}{x.postedDaysAgo > 21 ? ' (old: may be filled)' : ''} · Closes: {x.closingDate || 'not stated'}</li>
+              <li>Hours: {x.ghanaHours || 'time zone not stated: ask which hours they need in Ghana time'}</li>
+              {x.recruiterForClient && <li className="text-warning">Recruiter for an unnamed client: ask who the real employer is before sending any ID documents.</li>}
+            </ul>
+          </div>
+        )}
         <div>
           <div className="font-extrabold">What you take home (estimate)</div>
           {take ? (
@@ -764,6 +779,33 @@ function BreakdownPanel({ qualification, take, benefits, noBenefits, advice }) {
           )}
           {qualification.notes.map((n) => <div key={n} className="text-muted">{n}</div>)}
         </div>
+        {x?.learningPlan.length > 0 && (
+          <div>
+            <div className="font-extrabold">Learning plan for the gaps</div>
+            <ul className="list-disc pl-4 text-muted">
+              {x.learningPlan.map((l) => <li key={l.skill}><span className="font-bold">{l.skill}:</span> {l.how}</li>)}
+            </ul>
+          </div>
+        )}
+        {x && (
+          <div>
+            <div className="font-extrabold">Interview and growth</div>
+            <div className="text-muted">Interview: {x.interviewSteps.length ? x.interviewSteps.join(' · ') : 'steps not stated'}</div>
+            <div className="text-muted">Growth: {x.growth.length ? x.growth.join(' · ') : 'not mentioned'}</div>
+          </div>
+        )}
+        {x && (
+          <div>
+            <div className="font-extrabold">What you need at home</div>
+            <ul className="list-disc pl-4 text-muted">{x.homeNeeds.map((h) => <li key={h}>{h}</li>)}</ul>
+          </div>
+        )}
+        {x && (
+          <div>
+            <div className="font-extrabold">Apply checklist</div>
+            <ul className="list-disc pl-4 text-muted">{x.checklist.map((c) => <li key={c}>{c}</li>)}</ul>
+          </div>
+        )}
         <div className="rounded-md border border-aws-orange/30 bg-aws-orange/10 px-2 py-1.5">
           <span className="font-extrabold text-aws-orange">Advice: </span>{advice}
         </div>

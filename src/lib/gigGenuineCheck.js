@@ -43,7 +43,8 @@ const RESTRICTED_TEXT = [
 
 /** A title that asks for a language other than English. */
 const LANGS = 'german|french|dutch|arabic|spanish|portuguese|italian|japanese|mandarin|chinese|polish|turkish|swedish|danish|norwegian|finnish|korean|hebrew|russian';
-const NEEDS_LANGUAGE = new RegExp(`\\b(${LANGS})[- ]speak(?:ing|er)\\b|\\(([^)]*?\\b(?:${LANGS})\\b)[^)]*\\)`, 'i');
+// Also "Bilingual … Spanish" and "Support Engineer, German" style titles.
+const NEEDS_LANGUAGE = new RegExp(`\\b(${LANGS})[- ]speak(?:ing|er)\\b|\\(([^)]*?\\b(?:${LANGS})\\b)[^)]*\\)|\\bbilingual\\b[^()]*?\\b(${LANGS})\\b|,\\s*(${LANGS})\\b`, 'i');
 
 function textOf(gig) {
   return `${gig?.title || ''} ${gig?.description || ''}`;
@@ -96,7 +97,7 @@ export function checkGigGenuine(gig, { now = Date.now() } = {}) {
 
   const language = NEEDS_LANGUAGE.exec(String(gig?.title || ''));
   if (language) {
-    const name = (language[1] || language[2] || 'another language');
+    const name = (language[1] || language[3] || language[4] || language[2] || 'another language');
     return {
       verdict: 'not-open', keep: false, label: 'Needs another language',
       problems: [`Needs ${name[0].toUpperCase()}${name.slice(1).toLowerCase()} speakers.`], notes,

@@ -1,4 +1,4 @@
-import { postFacts, assessQualification, takeHome, adviceFor } from '../jobBreakdown.js';
+import { postFacts, assessQualification, takeHome, adviceFor, jobExtras } from '../jobBreakdown.js';
 import { payView, parsePay, matchPreferences } from '../jobPreferences.js';
 import { MY_PROFILE } from '../myProfile.js';
 
@@ -139,6 +139,48 @@ export function runJobBreakdownTests() {
     eq(postFacts('Analyst', 'Within the United States, our geographic pay zones are... Zone 3: All other US locations: $129,900').limitedToCountry, true, 'zones');
     eq(postFacts('Analyst', 'Must be authorized to work in the United States.').limitedToCountry, true, 'auth');
     eq(postFacts('Support', 'We hire worldwide and pay in USD.').limitedToCountry, false, 'open');
+  });
+
+  test('payment route, contract type and recruiter are read from the post', () => {
+    const f = postFacts('Support Engineer', 'Independent contractor, paid monthly via Deel. We are hiring on behalf of our client, a US MSP.');
+    eq(f.contract, 'contractor', 'contract');
+    eq(f.payMethods[0].name, 'Deel', 'deel');
+    eq(f.recruiterForClient, true, 'recruiter');
+  });
+
+  test('US Eastern hours are shown in Ghana time', () => {
+    const f = postFacts('NOC Analyst', 'Must work 9-5 EST.');
+    const x = jobExtras({ title: 'NOC Analyst', facts: f }, {});
+    eq(x.ghanaHours, 'Eastern (US East) 9 am–5 pm ≈ 2 pm–10 pm in Ghana', 'hours');
+  });
+
+  test('"Eastern Europe" and the word "et" are not read as US time zones', () => {
+    eq(postFacts('Support', 'Team based in Eastern Europe. Liberté et égalité.').workZone, null, 'zone');
+  });
+
+  test('nothing stated stays "not stated", never guessed', () => {
+    const x = jobExtras({ title: 'IT Support', facts: postFacts('IT Support', 'Help users.') }, {});
+    eq(x.payMethods.length, 0, 'pay'); eq(x.ghanaHours, null, 'hours'); eq(x.closingDate, null, 'close');
+    eq(x.contractNote, 'Contract type not stated: ask.', 'contract');
+  });
+
+  test('priority: a clean fit scores high, a not-yet scores low, and stays within 1–10', () => {
+    const fit = { title: 'IT Support Engineer', facts: postFacts('IT Support Engineer', 'Windows, help desk, networking') };
+    const hi = jobExtras(fit, { qualification: assessQualification(fit), match: { pay: { min: 1 }, perfect: true, stress: { level: 'low' } }, genuine: { verdict: 'genuine' } });
+    const bad = { title: 'Senior Engineer', facts: postFacts('Senior Engineer', 'TypeScript React Postgres') };
+    const lo = jobExtras(bad, { qualification: assessQualification(bad), match: { stress: { level: 'high' } }, genuine: { verdict: 'check' } });
+    eq(hi.priority, 10, 'high'); eq(lo.priority >= 1 && lo.priority <= 3, true, `low ${lo.priority}`);
+  });
+
+  test('very low pay pulls the priority down even when he qualifies', () => {
+    const g = { title: 'Technical Support Specialist', facts: postFacts('Technical Support Specialist', 'help desk, documentation') };
+    const x = jobExtras(g, { qualification: assessQualification(g), match: { pay: { min: 3 }, misses: ['Under $15/hr'], stress: { level: 'high' } }, genuine: { verdict: 'genuine' } });
+    eq(x.priority <= 3, true, `priority ${x.priority}`);
+  });
+
+  test('a recruiter post adds the ask-who-the-employer-is step to the checklist', () => {
+    const g = { title: 'Helpdesk', facts: postFacts('Helpdesk', 'Hiring on behalf of our client.') };
+    eq(jobExtras(g, {}).checklist.some((c) => /real employer/.test(c)), true, 'checklist');
   });
 
   return { allPassed: results.every((r) => r.pass), results };

@@ -117,6 +117,12 @@ export function runGigGenuineCheckTests() {
     eq(checkGigGenuine({ ...base, title: 'IT Service Desk Analyst (Remote, German, French)' }, { now: NOW }).keep, false, 'list');
   });
 
+  test('"Bilingual … Spanish" and ", German" titles need another language', () => {
+    const r = checkGigGenuine({ ...base, title: 'Bilingual Systems Support Engineer, Spanish (Wednesday - Sunday)' }, { now: NOW });
+    eq(r.keep, false, 'bilingual'); eq(r.problems[0], 'Needs Spanish speakers.', 'name');
+    eq(checkGigGenuine({ ...base, title: 'Technical Support Engineer, German' }, { now: NOW }).keep, false, 'comma');
+  });
+
   test('an English job with brackets is not mistaken for a language rule', () => {
     eq(checkGigGenuine({ ...base, title: 'Cloud Support Engineer (AWS, Remote)' }, { now: NOW }).verdict, 'genuine', 'verdict');
   });

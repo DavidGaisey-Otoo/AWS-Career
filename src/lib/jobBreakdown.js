@@ -47,6 +47,43 @@ const LIMITED_TO_COUNTRY = [
 
 const YEARS = /\b(\d{1,2})\+?\s*(?:years?|yrs?)\b/gi;
 
+// How the money reaches him, with the usual cost of each route.
+const PAY_METHODS = [
+  [/\bdeel\b/i, 'Deel', 'usually free to receive; about 1–2% to move it to a bank'],
+  [/\bwise\b/i, 'Wise', 'about 1–2% conversion fee'],
+  [/\bpayoneer\b/i, 'Payoneer', 'about 2–3% to withdraw'],
+  [/\bremote\.com\b/i, 'Remote.com', 'usually free to receive'],
+  [/\boyster\b/i, 'Oyster', 'usually free to receive'],
+  [/\bpaypal\b/i, 'PayPal', 'about 4–5% in fees and conversion'],
+  [/\bbank transfer|wire transfer\b/i, 'Bank transfer', 'about $15–40 per transfer'],
+];
+
+// Working-hours zones a post may name, with their standard offset from GMT.
+// Abbreviations must be upper case ("ET", not the word "et"); spelled-out
+// names must say "time" so "Eastern Europe" is not read as US Eastern.
+const ZONES = [
+  { abbr: /\b(?:PST|PDT|PT)\b/, words: /\bpacific (?:standard )?time\b/i, name: 'Pacific (US West)', offset: -8 },
+  { abbr: /\b(?:CST|CDT|CT)\b/, words: /\bcentral (?:standard )?time\b/i, name: 'Central (US)', offset: -6 },
+  { abbr: /\b(?:EST|EDT|ET)\b/, words: /\beastern (?:standard )?time\b/i, name: 'Eastern (US East)', offset: -5 },
+  { abbr: /\b(?:CET|CEST)\b/, words: /\bcentral european time\b/i, name: 'Central Europe', offset: 1 },
+  { abbr: /\b(?:GMT|BST)\b/, words: /\b(?:uk hours|uk time|london time)\b/i, name: 'UK', offset: 0 },
+];
+
+const RECRUITER_FOR_CLIENT = /\b(on behalf of (our|a|an) (client|customer)|our client|for (a|one of our) clients?|hiring for (a|an) (unnamed|confidential)|confidential client)\b/i;
+const INTERVIEW_STEPS = [
+  [/\btake[- ]home (test|assignment|task)\b/i, 'Take-home test'],
+  [/\b(technical|skills?) (test|assessment|interview)\b/i, 'Technical test or interview'],
+  [/\b(coding|hands-on|practical) (test|challenge|exercise)\b/i, 'Practical exercise'],
+  [/\b(\d|two|three|four) (interview )?(rounds|stages)\b/i, 'Several interview rounds'],
+  [/\bbackground check\b/i, 'Background check'],
+];
+const GROWTH = [
+  [/\b(training|onboarding program|mentor(ing|ship))\b/i, 'Training or mentoring'],
+  [/\bcertifications? (support|reimburse\w*|paid|budget|sponsor\w*)\b/i, 'Pays for certificates'],
+  [/\b(career (growth|path|progression)|promotion|advancement)\b/i, 'Promotion path'],
+];
+const CLOSING = /\b(?:apply (?:by|before)|closing date|applications close|deadline)[:\s]+([A-Z][a-z]{2,8}\.? \d{1,2}(?:, \d{4})?|\d{1,2} [A-Z][a-z]{2,8}(?: \d{4})?)/;
+
 /**
  * Facts read from the FULL post at parse time (the feed keeps only a
  * 300-character description, so these must be taken then).
@@ -66,7 +103,18 @@ export function postFacts(title, fullText) {
   const benefits = noBenefits ? [] : BENEFITS.filter(([re]) => re.test(text)).map(([, label]) => label);
   // Pay written in the post body (some boards leave the salary field empty).
   const payMatch = /([$£€]\s?\d[\d,.]*k?\s*(?:-|–|to)\s*[$£€]?\s?\d[\d,.]*k?\s*(?:\/\s*|per\s+)(?:hour|hr|month|year|annum)|[$£€]\s?\d[\d,.]*k?\s*(?:\/\s*|per\s+)(?:hour|hr|month|year|annum))/i.exec(text);
+  const contract = /\b(independent contractor|1099|contract(or)? (role|position|basis)|freelance)\b/i.test(text) ? 'contractor'
+    : /\b(full[- ]time employee|w-?2|permanent (role|position|contract)|employer of record|eor)\b/i.test(text) ? 'employee'
+    : null;
+  const zone = ZONES.find((z) => z.abbr.test(text) || z.words.test(text));
   return {
+    contract,
+    payMethods: PAY_METHODS.filter(([re]) => re.test(text)).map(([, name, cost]) => ({ name, cost })),
+    workZone: zone ? { name: zone.name, offset: zone.offset } : null,
+    recruiterForClient: RECRUITER_FOR_CLIENT.test(text),
+    interviewSteps: INTERVIEW_STEPS.filter(([re]) => re.test(text)).map(([, label]) => label),
+    growth: GROWTH.filter(([re]) => re.test(text)).map(([, label]) => label),
+    closingDate: (CLOSING.exec(text) || [])[1] || null,
     skillsAsked,
     yearsAsked: years.length ? Math.max(...years) : null,
     deepExpertise: DEEP_EXPERTISE.test(required),
@@ -142,6 +190,85 @@ export function takeHome({ view, kind, upwork = false, taxReservePct = 20, hours
     netMin: after(grossMin), netMax: after(grossMax),
     ghsMin: rate ? after(grossMin) * rate : null,
     ghsMax: rate ? after(grossMax) * rate : null,
+  };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const fmtHour = (h) => {
+  const x = ((h % 24) + 24) % 24;
+  return `${x % 12 === 0 ? 12 : x % 12} ${x < 12 ? 'am' : 'pm'}`;
+};
+
+/**
+ * The extra detail David asked for on every job: contract and payment
+ * route, dates, hours in Ghana time, interview steps, growth, what he needs
+ * at home, a learning plan, a 1–10 priority and an apply checklist.
+ * Pure. Anything the post does not say stays "not stated", never guessed.
+ */
+export function jobExtras(gig, { qualification, match, genuine, now = Date.now() } = {}) {
+  const f = gig?.facts || {};
+  const title = String(gig?.title || '');
+  const kind = match?.kind;
+  const contract = f.contract || (kind === 'freelance' ? 'contractor' : kind === 'full-time' ? 'employee' : null);
+
+  const posted = gig?.postedAt ? new Date(gig.postedAt).getTime() : NaN;
+  const postedDaysAgo = Number.isFinite(posted) ? Math.max(0, Math.floor((now - posted) / DAY_MS)) : null;
+
+  // A 9-to-5 day in the named zone, shown in Ghana time (GMT all year).
+  const ghanaHours = f.workZone
+    ? `${f.workZone.name} 9 am–5 pm ≈ ${fmtHour(9 - f.workZone.offset)}–${fmtHour(17 - f.workZone.offset)} in Ghana`
+    : null;
+
+  const supportRole = /\b(support|help ?desk|service desk|noc|operations|on-?call)\b/i.test(title);
+  const homeNeeds = [
+    'A reliable laptop',
+    'Stable internet (about 10 Mbps or more) with a backup data bundle',
+    supportRole ? 'Backup power for laptop and router (UPS or power bank): support work cannot drop during a power cut'
+      : 'Backup power for calls and deadlines',
+    'A quiet place for video calls',
+  ];
+
+  const learningPlan = (qualification?.missing || []).map((m) => ({ skill: m.label, how: m.learn }));
+
+  let score = 5;
+  const q = qualification?.verdict;
+  score += q === 'qualify' ? 3 : q === 'partly' ? 1 : q === 'not-yet' ? -3 : 0;
+  if (match?.pay) score += 1;
+  if (match?.perfect) score += 1;
+  const misses = match?.misses || [];
+  if (misses.some((m) => /^Under \$/.test(m))) score -= 4;          // not worth his time
+  if (misses.some((m) => /^Paid in |Currency not stated/.test(m))) score -= 2; // not USD/GBP
+  if (misses.includes('Above your current level')) score -= 2;
+  if (match?.stress?.level === 'high') score -= 2;
+  else if (match?.stress?.level === 'medium') score -= 1;
+  if (genuine?.verdict === 'check') score -= 1;
+  if (f.recruiterForClient) score -= 1;
+  if (postedDaysAgo != null && postedDaysAgo > 21) score -= 1;
+  const priority = Math.max(1, Math.min(10, score));
+
+  const checklist = [
+    'Confirm on the company\'s own careers page that someone in Ghana can apply',
+    'Tailor a copy of your base job CV for this role (true facts only)',
+    'Short cover letter that answers the post\'s main asks',
+    ...(f.recruiterForClient ? ['Ask who the real employer is before you send any ID documents'] : []),
+    ...(learningPlan.length ? ['Say honestly which skills you are still learning'] : []),
+    'Time to apply: about 30–45 minutes',
+  ];
+
+  return {
+    contract,
+    contractNote: contract === 'contractor' ? 'Contractor: no pension or benefits, and you pay your own tax (GRA).' : contract === 'employee' ? 'Employee (often through an employer-of-record): ask what benefits apply in Ghana.' : 'Contract type not stated: ask.',
+    payMethods: f.payMethods || [],
+    postedDaysAgo,
+    closingDate: f.closingDate || null,
+    ghanaHours,
+    recruiterForClient: Boolean(f.recruiterForClient),
+    interviewSteps: f.interviewSteps || [],
+    growth: f.growth || [],
+    homeNeeds,
+    learningPlan,
+    priority,
+    checklist,
   };
 }
 
