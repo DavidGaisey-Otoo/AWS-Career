@@ -97,6 +97,10 @@ export function buildFacts(detail = {}, profile = MY_PROFILE) {
     upworkReviews: Math.max(0, Number(d.upworkReviews) || 0),
     portfolio: Array.isArray(d.portfolio) ? d.portfolio : [],
     upwork: { ...DEFAULT_FACT_DETAIL.upwork, ...(d.upwork || {}) },
+    // Your own (practice) AWS accounts. Client work must never run in
+    // these; deliveryRunbooks.checkAccountTarget compares against them.
+    ownAccountIds: (Array.isArray(d.ownAccountIds) ? d.ownAccountIds : [])
+      .map((x) => String(x).replace(/\D/g, '')).filter((x) => x.length === 12),
   };
 }
 

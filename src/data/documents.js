@@ -112,7 +112,7 @@ function guessDaysFromAnalysis(analysis) {
 
 function defaultScopeFor(analysis) {
   const type = analysis?.type || 'General AWS Engineering';
-  return `Author will design, implement and deliver the ${type} engagement as described in the attached proposal. Work will be carried out remotely. The author will use their own AWS account for testing before any change reaches the client environment.`;
+  return `Author will design, implement and deliver the ${type} engagement as described in the attached proposal. Work will be carried out remotely. All client resources are created in the client's own AWS account, using access the client grants and can remove. The author may rehearse steps in a separate practice account that holds no client data.`;
 }
 
 function defaultDeliverables(analysis) {

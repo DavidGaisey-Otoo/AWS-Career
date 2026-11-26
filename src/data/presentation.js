@@ -210,7 +210,7 @@ function slideTesting() {
     id: uid(),
     kind: 'testing',
     title: 'Testing first — zero risk to you',
-    body: 'I build and validate every change in my own AWS account before it touches yours.',
+    body: 'I rehearse each step in my own practice account, then build in yours, and every change comes with a way to undo it.',
     bullets: [
       '✅ Architecture validated against Well-Architected Framework',
       '✅ Security checks: IAM, KMS, WAF, GuardDuty baseline',

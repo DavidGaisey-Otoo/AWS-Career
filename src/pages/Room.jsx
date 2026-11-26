@@ -31,6 +31,7 @@ export const TAB_COMPONENTS = {
   'jobs/packs':         named(() => import('../components/rooms/GigsDesk.jsx'), 'GigsDesk'),
   'jobs/all':           lazy(() => import('./Workspace.jsx')),
   'jobs/new':           lazy(() => import('./WinThisJob.jsx')),
+  'jobs/deliver':       named(() => import('../components/rooms/DeliveryDesk.jsx'), 'DeliveryDesk'),
   'jobs/proposals':     named(() => import('../components/rooms/ProposalsDesk.jsx'), 'ProposalsDesk'),
   'jobs/time':          named(() => import('../components/rooms/TimeTracker.jsx'), 'TimeTracker'),
   'jobs/call':          lazy(() => import('./DiscoveryCallPrep.jsx')),

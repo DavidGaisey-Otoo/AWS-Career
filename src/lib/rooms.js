@@ -33,6 +33,7 @@ export const ROOMS = Object.freeze([
       { id: 'all',       label: 'All jobs' },
       { id: 'new',       label: 'New job' },
       { id: 'proposals', label: 'Proposals', blurb: 'Write a proposal, track who has replied, and borrow from a template.' },
+      { id: 'deliver',   label: 'Delivery', blurb: 'Deliver a won job: ask for safe access, prove you are in the client’s account, work the steps with an undo for each, and hand over a report.' },
       { id: 'time',      label: 'Time', blurb: 'Time each job, see your week, and turn the hours into an invoice.' },
       { id: 'call',      label: 'Call prep' },
       { id: 'plan',      label: 'Project plan' },

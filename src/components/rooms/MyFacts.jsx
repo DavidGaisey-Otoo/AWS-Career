@@ -15,6 +15,25 @@ function Row({ label, children }) {
   );
 }
 
+function OwnAccounts({ ids, onChange }) {
+  const [draft, setDraft] = useState('');
+  const clean = draft.replace(/\D/g, '');
+  return (
+    <div className="space-y-1.5">
+      {ids.map((id) => (
+        <div key={id} className="flex items-center justify-between text-[12.5px]">
+          <span className="font-mono">…{String(id).slice(-4)}</span>
+          <button aria-label="Remove account" onClick={() => onChange(ids.filter((x) => x !== id))}><Trash2 size={12} /></button>
+        </div>
+      ))}
+      <div className="flex gap-2">
+        <input className={cn(input, 'flex-1')} inputMode="numeric" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Your account ID" />
+        <button disabled={clean.length !== 12 || ids.includes(clean)} onClick={() => { onChange([...ids, clean]); setDraft(''); }} className="btn btn-ghost !text-[12px] disabled:opacity-40">Add</button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * What a proposal may claim. The truth check reads only from here, so
  * this is the one place a new claim becomes allowed, and a certificate
@@ -108,6 +127,12 @@ export function MyFacts() {
           <input type="number" min="0" step="0.01" value={facts.upwork.pricePerConnect} onChange={(e) => updateUpwork({ pricePerConnect: Number(e.target.value) || 0.15 })} className={cn(input, 'w-20')} />
         </Row>
         <p className="text-[11.5px] text-muted">Upwork sets the Connect price, so check it when you buy.</p>
+      </section>
+
+      <section className="surface rounded-2xl p-4 space-y-1.5">
+        <h2 className="text-[14px] font-bold">Your own AWS accounts</h2>
+        <p className="text-[11.5px] text-muted">Your practice account IDs (12 digits). Jobs → Delivery refuses to unlock client work while you are signed in to one of these. Kept in this browser only.</p>
+        <OwnAccounts ids={detail.ownAccountIds || []} onChange={(ownAccountIds) => update({ ownAccountIds })} />
       </section>
 
       <section className="surface rounded-2xl p-4">

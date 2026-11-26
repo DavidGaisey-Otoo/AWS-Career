@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Bell, Briefcase, Link2, Camera, ClipboardCopy, Database, Download, Eye, EyeOff, Globe2, KeyRound, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon, Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2 } from 'lucide-react';
+import { Bell, Briefcase, Link2, Camera, ClipboardCopy, Database, Download, Eye, EyeOff, Globe2, KeyRound, Monitor, Moon, Palette, RotateCcw, Settings as SettingsIcon, ShieldCheck, Sliders, Sparkles, Sun, Trash2, Upload, User, Wand2 } from 'lucide-react';
 import { Github, Linkedin } from '../components/common/BrandIcons.jsx';
 import { BuildStamp } from '../components/common/BuildStamp.jsx';
 import { fetchGithubIdentity, hasGithubAppSession } from '../lib/githubAppAuth.js';
@@ -17,10 +17,12 @@ import { GoogleCalendarConnectCard } from '../components/integrations/GoogleCale
 import { GitHubAppConnectCard } from '../components/integrations/GitHubAppConnectCard.jsx';
 import { LocalAIPanel } from '../components/settings/LocalAIPanel.jsx';
 import { ConnectionsPanel } from '../components/settings/ConnectionsPanel.jsx';
+import { AccountSecurityPanel } from '../components/settings/AccountSecurityPanel.jsx';
 import { findRetiredData, removeRetiredData } from '../lib/retiredData.js';
 
 const SECTIONS = [
   { id: 'connections',   label: 'Connections',      icon: Link2 },
+  { id: 'security',      label: 'Account security', icon: ShieldCheck },
   { id: 'profile',       label: 'Profile',          icon: User },
   { id: 'notifications', label: 'Notifications',    icon: Bell },
   { id: 'display',       label: 'Display',          icon: Palette },
@@ -92,6 +94,7 @@ export default function Settings() {
         <motion.div ref={panelRef} key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}
                     className="scroll-mt-24 space-y-4">
           {section === 'connections'   && <ConnectionsSection />}
+          {section === 'security'      && <AccountSecurityPanel />}
           {section === 'profile'       && <ProfileSection />}
           {section === 'notifications' && <NotificationSection />}
           {section === 'display'       && <DisplaySection />}

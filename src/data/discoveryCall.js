@@ -158,13 +158,13 @@ function talkingPoints({ profile = {}, certs = [], portfolio = [], type }) {
       id: 'approach',
       label: 'State your method clearly',
       text:
-`My approach for this type of project: lock the architecture and Well-Architected review first, build in my own AWS account, demo end-to-end before any change touches yours, then a single supervised cutover with a written runbook.`,
+`My approach for this type of project: agree the design first, rehearse the steps in my own practice account with none of your data, then make the change in your account, with limited access you give me, using a written runbook where every step can be undone.`,
     },
     {
       id: 'zero-risk',
       label: 'Reduce perceived risk',
       text:
-`I test everything in my own account first so there is zero risk to your infrastructure. You only see fully-validated changes, with rollback steps already proven.`,
+`I rehearse the steps in my own practice account first, with none of your data in it, so the change in your account is planned and every step has a written way to undo it.`,
     },
     {
       id: 'comms',
