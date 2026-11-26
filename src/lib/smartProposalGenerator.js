@@ -18,6 +18,8 @@
  * for the JD extraction step so we don't duplicate that intelligence.
  */
 
+import { scopeAndDone } from './proposalScope.js';
+import { buildFacts } from './myFacts.js';
 import { analyzeJobDescription } from './freelanceEngine.js';
 import { clientNeed } from './clientVoice.js';
 
@@ -78,9 +80,30 @@ function pickHook(seed, need, projectTitle, primaryService) {
 // ════════════════════════════════════════════════════════════════════
 // Why-Me variations
 // ════════════════════════════════════════════════════════════════════
+/**
+ * Why me, built only from the facts (myFacts.js): the certificate he
+ * holds, his years in IT, how he works, and a portfolio item. Nothing
+ * here can say more than the facts do; the truth check re-reads it.
+ */
+const PORTFOLIO_FOR = { iam: 'safe-start', mfa: 'safe-start', billing: 'safe-start', cloudtrail: 'safe-start', 'account-setup': 'safe-start', networking: 'vpc-3-tier', 'small-fix': 'private-ec2' };
+
+export function whyMeFromFacts(facts, topics = []) {
+  if (!facts) return null;
+  const aws = facts.certificates.find((c) => c.id.startsWith('aws-'));
+  const bits = [];
+  if (aws) bits.push(`I'm an ${aws.name}${facts.yearsInIT ? ` with ${facts.yearsInIT}+ years in IT and network administration` : ''}, so I understand how DNS, ports and firewalls affect a cloud setup.`);
+  else if (facts.yearsInIT) bits.push(`I have ${facts.yearsInIT}+ years in IT and network administration.`);
+  bits.push('I work in your AWS account with limited access you give me, never more than the job needs, and finish with a short report: what I changed, why, and how to undo it.');
+  // The portfolio item closest to this job; none rather than an unrelated one.
+  const wanted = topics.map((t) => PORTFOLIO_FOR[t]).filter(Boolean);
+  const item = facts.portfolio?.find((p) => wanted.includes(p.id));
+  if (item) bits.push(`You can see similar work in my portfolio ("${item.title}", built in my own training account).`);
+  return bits.join(' ');
+}
+
 function pickWhyMe(seed, primaryService) {
   const variants = [
-    `I use an evidence-first workflow: agreed requirements, a reviewable ${primaryService.toUpperCase()} design, infrastructure-as-code where supported, validation results, and written handover notes. Any experience or certification claim should be added only when you can verify it.`,
+    `I use an evidence-first workflow: agreed requirements, a reviewable ${primaryService.toUpperCase()} design, infrastructure-as-code where supported, validation results, and written handover notes.`,
     `You would receive a scoped plan, architecture diagram, cost assumptions, risk register, and acceptance checks before production changes are considered.`,
     `My proposed workflow keeps assumptions visible and separates planning from verified deployment evidence, so you can review every important decision.`,
     `I would begin with a small, agreed milestone and provide the resulting code, test evidence, and documentation for review before expanding the scope.`,
@@ -133,7 +156,7 @@ function buildTimeline(services, isHourly) {
  * @param {string} [opts.lengthMode] — 'normal' | 'short' | 'long'
  * @returns {{ sections: Section[], fullText: string, wordCount: number, analysis: Object, meta: Object }}
  */
-export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'normal' } = {}) {
+export function generateSmartProposal({ jd, profile, facts = buildFacts(), seed = 0, lengthMode = 'normal' } = {}) {
   const analysis = analyzeJobDescription(jd) || {
     projectTitle: 'your AWS project',
     painPoint: 'the AWS work you described',
@@ -168,7 +191,7 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
   // Named services first; when the brief names none, what it describes.
   const ordered = orderServicesForApproach(analysis.services?.length ? analysis.services : (analysis.inferredServices || []));
   const approachSteps = ordered.length
-    ? ordered.map((s) => APPROACH_PHRASES[s] || `Use ${s.toUpperCase()} where it fits the workload best`).slice(0, 6)
+    ? ordered.map((s) => APPROACH_PHRASES[s] || APPROACH_PHRASES[String(s).replace(/\s+/g, '').toLowerCase()] || `Use ${s.toUpperCase()} where it fits the workload best`).slice(0, 6)
     : [
         'Start with a discovery call to lock down requirements and constraints',
         'Design the AWS architecture with cost, security, and reliability baked in',
@@ -182,11 +205,21 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
   }
   const approach = approachSteps.map((s, i) => `${i + 1}. ${s}.`).join('\n');
 
+  // ──────── SCOPE + DONE MEANS (fixed price, checkable by looking)
+  const posted = analysis.budget && !analysis.budget.high && !analysis.isHourly
+    ? { kind: 'fixed', amount: analysis.budget.low }
+    : null;
+  const scope = scopeAndDone({ jd, budget: posted, hourly: analysis.isHourly });
+
   // ──────── WHY ME (process only; never invent credentials or client history)
-  const whyMe = pickWhyMe(seed, primaryService);
+  const whyMe = whyMeFromFacts(facts, scope.topics) || pickWhyMe(seed, primaryService);
 
   // ──────── TIMELINE
-  const timeline = buildTimeline(analysis.services, analysis.isHourly);
+  // A small packaged job is days, not weeks; saying weeks loses it.
+  const small = scope.package && (!posted || posted.amount <= 500);
+  const timeline = small
+    ? 'Usually 1–3 days of work once I have access to your account, finished within a week. I will confirm the date before I start.'
+    : buildTimeline(analysis.services, analysis.isHourly);
 
   // ──────── CTA
   const cta = pickCta(seed, firstName);
@@ -196,6 +229,7 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
     { id: 'hook',          label: 'Hook',          body: hook },
     { id: 'understanding', label: 'Understanding', body: understanding },
     { id: 'approach',      label: 'My Approach',   body: approach },
+    { id: 'scope',         label: 'Scope + Done means', body: scope.text },
     { id: 'whyme',         label: 'Why Me',        body: whyMe },
     { id: 'timeline',      label: 'Timeline',      body: timeline },
     { id: 'cta',           label: 'Call To Action', body: cta },
@@ -237,11 +271,16 @@ export function generateSmartProposal({ jd, profile, seed = 0, lengthMode = 'nor
     finalText = finalText.replace(/\n\n\*\*Timeline\*\*/, `\n\n${risk}\n\n**Timeline**`);
   }
 
+  // Scope goes in after any length trimming, so "short" never strips
+  // the "Done means" list the client signs off against.
+  finalText = finalText.replace('\n\n**Why me**', () => `\n\n${scope.text}\n\n**Why me**`);
+
   return {
     sections,
     fullText: finalText,
     wordCount: wordCount(finalText),
     analysis,
+    scope,
     meta: {
       seed,
       lengthMode,

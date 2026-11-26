@@ -19,7 +19,8 @@ export const ROOMS = Object.freeze([
     blurb: 'Gigs worth your time, and what to charge for them.',
     tabs: [
       { id: 'gigs',   label: 'Live gigs', blurb: 'Freelance gigs and remote jobs from seven job boards: checked, split by type, and matched to your preferences.' },
-      { id: 'check',  label: 'Check a job post' },
+      { id: 'daily',  label: 'Daily check', blurb: 'Your Upwork routine: saved searches with the right filters, the checklist, and what you checked today.' },
+      { id: 'check',  label: 'Check a job post', blurb: 'Paste the whole Upwork job page: GO, MAYBE or SKIP for your level, the client signals, and what the Connects cost.' },
       { id: 'market', label: 'Market rates' },
       { id: 'rates',  label: 'Rate calculator' },
     ],
@@ -76,6 +77,7 @@ export const ROOMS = Object.freeze([
     blurb: 'Proof of your work, and the reputation that brings the next client.',
     tabs: [
       { id: 'portfolio',    label: 'Portfolio' },
+      { id: 'facts',        label: 'My facts', blurb: 'What your proposals are allowed to claim. The truth check reads only from here.' },
       { id: 'walkthroughs', label: 'Walkthroughs' },
       { id: 'builder',      label: 'Project builder' },
       { id: 'content',      label: 'Content queue' },

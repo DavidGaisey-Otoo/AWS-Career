@@ -26,6 +26,7 @@ export const TAB_COMPONENTS = {
   'find/check':         lazy(() => import('./JobAnalyzer.jsx')),
   'find/market':        lazy(() => import('./Market.jsx')),
   'find/rates':         lazy(() => import('./RateCalculator.jsx')),
+  'find/daily':         named(() => import('../components/rooms/DailyJobCheck.jsx'), 'DailyJobCheck'),
 
   'jobs/packs':         named(() => import('../components/rooms/GigsDesk.jsx'), 'GigsDesk'),
   'jobs/all':           lazy(() => import('./Workspace.jsx')),
@@ -55,6 +56,7 @@ export const TAB_COMPONENTS = {
   'build/log':          lazy(() => import('./SessionLog.jsx')),
 
   'grow/portfolio':     lazy(() => import('./Portfolio.jsx')),
+  'grow/facts':         named(() => import('../components/rooms/MyFacts.jsx'), 'MyFacts'),
   'grow/walkthroughs':  lazy(() => import('./Walkthroughs.jsx')),
   'grow/builder':       lazy(() => import('./ProjectBuilder.jsx')),
   'grow/content':       lazy(() => import('./ContentQueue.jsx')),

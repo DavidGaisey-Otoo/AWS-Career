@@ -26,6 +26,9 @@ import { generateEmail, gmailComposeUrl, mailtoUrl } from '../data/emailTemplate
 import { buildIntakeForm, intakeAsText } from '../lib/clientIntake.js';
 import { readableList, unsupportedText } from '../lib/readinessText.js';
 import { cn } from '../lib/utils.js';
+import { useMyFacts } from '../hooks/useMyFacts.js';
+import { checkTruth } from '../lib/truthCheck.js';
+import { TruthCheckPanel } from '../components/common/TruthCheck.jsx';
 
 function Step({ n, title, hint, done, children }) {
   return (
@@ -47,15 +50,16 @@ function Step({ n, title, hint, done, children }) {
   );
 }
 
-function CopyButton({ text, label = 'Copy', icon: Icon = Copy }) {
+function CopyButton({ text, label = 'Copy', icon: Icon = Copy, disabled = false }) {
   const [done, setDone] = useState(false);
   return (
     <button
+      disabled={disabled}
       onClick={async () => {
         try { await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1800); }
         catch { setDone(false); }
       }}
-      className="btn btn-ghost !text-[11px] !py-1.5 inline-flex items-center gap-1.5"
+      className="btn btn-ghost !text-[11px] !py-1.5 inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {done ? <Check size={12} /> : <Icon size={12} />}{done ? 'Copied' : label}
     </button>
@@ -64,6 +68,7 @@ function CopyButton({ text, label = 'Copy', icon: Icon = Copy }) {
 
 export default function WinThisJob() {
   const { profile } = useApp();
+  const { facts } = useMyFacts();
   const [brief, setBrief] = useState('');
   const [working, setWorking] = useState(false);
   const [solution, setSolution] = useState(null);
@@ -99,8 +104,10 @@ export default function WinThisJob() {
 
   const proposal = useMemo(() => {
     if (!solution) return null;
-    try { return generateSmartProposal({ jd: brief, profile }); } catch { return null; }
-  }, [solution, brief, profile]);
+    try { return generateSmartProposal({ jd: brief, profile, facts }); } catch { return null; }
+  }, [solution, brief, profile, facts]);
+
+  const truth = useMemo(() => (proposal?.fullText ? checkTruth(proposal.fullText, facts) : null), [proposal, facts]);
 
   const email = useMemo(() => {
     if (!solution) return null;
@@ -207,7 +214,8 @@ export default function WinThisJob() {
                 hint="Read it before you send it. It is a draft in your voice, not a finished quote.">
             {proposal?.fullText ? (
               <>
-                <CopyButton text={proposal.fullText} label={`Copy the proposal (${proposal.wordCount} words)`} />
+                <TruthCheckPanel result={truth} className="mb-2" />
+                <CopyButton text={proposal.fullText} disabled={!truth?.ok} label={`Copy the proposal (${proposal.wordCount} words)`} />
                 <pre className="mt-2 rounded-xl border border-token p-3 text-[11.5px] leading-relaxed max-h-80 overflow-auto whitespace-pre-wrap">
                   {proposal.fullText}
                 </pre>

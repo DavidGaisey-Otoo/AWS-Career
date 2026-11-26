@@ -20,6 +20,7 @@ import { ProactiveSuggestionsBanner } from '../components/common/ProactiveSugges
 import { ExpertReviewPanel } from '../components/expert-review/ExpertReviewPanel.jsx';
 import { ServiceSuggestionChips } from '../components/build/ServiceSuggestionChips.jsx';
 import { AutoFillFromBrief } from '../components/build/AutoFillFromBrief.jsx';
+import { UpworkFitPanel } from '../components/rooms/UpworkFitPanel.jsx';
 
 export default function JobAnalyzer() {
   const toast = useToast();
@@ -179,7 +180,10 @@ The analyzer looks for:
           {!result ? (
             <EmptyState />
           ) : (
-            <Analysis result={result} />
+            <>
+              <UpworkFitPanel text={result.rawText} />
+              <Analysis result={result} />
+            </>
           )}
         </div>
       </div>

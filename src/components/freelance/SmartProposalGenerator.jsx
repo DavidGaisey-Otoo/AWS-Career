@@ -36,6 +36,9 @@ import { ProactiveSuggestionsBanner } from '../common/ProactiveSuggestionsBanner
 import { ExpertReviewPanel } from '../expert-review/ExpertReviewPanel.jsx';
 import { ProposalReviewPanel } from '../proposal-review/ProposalReviewPanel.jsx';
 import { cn } from '../../lib/utils.js';
+import { useMyFacts } from '../../hooks/useMyFacts.js';
+import { checkTruth, truthSummary } from '../../lib/truthCheck.js';
+import { TruthCheckPanel } from '../common/TruthCheck.jsx';
 
 const TARGET_LOW = 200;
 const TARGET_HIGH = 350;
@@ -46,6 +49,7 @@ export function SmartProposalGenerator() {
   const toast = useToast();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { facts } = useMyFacts();
 
   const [jd, setJd] = useState(() => params.get('prefill') || '');
   const [proposal, setProposal] = useState(null);
@@ -78,6 +82,9 @@ export function SmartProposalGenerator() {
   }, [edited, proposal, approach]);
 
   const wc = useMemo(() => wordCount(displayText), [displayText]);
+  // Every claim in the text, edits included, read against My facts.
+  const truth = useMemo(() => (displayText ? checkTruth(displayText, facts) : null), [displayText, facts]);
+  const blocked = Boolean(truth && !truth.ok);
   const wcStatus = useMemo(() => {
     if (wc === 0) return { tone: 'opacity-50', label: '' };
     if (wc < TARGET_LOW) return { tone: 'text-warning', label: `too short (target ${TARGET_LOW}-${TARGET_HIGH})` };
@@ -96,6 +103,7 @@ export function SmartProposalGenerator() {
       const result = generateSmartProposal({
         jd: useJd,
         profile,
+        facts,
         seed: seedOverride ?? seed,
         lengthMode: lengthOverride ?? lengthMode,
       });
@@ -149,6 +157,7 @@ export function SmartProposalGenerator() {
   async function handleCopy() {
     const text = displayText;
     if (!text) return;
+    if (blocked) { toast?.error?.(truthSummary(truth)); return; }
     try {
       await navigator.clipboard.writeText(stripMarkdown(text));
       setCopied(true);
@@ -172,6 +181,7 @@ export function SmartProposalGenerator() {
   // FR-03: format proposal as email + deep-link to Email Outreach tab
   function handleAlsoSendAsEmail() {
     if (!proposal) return;
+    if (blocked) { toast?.error?.(truthSummary(truth)); return; }
     const proposalText = displayText;
     const title = proposal.analysis?.projectTitle || 'your AWS project';
     const clientFirst = proposal.analysis?.clientName?.split(' ')[0] || 'there';
@@ -356,6 +366,8 @@ export function SmartProposalGenerator() {
         />
       )}
 
+      {proposal && <TruthCheckPanel result={truth} />}
+
       {/* ─────── Output ─────── */}
       {proposal && (
         <div className="surface rounded-2xl p-5 space-y-3">
@@ -388,13 +400,16 @@ export function SmartProposalGenerator() {
               </button>
               <button
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11.5px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
+                disabled={blocked}
+                title={truthSummary(truth)}
+                className="disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11.5px] font-bold border border-token hover:border-aws-orange hover:text-aws-orange transition"
               >
                 {copied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
               </button>
               <button
                 onClick={handleAlsoSendAsEmail}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11.5px] font-bold border border-aws-orange/40 text-aws-orange hover:bg-aws-orange/10 transition"
+                disabled={blocked}
+                className="disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11.5px] font-bold border border-aws-orange/40 text-aws-orange hover:bg-aws-orange/10 transition"
                 title="Open this proposal in Email Outreach pre-filled"
               >
                 <Mail size={11} /> Also send as Email
@@ -405,11 +420,11 @@ export function SmartProposalGenerator() {
                 defaultTitle={`Discovery call — ${proposal.analysis?.projectTitle || 'AWS project'}`}
                 defaultDescription={`Project: ${proposal.analysis?.projectTitle || 'AWS project'}\n\nServices: ${(proposal.analysis?.services || []).join(', ') || 'TBD'}\n\nNotes from proposal:\n${stripMarkdown(displayText).slice(0, 500)}`}
               />
-              <ShareButton
+              {!blocked && <ShareButton
                 variant="ghost"
                 title={proposal.analysis?.projectTitle || 'My AWS proposal'}
                 text={stripMarkdown(displayText)}
-              />
+              />}
               <button
                 onClick={handleSaveToTracker}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11.5px] font-bold bg-gradient-aws text-ink-950 hover:brightness-110 transition"
