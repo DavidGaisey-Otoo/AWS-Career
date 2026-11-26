@@ -4,9 +4,18 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 // Bump this string when you want to show the modal again to everyone.
-export const CURRENT_VERSION = '2026.11.18c';
+export const CURRENT_VERSION = '2026.11.26';
 
 const WHATS_NEW = {
+  '2026.11.26': {
+    title: 'The whole Upwork workflow, from job post to getting paid.',
+    bullets: [
+      'Find work → Check a job post: paste the whole Upwork page for GO, MAYBE or SKIP at your level, the client signals and the Connects cost. Find work → Daily check holds your saved searches and routine.',
+      'Proposals are truth-checked against Grow → My facts: copying is locked if one claims SAA, years or client work you do not have. Each one now has a fixed-price scope and "Done means…".',
+      'Jobs → Delivery: ask for safe access, prove you are in the client’s account (never your own), work the runbook with an undo for every step, and copy the handover report.',
+      'Grow → Portfolio item blacks out screenshots and writes the case study and Upwork item. Money → Upwork tracks Connects, wins and Upwork’s fee. Settings → Account security holds your 2-step checklist.',
+    ],
+  },
   '2026.11.18c': {
     title: 'Time tracking, and every connection in one place.',
     bullets: [

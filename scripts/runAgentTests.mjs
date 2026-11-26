@@ -43,6 +43,7 @@ import { runJobPreferencesTests } from '../src/lib/__tests__/jobPreferences.test
 import { runJobBreakdownTests } from '../src/lib/__tests__/jobBreakdown.test.js';
 import { runUpworkWorkflowTests } from '../src/lib/__tests__/upworkWorkflow.test.js';
 import { runDeliveryWorkflowTests } from '../src/lib/__tests__/deliveryWorkflow.test.js';
+import { runPortfolioMoneyTests } from '../src/lib/__tests__/portfolioMoney.test.js';
 import { runProjectPlanDateTests } from '../src/lib/__tests__/projectPlanDate.test.js';
 import { runProjectWorkspaceTests } from '../src/lib/__tests__/projectWorkspace.test.js';
 
@@ -260,6 +261,7 @@ const jobPrefs = runJobPreferencesTests();
 const jobBreakdown = runJobBreakdownTests();
 const upworkWorkflow = runUpworkWorkflowTests();
 const deliveryWorkflow = runDeliveryWorkflowTests();
+const portfolioMoney = runPortfolioMoneyTests();
 console.log('');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('  JOB CHECK HONESTY TESTS');
@@ -340,6 +342,9 @@ for (const result of upworkWorkflow.results) console.log(`${result.pass ? '✓' 
 console.log('');
 console.log('  DELIVERY AND CLIENT SAFETY TESTS');
 for (const result of deliveryWorkflow.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
+console.log('');
+console.log('  PORTFOLIO AND MONEY TESTS');
+for (const result of portfolioMoney.results) console.log(`${result.pass ? '✓' : '✗'} ${result.name}${result.error ? ` — ${result.error}` : ''}`);
 
 const agentsOk = agents.summary.catchRate >= 85;
 const pipelineOk = pipeline.allPassed;
@@ -371,7 +376,7 @@ const clientIntakeOk = clientIntake.allPassed;
 const localFilesOk = localFiles.allPassed;
 const clientReportOk = clientReport.allPassed;
 const repoSecretsOk = repoSecrets.allPassed;
-const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk && workspaceOk && serviceWorkerOk && clientIntakeOk && localFilesOk && clientReportOk && repoSecretsOk && appRoutes.allPassed && retiredData.allPassed && rooms.allPassed && officeToday.allPassed && timeTracking.allPassed && connections.allPassed && jobCheck.allPassed && gigInbox.allPassed && gigGenuine.allPassed && jobPrefs.allPassed && jobBreakdown.allPassed && upworkWorkflow.allPassed && deliveryWorkflow.allPassed;
+const allOk = agentsOk && projectStandards.allPassed && awsEnvironmentPolicyOk && solutionDeliveryStandard.allPassed && pipelineOk && syncOk && customOk && drawioOk && deploySafetyOk && businessOk && artifactsOk && entryLevelOk && careerOk && githubImporterOk && lazyRecoveryOk && freelanceClaimsOk && professionalBriefOk && deliveryStatusOk && planningRecommendationsOk && clientDiscoveryOk && resourceSearchOk && accountTierOk && backupRoundTripOk && syncGuardOk && safeStorageOk && planDateOk && workspaceOk && serviceWorkerOk && clientIntakeOk && localFilesOk && clientReportOk && repoSecretsOk && appRoutes.allPassed && retiredData.allPassed && rooms.allPassed && officeToday.allPassed && timeTracking.allPassed && connections.allPassed && jobCheck.allPassed && gigInbox.allPassed && gigGenuine.allPassed && jobPrefs.allPassed && jobBreakdown.allPassed && upworkWorkflow.allPassed && deliveryWorkflow.allPassed && portfolioMoney.allPassed;
 
 console.log('');
 console.log(allOk
@@ -379,6 +384,6 @@ console.log(allOk
   : `❌ FAILED — agents:${agentsOk ? 'ok' : 'FAIL'} awsEnvironmentPolicy:${awsEnvironmentPolicyOk ? 'ok' : 'FAIL'} pipeline:${pipelineOk ? 'ok' : 'FAIL'} `
     + `sync:${syncOk ? 'ok' : 'FAIL'} custom:${customOk ? 'ok' : 'FAIL'} `
     + `drawio:${drawioOk ? 'ok' : 'FAIL'} deploySafety:${deploySafetyOk ? 'ok' : 'FAIL'} `
-    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'} workspace:${workspaceOk ? 'ok' : 'FAIL'} serviceWorker:${serviceWorkerOk ? 'ok' : 'FAIL'} clientIntake:${clientIntakeOk ? 'ok' : 'FAIL'} localFiles:${localFilesOk ? 'ok' : 'FAIL'} clientReport:${clientReportOk ? 'ok' : 'FAIL'} repoSecrets:${repoSecretsOk ? 'ok' : 'FAIL'} appRoutes:${appRoutes.allPassed ? 'ok' : 'FAIL'} retiredData:${retiredData.allPassed ? 'ok' : 'FAIL'} rooms:${rooms.allPassed ? 'ok' : 'FAIL'} today:${officeToday.allPassed ? 'ok' : 'FAIL'} time:${timeTracking.allPassed ? 'ok' : 'FAIL'} connections:${connections.allPassed ? 'ok' : 'FAIL'} jobCheck:${jobCheck.allPassed ? 'ok' : 'FAIL'} gigInbox:${gigInbox.allPassed ? 'ok' : 'FAIL'} gigGenuine:${gigGenuine.allPassed ? 'ok' : 'FAIL'} jobPrefs:${jobPrefs.allPassed ? 'ok' : 'FAIL'} jobBreakdown:${jobBreakdown.allPassed ? 'ok' : 'FAIL'} upwork:${upworkWorkflow.allPassed ? 'ok' : 'FAIL'} delivery:${deliveryWorkflow.allPassed ? 'ok' : 'FAIL'}`);
+    + `business:${businessOk ? 'ok' : 'FAIL'} artifacts:${artifactsOk ? 'ok' : 'FAIL'} entryLevel:${entryLevelOk ? 'ok' : 'FAIL'} career:${careerOk ? 'ok' : 'FAIL'} githubImporter:${githubImporterOk ? 'ok' : 'FAIL'} lazyRecovery:${lazyRecoveryOk ? 'ok' : 'FAIL'} freelanceClaims:${freelanceClaimsOk ? 'ok' : 'FAIL'} professionalBrief:${professionalBriefOk ? 'ok' : 'FAIL'} deliveryStatus:${deliveryStatusOk ? 'ok' : 'FAIL'} planningRecommendations:${planningRecommendationsOk ? 'ok' : 'FAIL'} clientDiscovery:${clientDiscoveryOk ? 'ok' : 'FAIL'} resourceSearch:${resourceSearchOk ? 'ok' : 'FAIL'} accountTier:${accountTierOk ? 'ok' : 'FAIL'} backupRoundTrip:${backupRoundTripOk ? 'ok' : 'FAIL'} syncGuard:${syncGuardOk ? 'ok' : 'FAIL'} safeStorage:${safeStorageOk ? 'ok' : 'FAIL'} planDate:${planDateOk ? 'ok' : 'FAIL'} workspace:${workspaceOk ? 'ok' : 'FAIL'} serviceWorker:${serviceWorkerOk ? 'ok' : 'FAIL'} clientIntake:${clientIntakeOk ? 'ok' : 'FAIL'} localFiles:${localFilesOk ? 'ok' : 'FAIL'} clientReport:${clientReportOk ? 'ok' : 'FAIL'} repoSecrets:${repoSecretsOk ? 'ok' : 'FAIL'} appRoutes:${appRoutes.allPassed ? 'ok' : 'FAIL'} retiredData:${retiredData.allPassed ? 'ok' : 'FAIL'} rooms:${rooms.allPassed ? 'ok' : 'FAIL'} today:${officeToday.allPassed ? 'ok' : 'FAIL'} time:${timeTracking.allPassed ? 'ok' : 'FAIL'} connections:${connections.allPassed ? 'ok' : 'FAIL'} jobCheck:${jobCheck.allPassed ? 'ok' : 'FAIL'} gigInbox:${gigInbox.allPassed ? 'ok' : 'FAIL'} gigGenuine:${gigGenuine.allPassed ? 'ok' : 'FAIL'} jobPrefs:${jobPrefs.allPassed ? 'ok' : 'FAIL'} jobBreakdown:${jobBreakdown.allPassed ? 'ok' : 'FAIL'} upwork:${upworkWorkflow.allPassed ? 'ok' : 'FAIL'} delivery:${deliveryWorkflow.allPassed ? 'ok' : 'FAIL'} portfolioMoney:${portfolioMoney.allPassed ? 'ok' : 'FAIL'}`);
 
 process.exit(allOk ? 0 : 1);

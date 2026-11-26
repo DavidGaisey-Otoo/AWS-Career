@@ -54,6 +54,7 @@ export const ROOMS = Object.freeze([
     blurb: 'What came in, what went out, and where you stand against your goal.',
     tabs: [
       { id: 'overview', label: 'Earnings', blurb: 'What came in this month against your goal, and every payment.' },
+      { id: 'upwork',   label: 'Upwork', blurb: 'Connects bought and spent, what each win cost, Upwork’s fee, and how to get paid out.' },
       { id: 'expenses', label: 'Expenses', blurb: 'What the work costs you, and what to set aside for tax.' },
       { id: 'goals',    label: 'Goals', blurb: 'Monthly and yearly targets, and how far along you are.' },
       { id: 'currency', label: 'Currency', blurb: 'Exchange rates, and what each way of getting paid costs you.' },
@@ -78,6 +79,7 @@ export const ROOMS = Object.freeze([
     blurb: 'Proof of your work, and the reputation that brings the next client.',
     tabs: [
       { id: 'portfolio',    label: 'Portfolio' },
+      { id: 'item',         label: 'Portfolio item', blurb: 'Black out a lab screenshot, write the case study, and get the Upwork portfolio item ready to paste.' },
       { id: 'facts',        label: 'My facts', blurb: 'What your proposals are allowed to claim. The truth check reads only from here.' },
       { id: 'walkthroughs', label: 'Walkthroughs' },
       { id: 'builder',      label: 'Project builder' },

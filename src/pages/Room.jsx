@@ -43,6 +43,7 @@ export const TAB_COMPONENTS = {
   'clients/paperwork':  lazy(() => import('./DocumentCenter.jsx')),
 
   'money/overview':     named(() => import('../components/rooms/MoneyOverview.jsx'), 'MoneyOverview'),
+  'money/upwork':       named(() => import('../components/rooms/UpworkMoney.jsx'), 'UpworkMoney'),
   'money/expenses':     named(() => import('../components/freelance/ExpenseTracker.jsx'), 'ExpenseTracker'),
   'money/goals':        named(() => import('../components/freelance/FinancialGoals.jsx'), 'FinancialGoals'),
   'money/currency':     named(() => import('../components/freelance/CurrencyCenter.jsx'), 'CurrencyCenter'),
@@ -57,6 +58,7 @@ export const TAB_COMPONENTS = {
   'build/log':          lazy(() => import('./SessionLog.jsx')),
 
   'grow/portfolio':     lazy(() => import('./Portfolio.jsx')),
+  'grow/item':          named(() => import('../components/rooms/PortfolioItemBuilder.jsx'), 'PortfolioItemBuilder'),
   'grow/facts':         named(() => import('../components/rooms/MyFacts.jsx'), 'MyFacts'),
   'grow/walkthroughs':  lazy(() => import('./Walkthroughs.jsx')),
   'grow/builder':       lazy(() => import('./ProjectBuilder.jsx')),
